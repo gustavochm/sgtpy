@@ -1,18 +1,34 @@
 from setuptools import setup, Extension
+from Cython.Distutils import build_ext
+
+
+cmdclass = {}
+ext_modules = []
+
+
+ext_modules += [Extension('SGTPy.coloc_cy',
+                          ['SGTPy/src/coloc_cy.pyx']),
+                Extension('SGTPy.sgt.cijmix_cy',
+                          ['SGTPy/src/cijmix_cy.pyx'])]
+cmdclass.update({'build_ext': build_ext})
+
 
 setup(
-  name = 'SGTPy',
+  name='SGTPy',
   license='MIT',
-  version = '0.0.1',
-  description = 'SAFT-VR-MIE EOS',
-  author = 'Gustavo Chaparro Maldonado, Andres Mejia Matallana',
-  author_email = 'gustavochaparro@udec.cl',
-  url = 'https://github.com/gustavochm/SGTPy',
-  download_url = 'https://github.com/gustavochm/SGTPy.git',
-  long_description = open('long_description.rst').read(),
-  packages = ['saftvrmie', 'saftvrmie.mixtures', 'saftvrmie.pure'],
-  install_requires = ['numpy','scipy', 'phasepy'],
-  platforms = ["Windows", "Linux", "Mac OS", "Unix"],
-  keywords = ['SAFT-VR-Mie', 'SGT'],
-  zip_safe = False
+  version='0.0.1',
+  description='SAFT-VR-MIE EOS and SGT',
+  author='Gustavo Chaparro Maldonado, Andres Mejia Matallana',
+  author_email='gustavochaparro@udec.cl',
+  url='https://github.com/gustavochm/SGTPy',
+  download_url='https://github.com/gustavochm/SGTPy.git',
+  long_description=open('long_description.rst').read(),
+  packages=['SGTPy', 'SGTPy.mixtures',  'SGTPy.pure',   'SGTPy.sgt',
+            'SGTPy.equilibrium'],
+  cmdclass=cmdclass,
+  ext_modules=ext_modules,
+  install_requires=['numpy', 'scipy', 'cython'],
+  platforms=["Windows", "Linux", "Mac OS", "Unix"],
+  keywords=['SAFT-VR-Mie', 'SGT'],
+  zip_safe=False
 )
