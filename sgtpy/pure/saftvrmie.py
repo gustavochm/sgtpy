@@ -139,13 +139,16 @@ class saftvrmie_pure():
 
 
         #For SGT Computations
-        if pure.cii == 0.:
-            cii = self.ms * (0.12008072630855947 + 2.2197907527439655 * alpha)
-            cii *= np.sqrt(Na**2 * self.eps * self.sigma**5)
-            cii **= 2
+        self.cii = np.array(pure.cii, ndmin = 1)
+
+
+    def cii_correlation(self, overwrite=False):
+        cii = self.ms * (0.12008072630855947 + 2.2197907527439655 * self.alpha)
+        cii *= np.sqrt(Na**2 * self.eps * self.sigma**5)
+        cii **= 2
+        if overwrite:
             self.cii = cii
-        else:
-            self.cii = np.array(pure.cii, ndmin = 1)
+        return cii
 
     def d(self,beta):
         integrer = np.exp(-beta * self.umie)

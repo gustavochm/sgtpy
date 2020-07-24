@@ -248,6 +248,15 @@ class saftvrmie_mix():
         self.cij = np.sqrt(np.outer(self.cii, self.cii))
         self.beta = np.zeros([self.nc, self.nc])
 
+    def cii_correlation(self, overwrite=False):
+        cii = self.ms * (0.12008072630855947 + 2.2197907527439655 * self.alpha)
+        cii *= np.sqrt(Na**2 * self.eps * self.sigma**5)
+        cii **= 2
+        if overwrite:
+            self.cii = cii
+            self.cij = np.sqrt(np.outer(self.cii, self.cii))
+        return cii
+        
     def diameter(self, beta):
         #umie = U_mie(1/roots, c, eps, lambda_r, lambda_a)
         integrer = np.exp(-beta * self.umie)
