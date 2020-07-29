@@ -21,7 +21,7 @@ from .g1sigma_chain import g1sigma, dg1sigma_dxhi00, d2g1sigma_dxhi00, dg1sigma_
 from .a2new_chain import da2new_dxhi00, d2a2new_dxhi00, d3a2new_dxhi00, da2new_dx_dxhi00, da2new_dxxhi_dxhi00
 from .lngmie_chain import lngmie, dlngmie_dxhi00, d2lngmie_dxhi00, dlngmie_dx, dlngmie_dxxhi
 
-from .association_aux import association_config, Iab ,dIab_drho, d2Iab_drho, Xass_solver
+from .association_aux import association_config, Iab, dIab_drho, d2Iab_drho, Xass_solver
 from .association_aux import dIab_dx, dIab_dxrho, CIJ_matrix, dXass_drho, d2Xass_drho, dXass_dx
 
 from .polarGV import aij, bij, cij
@@ -34,11 +34,12 @@ from ..constants import kb, Na
 R = Na * kb
 
 def U_mie(r, c, eps, lambda_r, lambda_a):
-    u = c * eps * (np.power.outer(r, lambda_r) - np.power.outer(r,lambda_a))
+    u = c * eps * (np.power.outer(r, lambda_r) - np.power.outer(r, lambda_a))
     return u
 
+
 def xhi_eval(xhi00, xs, xmi, xm, di03):
-    xhi =  xhi00 * xm * np.matmul(xs,di03)
+    xhi = xhi00 * xm * np.matmul(xs,di03)
     dxhi_dxhi00 = np.matmul(xmi, di03)
     dxhi_dxhi00[0] = xm
     return xhi, dxhi_dxhi00
@@ -52,12 +53,14 @@ def xhix_eval(xhi00, xs, xm, dij3):
     xhix = xhi00 * dxhix_dxhi00
     return xhix, dxhix_dxhi00
 
+
 def dxhi_dx_eval(xhi00, xs, xmi, xm, ms, di03):
-    xhi =  xhi00 * xm * np.matmul(xs,di03)
+    xhi = xhi00 * xm * np.matmul(xs,di03)
     dxhi_dxhi00 = np.matmul(xmi,di03)
     dxhi_dxhi00[0] = xm
     dxhi_dx = (xhi00 * di03.T * ms)
     return xhi, dxhi_dxhi00, dxhi_dx
+
 
 def dxhix_dx_eval(xhi00, xs, dxs_dx, xm, ms, dij3):
     aux1 = xs * dij3
@@ -65,7 +68,7 @@ def dxhix_dx_eval(xhi00, xs, dxs_dx, xm, ms, dij3):
     aux3 = aux2.sum()
     dxhix_dxhi00 = xm * aux3
     xhix = xhi00 * dxhix_dxhi00
-    suma1 = 2*np.sum(dxs_dx.T@aux1, axis = 1)
+    suma1 = 2*np.sum(dxs_dx.T@aux1, axis=1)
     dxhix_dx_dxhi00 = (ms * aux3 + xm * suma1)
     dxhix_dx = xhi00 * dxhix_dx_dxhi00
     return xhix, dxhix_dxhi00, dxhix_dx, dxhix_dx_dxhi00
@@ -82,13 +85,14 @@ nfi = np.arange(0,7)
 nfi_num = nfi[:4]
 nfi_den = nfi[4:]
 
-#Eq A26
+
+# Eq A26
 def fi(alphaij, i):
     phi = phi16[i-1]
     num = np.tensordot(np.power.outer(alphaij, nfi_num), phi[nfi_num],
-                       axes = (-1,-1))
+                       axes=(-1, -1))
     den = 1 + np.tensordot(np.power.outer(alphaij, nfi_den - 3), phi[nfi_den],
-                           axes = (-1,-1))
+                           axes=(-1, -1))
     return num/den
 
 
@@ -96,7 +100,7 @@ class saftvrmie_mix():
 
     def __init__(self, mixture):
 
-        #Pure component parameters
+        # Pure component parameters
         self.lr = np.asarray(mixture.lr)
         self.la = np.asarray(mixture.la)
         self.lar = self.lr + self.la
@@ -107,10 +111,10 @@ class saftvrmie_mix():
         self.nc = mixture.nc
 
         sigma3 = self.sigma**3
-        #Eq A45
+        # Eq A45
         self.sigmaij = np.add.outer(self.sigma, self.sigma) / 2
         self.sigmaij3 = self.sigmaij**3
-        #Eq A51
+        # Eq A51
 
         if hasattr(mixture, 'KIJsaft'):
             kij = mixture.KIJsaft
@@ -120,23 +124,23 @@ class saftvrmie_mix():
         self.epsij /= self.sigmaij3
         self.epsij *= (1-kij)
 
-        #Eq A48
+        # Eq A48
         self.lrij = np.sqrt(np.multiply.outer(self.lr-3., self.lr-3.)) + 3
         self.laij = np.sqrt(np.multiply.outer(self.la-3., self.la-3.)) + 3
         self.larij = self.lrij + self.laij
 
 
-        #Eq A3
+        # Eq A3
         dif_cij = self.lrij - self.laij
         self.Cij = self.lrij / dif_cij * (self.lrij / self.laij) ** (self.laij / dif_cij)
-        #Eq A24
+        # Eq A24
         self.alphaij = self.Cij * (1./(self.laij - 3.) - 1./(self.lrij - 3.))
 
         self.diag_index = np.diag_indices(self.nc)
         self.C = self.Cij[self.diag_index]
         self.alpha = self.alphaij[self.diag_index]
 
-        #For Second perturbation
+        # For Second perturbation
         self.f1 = fi(self.alphaij, 1)
         self.f2 = fi(self.alphaij, 2)
         self.f3 = fi(self.alphaij, 3)
@@ -144,35 +148,33 @@ class saftvrmie_mix():
         self.f5 = fi(self.alphaij, 5)
         self.f6 = fi(self.alphaij, 6)
 
-        #Eq A18
-        #Esto arreglarlo desde el puro debido a que estas constantes
-        #se deben evaluar una sola vez al crear el objeto
+        # Eq A18
         c_matrix = np.array([[0.81096, 1.7888, -37.578, 92.284],
                             [1.0205, -19.341, 151.26, -463.5],
                             [-1.9057, 22.845, -228.14, 973.92],
                             [1.0885, -6.1962, 106.98, -677.64]])
 
         lrij_power = np.power.outer(self.lrij, [0, -1, -2, -3])
-        self.cctes_lrij = np.tensordot(lrij_power, c_matrix, axes = (-1, -1))
+        self.cctes_lrij = np.tensordot(lrij_power, c_matrix, axes=(-1, -1))
 
         laij_power = np.power.outer(self.laij, [0, -1, -2, -3])
-        self.cctes_laij = np.tensordot(laij_power, c_matrix, axes = (-1, -1))
+        self.cctes_laij = np.tensordot(laij_power, c_matrix, axes=(-1, -1))
 
         lrij_2power = np.power.outer(2*self.lrij, [0, -1, -2, -3])
-        self.cctes_2lrij = np.tensordot(lrij_2power, c_matrix, axes = (-1, -1))
+        self.cctes_2lrij = np.tensordot(lrij_2power, c_matrix, axes=(-1, -1))
 
         laij_2power = np.power.outer(2*self.laij, [0, -1, -2, -3])
-        self.cctes_2laij = np.tensordot(laij_2power, c_matrix, axes = (-1, -1))
+        self.cctes_2laij = np.tensordot(laij_2power, c_matrix, axes=(-1, -1))
 
         larij_power = np.power.outer(self.larij, [0, -1, -2, -3])
-        self.cctes_larij = np.tensordot(larij_power, c_matrix, axes = (-1, -1))
+        self.cctes_larij = np.tensordot(larij_power, c_matrix, axes=(-1, -1))
 
-        #Terminos necesarios monomero
+        # Monomer necessary term
         self.lambdasij = (self.laij, self.lrij, self.larij)
         self.cctesij = (self.cctes_laij, self.cctes_lrij,
                         self.cctes_2laij, self.cctes_2lrij, self.cctes_larij)
 
-        #Terminos necesarios cadena
+        # Chain neccesary term
         self.cctes_la = self.cctes_laij[self.diag_index]
         self.cctes_lr = self.cctes_lrij[self.diag_index]
         self.cctes_lar = self.cctes_larij[self.diag_index]
@@ -180,10 +182,10 @@ class saftvrmie_mix():
         self.cctes_2lr = self.cctes_2lrij[self.diag_index]
 
         self.lambdas = (self.la, self.lr, self.lar)
-        self.cctes = (self.cctes_la, self.cctes_lr,
-                 self.cctes_2la, self.cctes_2lr, self.cctes_lar)
+        self.cctes = (self.cctes_la, self.cctes_lr, self.cctes_2la,
+                      self.cctes_2lr, self.cctes_lar)
 
-        #For diameter calculation
+        # For diameter calculation
         roots, weights = gauss(100)
         self.roots = roots
         self.weights = weights
@@ -191,8 +193,13 @@ class saftvrmie_mix():
 
         self.dxhi00_drho = np.pi / 6
 
-        #Configuracion asociacion
+        # association config
         self.eABij = np.sqrt(np.multiply.outer(mixture.eAB, mixture.eAB))
+        if hasattr(mixture, 'LIJsaft'):
+            lij = mixture.LIJsaft
+        else:
+            lij = np.zeros([mixture.nc, mixture.nc])
+        self.eABij *= (1.-lij)
         self.rcij = np.add.outer(mixture.rc, mixture.rc)/2
         self.rdij = np.add.outer(mixture.rd, mixture.rd)/2
         S, DIJ, compindex, indexabij, indexab, nsites, \
@@ -218,31 +225,27 @@ class saftvrmie_mix():
         polar_bool = np.any(self.npol != 0)
         self.polar_bool = polar_bool
         if polar_bool:
-            self.mpol = self.ms * (self.ms < 2) +  2 * (self.ms > 2)
-            #msij = np.sqrt(np.outer(self.mpol, self.mpol))
-            #msijk = np.cbrt(np.multiply.outer(self.mpol, np.outer(self.mpol, self.mpol)))
+            self.mpol = self.ms * (self.ms < 2) + 2 * (self.ms > 2)
             msij = np.sqrt(np.outer(self.ms, self.ms))
             msijk = np.cbrt(np.multiply.outer(self.ms, np.outer(self.ms, self.ms)))
             msij[msij > 2.] = 2.
             msijk[msijk > 2.] = 2.
 
-            aux1 = np.array([np.ones_like(msij), (msij -1 )/ msij, (msij -1 )/msij * (msij-2)/msij])
-            aux2 = np.array([np.ones_like(msijk), (msijk -1 )/ msijk, (msijk -1 )/msijk * (msijk-2)/msijk])
-            self.anij = np.tensordot(aij, aux1, axes = (1))
-            self.bnij = np.tensordot(bij, aux1, axes = (1))
-            self.cnij = np.tensordot(cij, aux2, axes = (1))
+            aux1 = np.array([np.ones_like(msij), (msij -1 )/msij, (msij -1)/msij * (msij-2)/msij])
+            aux2 = np.array([np.ones_like(msijk), (msijk -1 )/msijk, (msijk -1)/msijk * (msijk-2)/msijk])
+            self.anij = np.tensordot(aij, aux1, axes=(1))
+            self.bnij = np.tensordot(bij, aux1, axes=(1))
+            self.cnij = np.tensordot(cij, aux2, axes=(1))
 
             sigmaij = self.sigmaij
             mult = np.multiply.outer(sigmaij, sigmaij)
             listpolar = np.arange(self.nc)
             self.sigmaijk3 = mult[listpolar, :, listpolar] * sigmaij
             self.sigma3 = self.sigma**3
-            #self.epspol = 4*self.eps/self.ms**2
             # 1 D = 3.33564e-30 C * m
             # 1 C^2 = 9e9 N m^2
             cte = (3.33564e-30)**2 * (9e9)
-            self.mupolad2 = self.mupol**2  * cte / (self.ms * self.eps * self.sigma3)
-
+            self.mupolad2 = self.mupol**2 * cte / (self.ms * self.eps * self.sigma3)
 
         self.cii = mixture.cii
         self.cij = np.sqrt(np.outer(self.cii, self.cii))
@@ -256,13 +259,12 @@ class saftvrmie_mix():
             self.cii = cii
             self.cij = np.sqrt(np.outer(self.cii, self.cii))
         return cii
-        
+
     def diameter(self, beta):
         #umie = U_mie(1/roots, c, eps, lambda_r, lambda_a)
         integrer = np.exp(-beta * self.umie)
         d = self.sigma * (1. - np.matmul(self.weights, integrer))
         return d
-
 
     def ares(self, x, rho, T):
 
@@ -1115,24 +1117,24 @@ class saftvrmie_mix():
         return a
 
     def dafcn_dx(self, x, rho, T):
-        ares, aresx = self.dares_dx(x, rho , T)
+        ares, aresx = self.dares_dx(x, rho, T)
         beta = 1 / (kb*T)
         aideal, aidealx = daideal_dx(x, rho, beta)
-        a =  (ares + aideal)
+        a = (ares + aideal)
         a *= (Na/beta)
         ax = (aresx + aidealx)
         ax *= (Na/beta)
         return a, ax
 
-    def density(self, x, T, P, state, rho0 = None):
-        if rho0 == None:
+    def density(self, x, T, P, state, rho0=None):
+        if rho0 is None:
             rho = density_topliss(state, x, T, P, self)
         else:
             rho = density_newton(rho0, x, T, P, self)
         return rho
 
     def pressure(self, x, rho, T):
-        rhomolecular =  Na * rho
+        rhomolecular = Na * rho
         afcn, dafcn = self.dafcn_drho(x, rhomolecular, T)
         Psaft = rhomolecular**2 * dafcn / Na
         return Psaft
@@ -1142,10 +1144,10 @@ class saftvrmie_mix():
         afcn, dafcn, d2afcn = self.d2afcn_drho(x, rhomolecular, T)
         Psaft = rhomolecular**2 * dafcn / Na
         dPsaft = 2 * rhomolecular * dafcn + rhomolecular**2 * d2afcn
-        #dPsaft /= Na
+        # dPsaft /= Na
         return Psaft, dPsaft
 
-    def logfugmix(self, x, T, P, state, v0 = None):
+    def logfugmix(self, x, T, P, state, v0=None):
         if v0 is None:
             rho = self.density(x, T, P, state, None)
         else:
@@ -1158,7 +1160,7 @@ class saftvrmie_mix():
         lnphi = ares + (Z - 1.) - np.log(Z)
         return lnphi, v
 
-    def logfugef(self, x, T, P, state, v0 = None):
+    def logfugef(self, x, T, P, state, v0=None):
         if v0 is None:
             rho = self.density(x, T, P, state, None)
         else:
@@ -1195,14 +1197,14 @@ class saftvrmie_mix():
         rho = np.sum(rhoi)
         x = rhoi/rho
         rhomolecular = Na * rho
-        ares, aresx = self.dares_dxrho(x, rhomolecular , T)
+        ares, aresx = self.dares_dxrho(x, rhomolecular, T)
         beta = 1 / (kb*T)
-        aideal, aidealx = daideal_dxrho(x, rhomolecular , beta)
-        afcn, dafcn =  (ares + aideal)
+        aideal, aidealx = daideal_dxrho(x, rhomolecular, beta)
+        afcn, dafcn = (ares + aideal)
         ax = (aresx + aidealx)
         Z = dafcn * rhomolecular
         mu = afcn + ax - np.dot(x, ax) + (Z)
-        #mu *= (Na/beta)
+        # mu *= (Na/beta)
         return mu
 
     def dmuad(self, rhoi, T):
@@ -1253,7 +1255,7 @@ class saftvrmie_mix():
         Tfactor = 1.
         Pfactor = 1. / RT
         rofactor = 1.
-        tenfactor = np.sqrt(self.cii[0]*RT) * 1000 #To give tension in mN/m
+        tenfactor = np.sqrt(self.cii[0]*RT) * 1000  # To give tension in mN/m
         zfactor = 10**-10 * np.sqrt(RT / self.cii[0])
         return Tfactor, Pfactor, rofactor, tenfactor, zfactor
 
@@ -1261,4 +1263,4 @@ class saftvrmie_mix():
         self.beta = beta
 
     def ci(self, T):
-        return  self.cij * (1 - self.beta)
+        return self.cij * (1 - self.beta)
