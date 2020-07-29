@@ -20,7 +20,7 @@ def fobj_kij(kij, mix, datavle=None, datalle=None, datavlle=None):
     return error
 
 
-def fit_kij(kij_bounds, eos, mix, datavle=None, datalle=None, datavlle=None):
+def fit_kij(kij_bounds, mix, datavle=None, datalle=None, datavlle=None):
     """
     fit_kij: attemps to fit kij to LVE, LLE, LLVE
 
@@ -28,8 +28,6 @@ def fit_kij(kij_bounds, eos, mix, datavle=None, datalle=None, datavlle=None):
     ----------
     kij_bounds : tuple
         bounds for kij correction
-    eos : function
-        cubic eos to fit kij for qmr mixrule
     mix: object
         binary mixture
     datavle: tuple, optional
@@ -92,4 +90,55 @@ def fit_asso(x0, mix, datavle=None, datalle=None, datavlle=None):
 
     """
     fit = minimize(fobj_asso, x0, args=(mix, datavle, datalle, datavlle))
+    return fit
+
+
+def fobj_cross(x, mix, assoc, datavle=None, datalle=None, datavlle=None):
+    kij, rc = x
+    Kij = np.array([[0, kij], [kij, 0]])
+    mix.kij_saft(Kij)
+
+    eos = saftvrmie(mix)
+    eos.eABij[0, 1] = mix.eAB[assoc] / 2
+    eos.eABij[1, 0] = mix.eAB[assoc] / 2
+    eos.rcij[0, 1] = rc * 1e-10
+    eos.rcij[1, 0] = rc * 1e-10
+
+    error = 0.
+    if datavle is not None:
+        error += fobj_elv(eos, *datavle)
+    if datalle is not None:
+        error += fobj_ell(eos, *datalle)
+    if datavlle is not None:
+        error += fobj_hazb(eos, *datavlle)
+    return error
+
+
+def fit_cross(x0, mix, assoc, datavle=None, datalle=None, datavlle=None):
+    """
+    fit_asso: attemps to fit kij to LVE, LLE, LLVE
+
+    Parameters
+    ----------
+    x0 : array
+        initial values for kij and rc
+    mix: object
+        binary mixture
+    assoc : int
+        index of associating component
+    datavle: tuple, optional
+        (Xexp, Yexp, Texp, Pexp)
+    datalle: tuple, optional
+        (Xexp, Wexp, Texp, Pexp)
+    datavlle: tuple, optional
+        (Xexp, Wexp, Yexp, Texp, Pexp)
+
+    Returns
+    -------
+    fit : OptimizeResult
+        Result of SciPy minimize
+
+    """
+    fit = minimize(fobj_cross, x0, args=(mix, assoc, datavle, datalle,
+                   datavlle))
     return fit

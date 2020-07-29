@@ -228,6 +228,9 @@ class mixture(object):
     def kij_saft(self, kij):
         self.KIJsaft = kij
 
+    def lij_saft(self, lij):
+        self.LIJsaft = lij
+
     def ci(self, T):
         """
         Method that computes the matrix of cij interaction parameter for SGT at

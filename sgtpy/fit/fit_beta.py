@@ -8,6 +8,12 @@ def fobj_beta(beta, iftexp, rho1, rho2, T, P, eos):
     eos.beta_sgt(bij)
     tenb = np.zeros_like(iftexp)
     n = len(iftexp)
+
+    n1, n2 = rho1.shape
+    if n2 == n:
+        rho1 = rho1.T
+        rho2 = rho2.T
+
     for i in range(n):
         tenb[i] = sgt_mix(rho1[i], rho2[i], T[i], P[i], eos)
     fo = np.mean((1 - tenb/iftexp)**2)

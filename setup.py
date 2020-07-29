@@ -24,7 +24,7 @@ setup(
   download_url='https://github.com/gustavochm/SGTPy.git',
   long_description=open('long_description.rst').read(),
   packages=['SGTPy', 'SGTPy.mixtures',  'SGTPy.pure',   'SGTPy.sgt',
-            'SGTPy.equilibrium'],
+            'SGTPy.equilibrium', 'SGTPy.fit'],
   cmdclass=cmdclass,
   ext_modules=ext_modules,
   install_requires=['numpy', 'scipy', 'cython'],
