@@ -272,7 +272,7 @@ def dXass_drho(rhom, xj, Xass, DIJ, Dabij, dDabij_drho, CIJ):
 
 
 def d2Xass_drho(rhom, xj, Xass, dXass_drho, DIJ, Dabij, dDabij_drho,
-                d2Dabij_drho,  CIJ):
+                d2Dabij_drho, CIJ):
 
     b2rho = -rhom * (DIJ * (Xass * d2Dabij_drho+2*dXass_drho*dDabij_drho))@xj
     b2rho += 2 * (1/Xass - 1) / (rhom**2)
