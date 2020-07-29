@@ -10,7 +10,7 @@ from .a1sB_monomer import d3a1sB_dxhi00_eval
 from .a1sB_monomer import da1sB_dx_eval, da1sB_dx_dxhi00_eval
 
 from .ideal import aideal, daideal_drho, d2aideal_drho, daideal_dx
-from .ideal import  daideal_dxrho
+from .ideal import daideal_dxrho
 
 from .a1_monomer import a1, da1_dxhi00, d2a1_dxhi00,  da1_dx, da1_dxxhi
 from .a2_monomer import a2, da2_dxhi00, d2a2_dxhi00,  da2_dx, da2_dxxhi
@@ -18,14 +18,20 @@ from .ahs_monomer import ahs, dahs_dxhi00, d2ahs_dxhi00,  dahs_dx, dahs_dxxhi
 from .a3_monomer import a3, da3_dxhi00, d2a3_dxhi00,  da3_dx, da3_dxxhi
 
 from .ghs_chain import gdHS, dgdHS_dxhi00, d2gdHS_dxhi00, dgdHS_dx, dgdHS_dxxhi
-from .g2mca_chain import g2mca, dg2mca_dxhi00, d2g2mca_dxhi00, dg2mca_dx, dg2mca_dxxhi
-from .gammac_chain import gammac, dgammac_dxhi00, d2gammac_dxhi00, dgammac_dx, dgammac_dxxhi
-from .g1sigma_chain import g1sigma, dg1sigma_dxhi00, d2g1sigma_dxhi00, dg1sigma_dx, dg1sigma_dxxhi
-from .a2new_chain import da2new_dxhi00, d2a2new_dxhi00, d3a2new_dxhi00, da2new_dx_dxhi00, da2new_dxxhi_dxhi00
-from .lngmie_chain import lngmie, dlngmie_dxhi00, d2lngmie_dxhi00, dlngmie_dx, dlngmie_dxxhi
+from .g2mca_chain import g2mca, dg2mca_dxhi00, d2g2mca_dxhi00, dg2mca_dx
+from .g2mca_chain import dg2mca_dxxhi
+from .gammac_chain import gammac, dgammac_dxhi00, d2gammac_dxhi00, dgammac_dx
+from .gammac_chain import dgammac_dxxhi
+from .g1sigma_chain import g1sigma, dg1sigma_dxhi00, d2g1sigma_dxhi00
+from .g1sigma_chain import dg1sigma_dx, dg1sigma_dxxhi
+from .a2new_chain import da2new_dxhi00, d2a2new_dxhi00, d3a2new_dxhi00
+from .a2new_chain import da2new_dx_dxhi00, da2new_dxxhi_dxhi00
+from .lngmie_chain import lngmie, dlngmie_dxhi00, d2lngmie_dxhi00
+from .lngmie_chain import dlngmie_dx, dlngmie_dxxhi
 
-from .association_aux import association_config, Iab, dIab_drho, d2Iab_drho, Xass_solver
-from .association_aux import dIab_dx, dIab_dxrho, CIJ_matrix, dXass_drho, d2Xass_drho, dXass_dx
+from .association_aux import association_config, Iab, dIab_drho, d2Iab_drho
+from .association_aux import Xass_solver, dXass_drho, d2Xass_drho, dXass_dx
+from .association_aux import dIab_dx, dIab_dxrho, CIJ_matrix
 
 from .polarGV import aij, bij, cij
 from .polarGV import Apolar, dApolar_drho, d2Apolar_drho
@@ -36,13 +42,14 @@ from ..constants import kb, Na
 
 R = Na * kb
 
+
 def U_mie(r, c, eps, lambda_r, lambda_a):
     u = c * eps * (np.power.outer(r, lambda_r) - np.power.outer(r, lambda_a))
     return u
 
 
 def xhi_eval(xhi00, xs, xmi, xm, di03):
-    xhi = xhi00 * xm * np.matmul(xs,di03)
+    xhi = xhi00 * xm * np.matmul(xs, di03)
     dxhi_dxhi00 = np.matmul(xmi, di03)
     dxhi_dxhi00[0] = xm
     return xhi, dxhi_dxhi00
@@ -58,8 +65,8 @@ def xhix_eval(xhi00, xs, xm, dij3):
 
 
 def dxhi_dx_eval(xhi00, xs, xmi, xm, ms, di03):
-    xhi = xhi00 * xm * np.matmul(xs,di03)
-    dxhi_dxhi00 = np.matmul(xmi,di03)
+    xhi = xhi00 * xm * np.matmul(xs, di03)
+    dxhi_dxhi00 = np.matmul(xmi, di03)
     dxhi_dxhi00[0] = xm
     dxhi_dx = (xhi00 * di03.T * ms)
     return xhi, dxhi_dxhi00, dxhi_dx
@@ -76,20 +83,26 @@ def dxhix_dx_eval(xhi00, xs, dxs_dx, xm, ms, dij3):
     dxhix_dx = xhi00 * dxhix_dx_dxhi00
     return xhix, dxhix_dxhi00, dxhix_dx, dxhix_dx_dxhi00
 
-#Second perturbation
-phi16 = np.array([[7.5365557, -37.60463, 71.745953, -46.83552, -2.467982, -0.50272, 8.0956883],
-[-359.44, 1825.6, -3168.0, 1884.2, -0.82376, -3.1935, 3.7090],
-[1550.9, -5070.1, 6534.6, -3288.7, -2.7171, 2.0883, 0],
-[-1.19932, 9.063632, -17.9482, 11.34027, 20.52142, -56.6377, 40.53683],
-[-1911.28, 21390.175, -51320.7, 37064.54, 1103.742, -3264.61, 2556.181],
-[9236.9, -129430., 357230., -315530., 1390.2, -4518.2, 4241.6]])
 
-nfi = np.arange(0,7)
+# Second perturbation
+phi16 = np.array([[7.5365557, -37.60463, 71.745953, -46.83552, -2.467982,
+                 -0.50272, 8.0956883],
+                 [-359.44, 1825.6, -3168.0, 1884.2, -0.82376, -3.1935, 3.7090],
+                 [1550.9, -5070.1, 6534.6, -3288.7, -2.7171, 2.0883, 0],
+                 [-1.19932, 9.063632, -17.9482, 11.34027, 20.52142, -56.6377,
+                 40.53683],
+                 [-1911.28, 21390.175, -51320.7, 37064.54, 1103.742, -3264.61,
+                 2556.181],
+                 [9236.9, -129430., 357230., -315530., 1390.2, -4518.2,
+                 4241.6]])
+
+
+nfi = np.arange(0, 7)
 nfi_num = nfi[:4]
 nfi_den = nfi[4:]
 
 
-# Eq A26
+# Equation A26
 def fi(alphaij, i):
     phi = phi16[i-1]
     num = np.tensordot(np.power.outer(alphaij, nfi_num), phi[nfi_num],
