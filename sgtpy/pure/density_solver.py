@@ -1,70 +1,72 @@
 import numpy as np
 from scipy.optimize import minimize_scalar, brentq
-kb = 1.3806488e-23 # K/J
-Na = 6.02214e23 
+
+
+kb = 1.3806488e-23  # K/J
+Na = 6.02214e23
+
 
 def dPsaft_fun(rho, T, saft):
-    rhomolecular = Na * rho 
-    _, dafcn, d2afcn = saft.d2afcn_drho(rhomolecular, T) 
+    rhomolecular = Na * rho
+    _, dafcn, d2afcn = saft.d2afcn_drho(rhomolecular, T)
     dPsaft = 2 * rhomolecular * dafcn + rhomolecular**2 * d2afcn
     return dPsaft
 
+
 def Psaft_obj(rho, T, saft, Pspec):
     rhomolecular = Na * rho
-    _, dafcn,  = saft.dafcn_drho(rhomolecular, T) 
+    _, dafcn,  = saft.dafcn_drho(rhomolecular, T)
     Psaft = rhomolecular**2 * dafcn / Na
     return Psaft - Pspec
 
 
 def density_topliss(state, T, P, saft):
-    
-    #lower boundary a zero density
+
+    # lower boundary a zero density
     rho_lb = 1e-5
-    #P_lb = 0.
     dP_lb = Na * kb * T
-    
-    #upper boundary limit at infinity pressure
+
+    # upper boundary limit at infinity pressure
     etamax = 0.7405
     rho_lim = (6 * etamax) / (saft.ms * np.pi * saft.sigma**3) / Na
-    #Mejorar esta parte con el maximo valor posible de eta de la densidad
     ub_sucess = False
-    rho_ub = 0.4 *  rho_lim
+    rho_ub = 0.4 * rho_lim
     it = 0
     while not ub_sucess and it < 5:
         it += 1
         P_ub, dP_ub = saft.dP_drho(rho_ub, T)
-        rho_ub += 0.1 *  rho_lim
+        rho_ub += 0.1 * rho_lim
         ub_sucess = P_ub > P and dP_ub > 0
-        
-    #Calculo de derivada numerica en densidad nula
+
+    # derivative computation  at zero density
     rho_lb1 = 1e-4 * rho_lim
     P_lb1, dP_lb1 = saft.dP_drho(rho_lb1, T)
     d2P_lb1 = (dP_lb1 - dP_lb) / rho_lb1
     if d2P_lb1 > 0:
         flag = 3
-    else: 
+    else:
         flag = 1
-        
-    #Comienza Etapa 1    
+
+    # Stage 1
     bracket = [rho_lb, rho_ub]
     if flag == 1:
-        #Se debe encontrar el punto de inflexion
-        sol_inf = minimize_scalar(dPsaft_fun, args = (T, saft),
-                                  bounds = bracket, method = 'Bounded' )
+        # Found inflexion point
+        sol_inf = minimize_scalar(dPsaft_fun, args=(T, saft),
+                                  bounds=bracket, method='Bounded')
         rho_inf = sol_inf.x
         dP_inf = sol_inf.fun
         if dP_inf > 0:
             flag = 3
-        else: 
+        else:
             flag = 2
-            
-    #Etapa 2
+
+    # Stage 2
     if flag == 2:
         if state == 'L':
             bracket[0] = rho_inf
         elif state == 'V':
             bracket[1] = rho_inf
-        rho_ext = brentq(dPsaft_fun, bracket[0], bracket[1], args =(T, saft))
+        rho_ext = brentq(dPsaft_fun, bracket[0], bracket[1], args=(T, saft))
         P_ext, dP_ext = saft.dP_drho(rho_ext, T)
         if P_ext > P and state == 'V':
             bracket[1] = rho_ext
@@ -76,17 +78,18 @@ def density_topliss(state, T, P, saft):
     if flag == -1:
         rho = np.nan
     else:
-        rho = brentq(Psaft_obj, bracket[0], bracket[1], args = (T, saft, P))
+        rho = brentq(Psaft_obj, bracket[0], bracket[1], args=(T, saft, P))
 
     return rho
 
+
 def density_newton(rho0, T, P, saft):
-    
+
     rho = 1.*rho0
     Psaft, dPsaft = saft.dP_drho(rho, T)
     FO = Psaft - P
     dFO = dPsaft
-    for i in range(10):
+    for i in range(15):
         rho -= FO/dFO
         Psaft, dPsaft = saft.dP_drho(rho, T)
         FO = Psaft - P
@@ -94,4 +97,3 @@ def density_newton(rho0, T, P, saft):
         if np.abs(FO) < 1e-8:
             break
     return rho
-        
