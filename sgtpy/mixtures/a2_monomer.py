@@ -82,7 +82,6 @@ def da2_dxxhi(xs, dxs_dx, khs, dkhs, dkhsx, xhixm, dxhim_dxhi00, dxhim_dx,
     xi, dxi = dXi_dxhi00(xhixm, dxhim_dxhi00, f1, f2, f3)
     dxix = dXi_dx(xhixm, dxhim_dx, f1, f2, f3)
 
-    ctes = epsij / 2
     sum1, dsum1 = da2ij
 
     a2 = sum1 * khs * (1 + xi) * ctes
