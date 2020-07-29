@@ -41,33 +41,6 @@ def d2a3_dxhi00(xs, xhim, dxhim_dxhi00, epsij, f4, f5, f6):
     return a
 
 
-'''
-def da3_dx(xs, dxs_dx, xhim, dxhim_dx, epsij, f4, f5, f6):
-
-    aux1 = -epsij**3 * f4 * np.exp(f5 * xhim + f6 * xhim**2)
-    aux2 = (1 + f5 * xhim + 2 * f6 * xhim**2)
-    aux3 = aux1 * aux2
-
-    da3ij = np.exp(f5 * xhim + f6 * xhim**2)
-
-    a3ij = -epsij**3 * f4 * xhim * da3ij
-    a3m = np.dot(xs, np.dot(a3ij, xs))
-
-    da3ij *= 1 + f5 * xhim + 2 * f6 * xhim**2
-    da3ij *= -epsij**3 * f4
-    da3ij = np.multiply.outer(dxhim_dx, da3ij)
-
-    a3 = np.exp(f5 * xhim + f6 * xhim**2)
-    a3 *= -epsij**3 * f4 * xhim
-    aux1 = xs * a3
-    suma1 = 2*np.sum(dxs_dx.T@aux1, axis=1)
-
-    dax = xs@da3ij@xs + suma1
-
-    return a3m, dax
-'''
-
-
 def da3_dx(xs, dxs_dx, xhim, dxhim_dx, epsij, f4, f5, f6):
     aux1 = -epsij**3 * f4 * np.exp(f5 * xhim + f6 * xhim**2)
     aux2 = (1 + f5 * xhim + 2 * f6 * xhim**2)
