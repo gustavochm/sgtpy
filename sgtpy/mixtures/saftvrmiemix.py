@@ -1,13 +1,16 @@
 import numpy as np
-from phasepy import gauss
+from ..math import gauss
 
-from .monomer_aux import dkHS_dxhi00, d2kHS_dxhi00, d3kHS_dxhi00, dkHS_dx_dxhi00, dkHS_dx_dxhi002
+from .monomer_aux import dkHS_dxhi00, d2kHS_dxhi00, d3kHS_dxhi00
+from .monomer_aux import dkHS_dx_dxhi00, dkHS_dx_dxhi002
 
 from .a1sB_monomer import x0lambda_eval
-from .a1sB_monomer import da1sB_dxhi00_eval, d2a1sB_dxhi00_eval,  d3a1sB_dxhi00_eval
+from .a1sB_monomer import da1sB_dxhi00_eval, d2a1sB_dxhi00_eval
+from .a1sB_monomer import d3a1sB_dxhi00_eval
 from .a1sB_monomer import da1sB_dx_eval, da1sB_dx_dxhi00_eval
 
-from .ideal import aideal, daideal_drho, d2aideal_drho, daideal_dx, daideal_dxrho
+from .ideal import aideal, daideal_drho, d2aideal_drho, daideal_dx
+from .ideal import  daideal_dxrho
 
 from .a1_monomer import a1, da1_dxhi00, d2a1_dxhi00,  da1_dx, da1_dxxhi
 from .a2_monomer import a2, da2_dxhi00, d2a2_dxhi00,  da2_dx, da2_dxxhi

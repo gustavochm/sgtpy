@@ -1,5 +1,5 @@
 import numpy as np
-from phasepy import gauss
+from ..math import gauss
 
 from .monomer_aux import Xi, dXi, d2Xi
 from .monomer_aux import dkHS, d2kHS, d3kHS
