@@ -23,7 +23,7 @@ from .association_aux import d2Iab_drho, dXass_drho, d2Xass_drho
 from .polarGV import aij, bij, cij
 from .polarGV import Apol, dApol_drho, d2Apol_drho
 
-from .density_solver import  density_topliss, density_newton
+from .density_solver import density_topliss, density_newton
 from .psat_saft import psat
 
 from ..constants import kb, Na
@@ -36,21 +36,24 @@ def U_mie(r, c, eps, lambda_r, lambda_a):
     return u
 
 
-#Second perturbation
-phi16 = np.array([[7.5365557, -37.60463, 71.745953, -46.83552, -2.467982, -0.50272, 8.0956883],
-[-359.44, 1825.6, -3168.0, 1884.2, -0.82376, -3.1935, 3.7090],
-[1550.9, -5070.1, 6534.6, -3288.7, -2.7171, 2.0883, 0],
-[-1.19932, 9.063632, -17.9482, 11.34027, 20.52142, -56.6377, 40.53683],
-[-1911.28, 21390.175, -51320.7, 37064.54, 1103.742, -3264.61, 2556.181],
-[9236.9, -129430., 357230., -315530., 1390.2, -4518.2, 4241.6]])
-
+phi16 = np.array([[7.5365557, -37.60463, 71.745953, -46.83552, -2.467982,
+                 -0.50272, 8.0956883],
+                 [-359.44, 1825.6, -3168.0, 1884.2, -0.82376, -3.1935, 3.7090],
+                 [1550.9, -5070.1, 6534.6, -3288.7, -2.7171, 2.0883, 0],
+                 [-1.19932, 9.063632, -17.9482, 11.34027, 20.52142, -56.6377,
+                 40.53683],
+                 [-1911.28, 21390.175, -51320.7, 37064.54, 1103.742, -3264.61,
+                 2556.181],
+                 [9236.9, -129430., 357230., -315530., 1390.2, -4518.2,
+                 4241.6]])
 
 
 nfi = np.arange(0,7)
 nfi_num = nfi[:4]
 nfi_den = nfi[4:]
 
-#Eq 20
+
+# Equation 20
 def fi(alpha, i):
     phi = phi16[i-1]
     num = np.dot(phi[nfi_num], np.power(alpha, nfi_num))
@@ -70,7 +73,7 @@ class saftvrmie_pure():
         self.lambda_ar = self.lambda_r + self.lambda_a
 
         dif_c = self.lambda_r - self.lambda_a
-        self.c = self.lambda_r / dif_c * (self.lambda_r / self.lambda_a) ** (self.lambda_a / dif_c)
+        self.c = self.lambda_r/dif_c*(self.lambda_r/self.lambda_a)**(self.lambda_a/dif_c)
         alpha = self.c*(1/(self.lambda_a - 3) - 1/(self.lambda_r - 3))
         self.alpha = alpha
 
@@ -87,12 +90,13 @@ class saftvrmie_pure():
         self.roots = roots
         self.weights = weights
 
-        self.umie = U_mie(1./roots, self.c, self.eps, self.lambda_r, self.lambda_a)
+        self.umie = U_mie(1./roots, self.c, self.eps, self.lambda_r,
+                          self.lambda_a)
 
         c_matrix = np.array([[0.81096, 1.7888, -37.578, 92.284],
-                    [1.0205, -19.341, 151.26, -463.5],
-                    [-1.9057, 22.845, -228.14, 973.92],
-                    [1.0885, -6.1962, 106.98, -677.64]])
+                            [1.0205, -19.341, 151.26, -463.5],
+                            [-1.9057, 22.845, -228.14, 973.92],
+                            [1.0885, -6.1962, 106.98, -677.64]])
 
         lam_exp = np.array([0, -1, -2, -3])
 
@@ -104,7 +108,7 @@ class saftvrmie_pure():
         self.cctes = (self.cctes_la, self.cctes_lr,
                       self.cctes_2la, self.cctes_2lr, self.cctes_lar)
 
-        #Configuracion asociacion
+        # association configuration
         self.eABij = pure.eAB
         self.rcij = pure.rcAB
         self.rdij = pure.rdAB
@@ -119,15 +123,15 @@ class saftvrmie_pure():
             self.nsites = nsites
             self.diagasso = diagasso
 
-        #Polar Contribution
+        # Polar Contribution
         self.mupol = pure.mupol
         self.npol = pure.npol
         polar_bool = self.npol != 0
         self.polar_bool = polar_bool
         if polar_bool:
-            mpol = self.ms * (self.ms < 2) +  2 * (self.ms > 2)
+            mpol = self.ms * (self.ms < 2) + 2 * (self.ms > 2)
             self.mpol = mpol
-            aux1 = np.array([1, (mpol -1 )/mpol, (mpol -1 )/mpol * (mpol-2)/mpol])
+            aux1 = np.array([1, (mpol -1)/mpol, (mpol -1)/mpol*(mpol-2)/mpol])
             self.anij = aij@aux1
             self.bnij = bij@aux1
             self.cnijk = cij@aux1
@@ -135,12 +139,10 @@ class saftvrmie_pure():
             # 1 D = 3.33564e-30 C * m
             # 1 C^2 = 9e9 N m^2
             cte = (3.33564e-30)**2 * (9e9)
-            self.mupolad2 = self.mupol**2  * cte / (self.ms * self.eps * self.sigma3)
+            self.mupolad2 = self.mupol**2 * cte / (self.ms * self.eps * self.sigma3)
 
-
-        #For SGT Computations
-        self.cii = np.array(pure.cii, ndmin = 1)
-
+        # For SGT Computations
+        self.cii = np.array(pure.cii, ndmin=1)
 
     def cii_correlation(self, overwrite=False):
         cii = self.ms * (0.12008072630855947 + 2.2197907527439655 * self.alpha)
@@ -150,67 +152,65 @@ class saftvrmie_pure():
             self.cii = cii
         return cii
 
-    def d(self,beta):
+    def d(self, beta):
         integrer = np.exp(-beta * self.umie)
         d = self.sigma * (1. - np.dot(integrer, self.weights))
         return d
 
-    def eta_sigma(self,rho):
+    def eta_sigma(self, rho):
         return self.ms * rho * np.pi * self.sigma**3 / 6
 
     def eta_bh(self, rho, d):
-        deta_drho =  self.ms * np.pi * d**3 / 6
+        deta_drho = self.ms * np.pi * d**3 / 6
         eta = deta_drho * rho
         return eta, deta_drho
 
-    def density(self, T, P, state, rho0 = None):
-        if rho0 == None:
+    def density(self, T, P, state, rho0=None):
+        if rho0 is None:
             rho = density_topliss(state, T, P, self)
         else:
             rho = density_newton(rho0, T, P, self)
         return rho
 
-    def psat(self, T, P0 = None, v0 = [None, None]):
-        P, vl, vv = psat(self, T, P0 , v0)
+    def psat(self, T, P0=None, v0=[None, None]):
+        P, vl, vv = psat(self, T, P0, v0)
         return P, vl, vv
 
     def ares(self, rho, T):
-        #Constants evaluated at given density and temperature
+        # Constants evaluated at given density and temperature
         beta = 1 / (kb*T)
         dia = self.d(beta)
-        tetha  = np.exp(beta*self.eps)-1
+        tetha = np.exp(beta*self.eps)-1
         eta, deta = self.eta_bh(rho, dia)
         nsigma = self.eta_sigma(rho)
         x0 = self.sigma/dia
         x03 = x0**3
 
-        #parameters needed for evaluating the helmothlz contributions
-        x0_a1, x0_a2, x0_a12, x0_a22  = x0lambda_eval(x0, self.lambda_a,
-                                                      self.lambda_r, self.lambda_ar)
+        # Parameters needed for evaluating the helmothlz contributions
+        x0_a1, x0_a2, x0_a12, x0_a22 = x0lambda_eval(x0, self.lambda_a,
+                                                     self.lambda_r,
+                                                     self.lambda_ar)
         a1sb_a1, a1sb_a2 = da1B_eval(x0, eta, self.lambda_a, self.lambda_r,
-                                     self.lambda_ar, self.cctes, self.eps) #valor y derivada
-        dkhs = dkHS(eta) #valor y derivada
-        xi = Xi(x03, nsigma, self.f1, self.f2, self.f3) #solo valor
-        da2m_new = da2m_new_deta(x0_a2, a1sb_a2,  dkhs, self.c, self.eps) #sol derivada
+                                     self.lambda_ar, self.cctes, self.eps)
+        dkhs = dkHS(eta)
+        xi = Xi(x03, nsigma, self.f1, self.f2, self.f3)
+        da2m_new = da2m_new_deta(x0_a2, a1sb_a2,  dkhs, self.c, self.eps)
 
-        #ideal conribution
-        #a_ideal = aideal(rho, beta)
+        # Monomer contribution
+        ahs_eval = ahs(eta)
+        a1m_eval = a1m(x0_a1, a1sb_a1, self.c)
+        a2m_eval = a2m(x0_a2, a1sb_a2[0], dkhs[0], xi, self.c, self.eps)
+        a3m_eval = a3m(x03, nsigma, self.eps, self.f4, self.f5, self.f6)
+        a_mono = amono(ahs_eval, a1m_eval[0], a2m_eval, a3m_eval, beta,
+                       self.ms)
 
-        #monomer
-        ahs_eval = ahs(eta) #solo valor
-        a1m_eval = a1m(x0_a1 , a1sb_a1, self.c) #valor y derivada
-        a2m_eval = a2m(x0_a2, a1sb_a2[0], dkhs[0], xi, self.c, self.eps) #solo valor
-        a3m_eval = a3m(x03, nsigma, self.eps, self.f4, self.f5, self.f6) #solo valor
-        a_mono = amono(ahs_eval, a1m_eval[0], a2m_eval, a3m_eval, beta, self.ms)
+        # Chain contribution
+        a_chain = achain(x0, eta, x0_a12, a1sb_a1[0], a1m_eval[1], x03, nsigma,
+                         self.alpha, tetha, x0_a22, a1sb_a2[0], da2m_new,
+                         dkhs[0], dia, deta, rho, beta,  self.eps, self.c,
+                         self.ms)
 
-        #chain contributions
-        a_chain = achain(x0, eta,
-              x0_a12, a1sb_a1[0], a1m_eval[1],
-              x03, nsigma, self.alpha, tetha,
-              x0_a22, a1sb_a2[0], da2m_new, dkhs[0],
-              dia, deta, rho, beta,  self.eps, self.c, self.ms)
-
-        #total helmolthz
+        # Total Helmolthz
         a = a_mono + a_chain
 
         if self.assoc_bool:
@@ -219,9 +219,9 @@ class saftvrmie_pure():
             Dab = self.sigma3 * Fab * iab
             Dabij = np.zeros([self.nsites, self.nsites])
             Dabij[self.indexabij] = Dab
-            KIJ =  rho * (self.DIJ*Dabij)
-            Xass = Xass_solver(self.nsites, KIJ, self.diagasso, Xass0 = None)
-            a += np.dot(self.S , (np.log(Xass) - Xass/2 + 1/2))
+            KIJ = rho * (self.DIJ*Dabij)
+            Xass = Xass_solver(self.nsites, KIJ, self.diagasso, Xass0=None)
+            a += np.dot(self.S, (np.log(Xass) - Xass/2 + 1/2))
 
         if self.polar_bool:
             apolar = Apol(rho, eta, T, self.eps, self.anij, self.bnij,
@@ -231,45 +231,48 @@ class saftvrmie_pure():
         return a
 
     def dares_drho(self, rho, T):
-        #Constants evaluated at given density and temperatura
+        # Constants evaluated at given density and temperatura
         beta = 1 / (kb*T)
         dia = self.d(beta)
-        tetha  = np.exp(beta*self.eps)-1
+        tetha = np.exp(beta*self.eps)-1
         eta, deta = self.eta_bh(rho, dia)
         nsigma = self.eta_sigma(rho)
         x0 = self.sigma/dia
         x03 = x0**3
 
-        drho = np.array([1. , deta, deta**2])
+        drho = np.array([1., deta, deta**2])
 
-        #parameters needed for evaluating the helmothlz contributions
-        x0_a1, x0_a2, x0_a12, x0_a22  = x0lambda_eval(x0, self.lambda_a,
-                                                      self.lambda_r, self.lambda_ar)
+        # Parameters needed for evaluating the helmothlz contributions
+        x0_a1, x0_a2, x0_a12, x0_a22 = x0lambda_eval(x0, self.lambda_a,
+                                                     self.lambda_r,
+                                                     self.lambda_ar)
         a1sb_a1, a1sb_a2 = d2a1B_eval(x0, eta, self.lambda_a, self.lambda_r,
-                                      self.lambda_ar, self.cctes, self.eps) #valor y 1 y 2 derivada
-        dkhs = d2kHS(eta) #valor y  1y 2 derivada
-        dxi = dXi(x03, nsigma, self.f1, self.f2, self.f3) #valor y derivada
-        da2m_new = d2a2m_new_deta(x0_a2, a1sb_a2, dkhs, self.c, self.eps) #1 y 2da derivada
+                                      self.lambda_ar, self.cctes, self.eps)
+        dkhs = d2kHS(eta)
+        dxi = dXi(x03, nsigma, self.f1, self.f2, self.f3)
+        da2m_new = d2a2m_new_deta(x0_a2, a1sb_a2, dkhs, self.c, self.eps)
 
-        #monomer
-        ahs_eval = dahs_deta(eta) #valor y derivada
-        a1m_eval = a1m(x0_a1 , a1sb_a1, self.c) #valor y 1 y 2 derivada
-        a2m_eval = da2m_deta(x0_a2, a1sb_a2[:2], dkhs[:2], dxi, self.c, self.eps) #valor y 1 derivada
-        a3m_eval = da3m_deta(x03, nsigma, self.eps, self.f4, self.f5, self.f6) #valor y 1 derivada
-        a_mono = damono_drho(ahs_eval, a1m_eval[:2], a2m_eval, a3m_eval, beta, drho[:2], self.ms)
+        # Monomer contribution
+        ahs_eval = dahs_deta(eta)
+        a1m_eval = a1m(x0_a1, a1sb_a1, self.c)
+        a2m_eval = da2m_deta(x0_a2, a1sb_a2[:2], dkhs[:2], dxi, self.c,
+                             self.eps)
+        a3m_eval = da3m_deta(x03, nsigma, self.eps, self.f4, self.f5, self.f6)
+        a_mono = damono_drho(ahs_eval, a1m_eval[:2], a2m_eval, a3m_eval, beta,
+                             drho[:2], self.ms)
 
-        #chain contributions
-        a_chain = dachain_drho(x0, eta,
-              x0_a12, a1sb_a1[:2], a1m_eval,
-              x03, nsigma, self.alpha, tetha,
-              x0_a22, a1sb_a2[:2], da2m_new, dkhs[:2],
-              dia, drho, rho, beta,  self.eps, self.c, self.ms)
+        # Chain contribution
+        a_chain = dachain_drho(x0, eta, x0_a12, a1sb_a1[:2], a1m_eval, x03,
+                               nsigma, self.alpha, tetha, x0_a22, a1sb_a2[:2],
+                               da2m_new, dkhs[:2], dia, drho, rho, beta,
+                               self.eps, self.c, self.ms)
 
-        #total helmolthz
+        # Total helmolthz
         a = a_mono + a_chain
 
         if self.assoc_bool:
-            iab, diab = dIab_drho(dia, self.rcij, self.rdij, eta, deta,  self.sigma3)
+            iab, diab = dIab_drho(dia, self.rcij, self.rdij, eta, deta,
+                                  self.sigma3)
             Fab = np.exp(beta * self.eABij) - 1
             Dab = self.sigma3 * Fab * iab
             dDab = self.sigma3 * Fab * diab
@@ -279,21 +282,22 @@ class saftvrmie_pure():
             Dabij[self.indexabij] = Dab
             dDabij_drho[self.indexabij] = dDab
 
-            KIJ =  rho * (self.DIJ*Dabij)
+            KIJ = rho * (self.DIJ*Dabij)
 
-            Xass = Xass_solver(self.nsites, KIJ, self.diagasso, Xass0 = None)
-            CIJ = rho  * Xass**2 * Dabij * self.DIJ
+            Xass = Xass_solver(self.nsites, KIJ, self.diagasso, Xass0=None)
+            CIJ = rho * Xass**2 * Dabij * self.DIJ
 
             CIJ[self.diagasso] += 1.
             CIJ = CIJ.T
 
             dXass = dXass_drho(rho, Xass, self.DIJ, Dabij, dDabij_drho, CIJ)
-            a[0] += np.dot(self.S , (np.log(Xass) - Xass/2 + 1/2))
+            a[0] += np.dot(self.S, (np.log(Xass) - Xass/2 + 1/2))
             a[1] += np.dot(self.S, (1/Xass - 1/2) * dXass)
 
         if self.polar_bool:
-            dapolar = dApol_drho(rho, eta, deta, T, self.eps, self.anij, self.bnij,
-                          self.cnijk, self.mupolad2, self.npol, self.sigma3)
+            dapolar = dApol_drho(rho, eta, deta, T, self.eps, self.anij,
+                                 self.bnij, self.cnijk, self.mupolad2,
+                                 self.npol, self.sigma3)
             a += dapolar
 
         return a
@@ -409,7 +413,6 @@ class saftvrmie_pure():
         Psaft = rhomolecular**2 * dafcn / Na
         dPsaft = 2 * rhomolecular * dafcn + rhomolecular**2 * d2afcn
         return Psaft, dPsaft
-
 
     def logfug(self, T, P, state, v0 = None):
         if v0 is None:
