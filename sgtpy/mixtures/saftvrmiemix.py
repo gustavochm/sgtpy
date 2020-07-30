@@ -532,7 +532,6 @@ class saftvrmie_mix():
 
         return ares
 
-
     def d2ares_drho(self, x, rho, T):
 
         dxhi00_drho = self.dxhi00_drho
@@ -540,31 +539,31 @@ class saftvrmie_mix():
 
         beta = 1 / (kb * T)
         dii = self.diameter(beta)
-        #Eq A46
+        # Equation A46
         dij = np.add.outer(dii, dii) / 2
         x0 = self.sigmaij / dij
         x0i = x0[diag_index]
 
         xmi = x * self.ms
         xm = np.sum(xmi)
-        #Eq A8
+        # Equation A8
         xs = xmi / xm
 
-        #definiendo xhi0 sin dependencia de x
+        # Defining xhi0 without x depedence
         di03 = np.power.outer(dii, np.arange(4))
         xhi00 = dxhi00_drho * rho
 
-        #Eq A7
-        xhi, dxhi_dxhi00 =  xhi_eval(xhi00, xs, xmi, xm, di03)
+        # Equation A7
+        xhi, dxhi_dxhi00 = xhi_eval(xhi00, xs, xmi, xm, di03)
 
-        #xhi x Eq A13
+        # xhi x Eq A13
         dij3 = dij**3
         xhix, dxhix_dxhi00 = xhix_eval(xhi00, xs, xm, dij3)
 
-        #xhi m Eq A23
+        # xhi m Eq A23
         xhixm, dxhixm_dxhi00 = xhix_eval(xhi00, xs, xm, self.sigmaij3)
 
-        #Terminos necesarios monomero
+        # Monomer necessary terms
         a1vdw_cteij = -12 * self.epsij * dij3
 
         a1vdw_laij = a1vdw_cteij / (self.laij - 3)
@@ -572,48 +571,49 @@ class saftvrmie_mix():
         a1vdw_2laij = a1vdw_cteij / (2*self.laij - 3)
         a1vdw_2lrij = a1vdw_cteij / (2*self.lrij - 3)
         a1vdw_larij = a1vdw_cteij / (self.larij - 3)
-        a1vdwij = (a1vdw_laij, a1vdw_lrij, a1vdw_2laij, a1vdw_2lrij, a1vdw_larij)
+        a1vdwij = (a1vdw_laij, a1vdw_lrij, a1vdw_2laij, a1vdw_2lrij,
+                   a1vdw_larij)
 
+        x0_a1, x0_a2, x0_g1, x0_g2 = x0lambda_eval(x0, self.la, self.lr,
+                                                   self.lar, self.laij,
+                                                   self.lrij, self.larij,
+                                                   diag_index)
 
+        da1, da2 = d3a1sB_dxhi00_eval(xhi00, xhix, x0, xm, self.lambdasij,
+                                      self.cctesij, a1vdwij, a1vdw_cteij,
+                                      dxhix_dxhi00)
 
-        x0_a1, x0_a2, x0_g1, x0_g2 = x0lambda_eval(x0, self.la, self.lr, self.lar,
-                                                   self.laij, self.lrij, self.larij, diag_index)
-
-
-        da1, da2  = d3a1sB_dxhi00_eval(xhi00, xhix, x0, xm, self.lambdasij,
-                                      self.cctesij, a1vdwij, a1vdw_cteij, dxhix_dxhi00)
-
-        suma1_monomer = self.Cij * np.sum(da1 * x0_a1, axis = 1)
-        suma2_monomer = self.Cij**2 * np.sum(da2 * x0_a2, axis = 1)
+        suma1_monomer = self.Cij * np.sum(da1 * x0_a1, axis=1)
+        suma2_monomer = self.Cij**2 * np.sum(da2 * x0_a2, axis=1)
 
         khs, dkhs, d2khs, d3khs = d3kHS_dxhi00(xhix, dxhix_dxhi00)
 
-        #Evaluacion monomero
+        # Monomer evaluation
         suma_a1 = suma1_monomer[:3]
         suma_a2 = suma2_monomer[:3]
 
         aHS = d2ahs_dxhi00(xhi, dxhi_dxhi00)
         a1m = d2a1_dxhi00(xs,  suma_a1)
         a2m = d2a2_dxhi00(xs, khs, dkhs, d2khs, xhixm, dxhixm_dxhi00, suma_a2,
-                         self.epsij, self.f1, self.f2, self.f3)
-        a3m = d2a3_dxhi00(xs, xhixm, dxhixm_dxhi00, self.epsij, self.f4, self.f5, self.f6)
+                          self.epsij, self.f1, self.f2, self.f3)
+        a3m = d2a3_dxhi00(xs, xhixm, dxhixm_dxhi00, self.epsij, self.f4,
+                          self.f5, self.f6)
         am = aHS + beta * a1m + beta**2 * a2m + beta**3 * a3m
-        amono = xm * am #valor y derivada correcta
+        amono = xm * am
 
-        #USARLOS PARA LOS A1 Y A2 DE LA CADENA
+        # To be used in a1 and a2 of chain
         suma1_chain = suma1_monomer[:, diag_index[0], diag_index[1]]
         suma2_chain = suma2_monomer[:, diag_index[0], diag_index[1]]
 
         da1c = da1[:, :, diag_index[0], diag_index[1]]
         da2c = da2[:, :, diag_index[0], diag_index[1]]
 
-        #USARLOS EN LA SUMATORIA A1SB DE LA CADENA
-        sumg1_chain = self.C * np.sum(da1c * x0_g1, axis = 1)
-        sumg2_chain = self.C**2 * np.sum(da2c * x0_g2, axis = 1)
+        # To be used in the sumatory a1sb of chain
+        sumg1_chain = self.C * np.sum(da1c * x0_g1, axis=1)
+        sumg2_chain = self.C**2 * np.sum(da2c * x0_g2, axis=1)
 
-        #Evaluacion cadena
+        # Chain contribution
         gHS = d2gdHS_dxhi00(x0i, xhix, dxhix_dxhi00)
-
         tetha = np.exp(beta * self.eps) - 1.
         gc = d2gammac_dxhi00(xhixm, dxhixm_dxhi00, self.alpha, tetha)
 
@@ -621,27 +621,27 @@ class saftvrmie_mix():
         suma_g1 = sumg1_chain[:3]
         g1s = d2g1sigma_dxhi00(xhi00, xm, da1ii, suma_g1, self.eps, dii)
 
-        #da2new, d2a2new, d3a2new = d3a2new_dxhi00(khs, dkhs, d2khs, d3khs, suma2_chain[:4], self.eps)
-        da2new, d2a2new, d3a2new = d3a2new_dxhi00(khs, dkhs, d2khs, d3khs, suma2_chain, self.eps)
-        suma_g2 = sumg2_chain[[0,1,2]]
-        g2m = d2g2mca_dxhi00(xhi00, khs, dkhs, d2khs, xm, da2new, d2a2new, d3a2new,
-                            suma_g2, self.eps, dii)
-
+        da2new, d2a2new, d3a2new = d3a2new_dxhi00(khs, dkhs, d2khs, d3khs,
+                                                  suma2_chain, self.eps)
+        suma_g2 = sumg2_chain[[0, 1, 2]]
+        g2m = d2g2mca_dxhi00(xhi00, khs, dkhs, d2khs, xm, da2new, d2a2new,
+                             d3a2new, suma_g2, self.eps, dii)
         g2s = g2m * (1 + gc[0])
         g2s[1] += g2m[0] * gc[1]
-        g2s[2] += 2. *g2m[1] * gc[1] + g2m[0] * gc[2]
+        g2s[2] += 2. * g2m[1] * gc[1] + g2m[0] * gc[2]
 
         lng = d2lngmie_dxhi00(gHS, g1s, g2s, beta, self.eps)
         achain = - lng@(x * (self.ms - 1))
 
         ares = amono + achain
 
-        ares *= np.array([1, dxhi00_drho, dxhi00_drho**2])
+        ares *= np.array([1., dxhi00_drho, dxhi00_drho**2])
 
         if self.assoc_bool:
             xj = x[self.compindex]
-            iab, diab, d2iab = d2Iab_drho(xhi, dxhi_dxhi00, dxhi00_drho, dii, dij,
-                                  self.rcij, self.rdij, self.sigmaij3)
+            iab, diab, d2iab = d2Iab_drho(xhi, dxhi_dxhi00, dxhi00_drho, dii,
+                                          dij, self.rcij, self.rdij,
+                                          self.sigmaij3)
             Fab = np.exp(beta * self.eABij) - 1.
             Dab = self.sigmaij3 * Fab * iab
             dDab_drho = self.sigmaij3 * Fab * diab
@@ -656,22 +656,24 @@ class saftvrmie_mix():
             d2Dabij_drho[self.indexabij] = d2Dab_drho[self.indexab]
 
             KIJ = rho * np.outer(xj, xj) * (self.DIJ * Dabij)
-            Xass = Xass_solver(self.nsites, xj, KIJ, self.diagasso, Xass0 = None)
+            Xass = Xass_solver(self.nsites, xj, KIJ, self.diagasso, Xass0=None)
             CIJ = CIJ_matrix(rho, xj, Xass, self.DIJ, Dabij, self.diagasso)
-            dXass = dXass_drho(rho, xj, Xass, self.DIJ, Dabij, dDabij_drho, CIJ)
+            dXass = dXass_drho(rho, xj, Xass, self.DIJ, Dabij, dDabij_drho,
+                               CIJ)
             d2Xass = d2Xass_drho(rho, xj, Xass, dXass, self.DIJ, Dabij,
-                                         dDabij_drho, d2Dabij_drho, CIJ)
+                                 dDabij_drho, d2Dabij_drho, CIJ)
             ares[0] += np.dot(self.S*xj, (np.log(Xass) - Xass/2 + 1/2))
             ares[1] += np.dot(self.S*xj, (1/Xass - 1/2) * dXass)
-            ares[2] += np.dot(self.S*xj, -(dXass/Xass)**2 + d2Xass * (1/Xass - 1/2))
+            ares[2] += np.dot(self.S*xj, -(dXass/Xass)**2+d2Xass*(1/Xass-1/2))
 
         if self.polar_bool:
             eta = xhi[-1]
             deta_dxhi00 = dxhi_dxhi00[-1]
             deta = deta_dxhi00 * self.dxhi00_drho
             dapolar = d2Apolar_drho(rho, x, T, self.anij, self.bnij, self.cnij,
-            eta, deta, self.eps, self.epsij, self.sigma3, self.sigmaij3,
-            self.sigmaijk3,  self.npol, self.mupolad2)
+                                    eta, deta, self.eps, self.epsij,
+                                    self.sigma3, self.sigmaij3, self.sigmaijk3,
+                                    self.npol, self.mupolad2)
             ares += dapolar
 
         return ares
