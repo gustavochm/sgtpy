@@ -1,7 +1,6 @@
 from __future__ import division, print_function, absolute_import
 
 from .path_sk import ten_beta0_sk
-from .path_hk import ten_beta0_hk
 from .reference_component import ten_beta0_reference
 
 from .sgt_beta0 import sgt_mix_beta0
