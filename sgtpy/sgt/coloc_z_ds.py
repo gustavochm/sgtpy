@@ -65,7 +65,7 @@ def dfobj_z_newton(rointer, Binter, dro20, dro21, mu0, T, cij, n, ro_1,
 
 
 def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
-             z=20., n=20, ds=0.1, itmax=50, rho_tol=1e-3,
+             z=20., n=20, ds=50, itmax=100, rho_tol=1e-2,
              full_output=False, solver_opt=None):
     """
     SGT for mixtures and beta != 0 (rho1, rho2, T, P) -> interfacial tension
@@ -139,14 +139,12 @@ def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
     A, B = colocAB(rootsf)
 
     # Initial profiles
-    # Linear Profile
-    pend = (rho2a - rho1a)
-    b = rho1a
-    pfl = (np.outer(roots, pend) + b)
-    ro_1 = (pfl.T).copy()
-
-    # Initial profiles
     if rho0 == 'linear':
+        # Linear Profile
+        pend = (rho2a - rho1a)
+        b = rho1a
+        pfl = (np.outer(roots, pend) + b)
+        ro_1 = (pfl.T).copy()
         rointer = (pfl.T).copy()
     elif rho0 == 'hyperbolic':
         # Hyperbolic profile
@@ -154,17 +152,20 @@ def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
         thb = np.tanh(2*inter)
         pft = np.outer(thb, (rho2a-rho1a))/2 + (rho1a+rho2a)/2
         rointer = pft.T
+        ro_1 = rointer.copy()
     elif isinstance(rho0,  TensionResult):
         _z0 = rho0.z
         _ro0 = rho0.rho
         z = _z0[-1]
         rointer = interp1d(_z0, _ro0)(roots * z)
         rointer *= rofactor
+        ro_1 = rointer.copy()
     elif isinstance(rho0,  np.ndarray):
         # Check dimensiones
         if rho0.shape[0] == nc and rho0.shape[1] == n:
             rointer = rho0.copy()
             rointer *= rofactor
+            ro_1 = rointer.copy()
         else:
             raise Exception('Shape of initial value must be nc x n')
 
@@ -200,11 +201,11 @@ def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
 
         rointer = sol.x
         rointer = np.abs(rointer.reshape([nc, n]))
-        error = np.linalg.norm(rointer - ro_1)
+        error = np.linalg.norm(rointer/ro_1 - 1)
         if error < rho_tol:
             break
         ro_1 = rointer.copy()
-        ds *= 1.3
+        ds *= 1.1
 
     dro = np.matmul(rointer, Ainter.T)
     dro += dro10
