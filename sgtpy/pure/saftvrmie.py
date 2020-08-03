@@ -278,43 +278,43 @@ class saftvrmie_pure():
 
         return Tfactor, Pfactor, rofactor, tenfactor
 
-    def a0ad_aux(self, rho, temp_aux):
+    def a0ad_aux(self, rho, temp_aux, Xass0=None):
 
         rhomolecular = rho * Na
-        a0, Xass = self.afcn_aux(rhomolecular, temp_aux)
+        a0, Xass = self.afcn_aux(rhomolecular, temp_aux, Xass0)
         a0 *= rho
 
         return a0, Xass
 
-    def a0ad(self, rho, T):
+    def a0ad(self, rho, T, Xass0=None):
         temp_aux = self.temperature_aux(T)
-        a0, Xass = self.a0ad_aux(rho, temp_aux)
+        a0, Xass = self.a0ad_aux(rho, temp_aux, Xass0)
         return a0
 
-    def muad_aux(self, rho, temp_aux):
+    def muad_aux(self, rho, temp_aux, Xass0=None):
 
         rhomolecular = rho * Na
-        da, Xass = self.dafcn_aux(rhomolecular, temp_aux)
+        da, Xass = self.dafcn_aux(rhomolecular, temp_aux, Xass0)
         afcn, dafcn = da
         mu = afcn + rhomolecular * dafcn
 
         return mu, Xass
 
-    def muad(self, rho, T):
+    def muad(self, rho, T, Xass0=None):
         temp_aux = self.temperature_aux(T)
-        mu, Xass = self.muad_aux(rho, temp_aux)
+        mu, Xass = self.muad_aux(rho, temp_aux, Xass0)
         return mu
 
-    def dOm_aux(self, rho, temp_aux, mu, Psat):
+    def dOm_aux(self, rho, temp_aux, mu, Psat, Xass0=None):
 
-        a0, Xass = self.a0ad_aux(rho, temp_aux)
+        a0, Xass = self.a0ad_aux(rho, temp_aux, Xass0)
         GPT = a0 - rho*mu + Psat
 
-        return GPT
+        return GPT, Xass
 
-    def dOm(self, rho, T, mu, Psat):
+    def dOm(self, rho, T, mu, Psat, Xass0=None):
         temp_aux = self.temperature_aux(T)
-        GPT, Xass = self.dOm_aux(rho, temp_aux, mu, Psat)
+        GPT, Xass = self.dOm_aux(rho, temp_aux, mu, Psat, Xass0)
         return GPT
 
     def speed_sound(self, T, P, state, v0=None, Mw=1.):
