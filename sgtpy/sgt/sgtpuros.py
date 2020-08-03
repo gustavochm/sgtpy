@@ -4,35 +4,6 @@ from ..math import gauss
 from .tensionresult import TensionResult
 
 
-def ten_fit(T, model, roots, weigths, P0=None):
-
-    # LV Equilibrium
-    Psat, vl, vv = model.psat(T, P0)
-    rol = 1./vl
-    rov = 1./vv
-
-    # Dimensionless variables
-    Tfactor, Pfactor, rofactor, tenfactor = model.sgt_adim_fit(T)
-
-    rola = rol * rofactor
-    rova = rov * rofactor
-    Tad = T * Tfactor
-    Pad = Psat * Pfactor
-
-    # Chemical potentials
-    mu0 = model.muad(rova, Tad)
-
-    roi = (rola-rova)*roots+rova
-    wreal = (rola-rova)*weigths
-
-    dOm = model.dOm(roi, Tad, mu0, Pad)
-    tenint = np.nan_to_num(np.sqrt(2*dOm))
-    ten = np.dot(wreal, tenint)
-    ten *= tenfactor
-
-    return ten
-
-
 def sgt_pure(rhov, rhol, Tsat, Psat, model, n=100, full_output=False):
     """
     SGT for pure component (rhol, rhov, T, P) -> interfacial tension
@@ -63,16 +34,17 @@ def sgt_pure(rhov, rhol, Tsat, Psat, model, n=100, full_output=False):
     # roots and weights of Gauss quadrature
     roots, w = gauss(n)
 
+    temp_aux = model.temperature_aux(Tsat)
     Tfactor, Pfactor, rofactor, tenfactor, zfactor = model.sgt_adim(Tsat)
 
     rola = rhol * rofactor
     rova = rhov * rofactor
-    Tad = Tsat * Tfactor
+    # Tad = Tsat * Tfactor
     Pad = Psat * Pfactor
 
     # Equilibrium chemical potential
-    mu0 = model.muad(rova, Tad)
-    mu02 = model.muad(rola, Tad)
+    mu0, Xass0 = model.muad_aux(rova, temp_aux)
+    mu02, Xass1 = model.muad_aux(rola, temp_aux)
     if not np.allclose(mu0, mu02):
         raise Exception('Not equilibria compositions, mul != muv')
 
@@ -80,8 +52,10 @@ def sgt_pure(rhov, rhol, Tsat, Psat, model, n=100, full_output=False):
     wreal = np.abs((rola-rova)*w)
 
     dOm = np.zeros(n)
-    for i in range(n):
-        dOm[i] = model.dOm(roi[i], Tad, mu0, Pad)
+    i = 0
+    dOm[i], Xass = model.dOm_aux(roi[i], temp_aux, mu0, Pad, Xass0)
+    for i in range(1, n):
+        dOm[i], Xass = model.dOm_aux(roi[i], temp_aux, mu0, Pad, Xass)
 
     tenint = np.nan_to_num(np.sqrt(2*dOm))
     ten = np.dot(wreal, tenint)
