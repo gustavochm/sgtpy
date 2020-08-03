@@ -1,23 +1,25 @@
 import numpy as np
 from scipy.optimize import root
+from ..constants import kb, Na
 
 
-kb = 1.3806488e-23  # K/J
-Na = 6.02214e23
 R = Na * kb
 
 
-def mu_obj(rho, T, saft):
+def mu_obj(rho, temp_aux, saft):
     rhol, rhov = Na * rho
 
-    afcnl, dafcnl, d2afcnl = saft.d2afcn_drho(rhol, T)
+    global Xassl, Xassv
+    dal, Xassl = saft.d2afcn_aux(rhol, temp_aux, Xassl)
+    afcnl, dafcnl, d2afcnl = dal
     Pl = rhol**2 * dafcnl / Na
     dPl = (2 * rhol * dafcnl + rhol**2 * d2afcnl)
 
     mul = afcnl + rhol*dafcnl
     dmul = Na * (rhol*d2afcnl + 2*dafcnl)
 
-    afcnv, dafcnv, d2afcnv = saft.d2afcn_drho(rhov, T)
+    dav, Xaasv = saft.d2afcn_aux(rhov, temp_aux)
+    afcnv, dafcnv, d2afcnv = dav
     Pv = rhov**2 * dafcnv / Na
     dPv = (2 * rhov * dafcnv + rhov**2 * d2afcnv)
 
@@ -30,7 +32,7 @@ def mu_obj(rho, T, saft):
     return FO, dFO
 
 
-def psat(saft, T, P0=None, v0=[None, None]):
+def psat(saft, T, P0=None, v0=[None, None], Xass0=[None, None]):
 
     P0input = P0 is None
     v0input = v0 == [None, None]
@@ -43,39 +45,48 @@ def psat(saft, T, P0=None, v0=[None, None]):
     elif not v0input:
         good_initial = True
 
+    temp_aux = saft.temperature_aux(T)
+    beta = temp_aux[0]
+    RT = Na/beta
+
+    global Xassl, Xassv
+    Xassl, Xassv = Xass0
+
     vl, vv = v0
     if not good_initial:
-        lnphiv, vv = saft.logfug(T, P, 'V', vv)
-        lnphil, vl = saft.logfug(T, P, 'L', vl)
+        lnphiv, vv, Xassv = saft.logfug_aux(temp_aux, P, 'V', vv, Xassv)
+        lnphil, vl, Xassv = saft.logfug_aux(temp_aux, P, 'L', vl, Xassl)
         FO = lnphiv - lnphil
-        dFO = (vv - vl)/R/T
+        dFO = (vv - vl)/RT
         P -= FO/dFO
         for i in range(10):
-            lnphiv, vv = saft.logfug(T, P, 'V', vv)
-            lnphil, vl = saft.logfug(T, P, 'L', vl)
+            lnphiv, vv, Xassv = saft.logfug_aux(temp_aux, P, 'V', vv, Xassv)
+            lnphil, vl, Xassv = saft.logfug_aux(temp_aux, P, 'L', vl, Xassl)
             FO = lnphiv - lnphil
-            dFO = (vv - vl)/R/T
+            dFO = (vv - vl)/RT
             P -= FO/dFO
             sucess = abs(FO) <= 1e-8
             if sucess:
                 break
         if not sucess:
             rho0 = 1. / np.array([vl, vv])
-            sol = root(mu_obj, rho0, args=(T, saft), jac=True)
+            sol = root(mu_obj, rho0, args=(temp_aux, saft), jac=True)
             rhol, rhov = sol.x
             vl, vv = 1./sol.x
             rhomolecular = rhol * Na
-            afcn, dafcn = saft.dafcn_drho(rhomolecular, T)
+            dal, Xassl = saft.dafcn_aux(rhomolecular, temp_aux, Xassl)
+            afcn, dafcn = dal
             P = rhomolecular**2 * dafcn/Na
     else:
         rho0 = 1. / np.asarray([v0])
-        sol = root(mu_obj, rho0, args=(T, saft), jac=True)
+        sol = root(mu_obj, rho0, args=(temp_aux, saft), jac=True)
         if sol.success:
             rhol, rhov = sol.x
             vl, vv = 1./sol.x
             rhomolecular = rhol * Na
-            afcn, dafcn = saft.dafcn_drho(rhomolecular, T)
-            P = rhomolecular**2*dafcn/Na
+            dal, Xassl = saft.dafcn_aux(rhomolecular, temp_aux, Xassl)
+            afcn, dafcn = dal
+            P = rhomolecular**2 * dafcn/Na
         else:
             P = None
     return P, vl, vv
