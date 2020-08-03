@@ -1,6 +1,6 @@
 from __future__ import division, print_function, absolute_import
 import numpy as np
-from scipy.optimize import fsolve, root
+from scipy.optimize import root
 from scipy.integrate import cumtrapz
 from .cijmix_cy import cmix_cy
 from .tensionresult import TensionResult
@@ -14,7 +14,7 @@ def fobj_sk(inc, spath, T, mu0, ci, sqrtci, model):
     alpha = inc[-1]
     mu = model.muad(ro, T)
     obj = np.zeros_like(inc)
-    obj[:-1] = R*T*(mu - mu0) + alpha*sqrtci
+    obj[:-1] = (mu - mu0) + alpha*sqrtci
     obj[-1] = spath - sqrtci.dot(ro)
     return obj
 
@@ -54,10 +54,10 @@ def ten_beta0_sk(rho1, rho2, Tsat, Psat, model, n=200, full_output=False,
     i = 1
     r0 = ro1a + deltaro * (spath[i]-s0) / n
     # #
-    RT = R*Tsat
+    # RT = R*Tsat
     #
     if alpha0 is None:
-        alpha0 = RT*np.mean((model.muad(r0, Tsat) - mu0)/sqrtci)
+        alpha0 = np.mean((model.muad(r0, Tsat) - mu0)/sqrtci)
     r0 = np.hstack([r0, alpha0])
     ro0 = root(fobj_sk, r0, args=(spath[i], Tsat, mu0, ci, sqrtci, model),
                method='lm')
@@ -65,8 +65,9 @@ def ten_beta0_sk(rho1, rho2, Tsat, Psat, model, n=200, full_output=False,
     ro[:, i] = np.abs(ro0[:-1])
 
     for i in range(1, n):
-        ro0 = fsolve(fobj_sk, ro0,
-                     args=(spath[i], Tsat, mu0, ci, sqrtci, model))
+        sol = root(fobj_sk, ro0, args=(spath[i], Tsat, mu0, ci, sqrtci,
+                   model), method='lm')
+        ro0 = sol.x
         alphas[i] = ro0[-1]
         ro[:, i] = np.abs(ro0[:-1])
 
