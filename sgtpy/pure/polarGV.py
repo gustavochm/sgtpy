@@ -1,8 +1,4 @@
 import numpy as np
-from ..constants import kb, Na
-
-
-R = kb * Na
 
 
 # Expansion of polar term
@@ -25,11 +21,9 @@ cij = np.array([[-0.0646774, -0.9520876, -0.6260979],
                [0.,  0., 0.]])
 
 
-def Apol(rho, eta, T, eps, anij, bnij, cnijk, muad2, npol, sigma3):
+def Apol(rho, eta, epsa, anij, bnij, cnijk, muad2, npol, sigma3):
 
     etav = np.power(eta, [0, 1, 2, 3, 4])
-
-    epsa = eps / T / kb
 
     J2Dij = np.dot(anij + bnij * epsa, etav)
     aux2 = -np.pi * epsa**2 * sigma3 * npol**2 * muad2**2
@@ -43,12 +37,10 @@ def Apol(rho, eta, T, eps, anij, bnij, cnijk, muad2, npol, sigma3):
     return Apolar
 
 
-def dApol_drho(rho, eta, deta, T, eps, anij, bnij, cnijk, muad2, npol, sigma3):
+def dApol_drho(rho, eta, deta, epsa, anij, bnij, cnijk, muad2, npol, sigma3):
 
     etavec = np.array([[1., eta, eta**2, eta**3, eta**4],
                       [0., 1., 2*eta, 3*eta**2, 4*eta**3]])
-
-    epsa = eps / T / kb
 
     J2Dij, dJ2Dij = np.tensordot(etavec, anij + bnij * epsa, axes=((1), (0)))
     aux2 = -np.pi * epsa**2 * sigma3 * npol**2 * muad2**2
@@ -69,14 +61,12 @@ def dApol_drho(rho, eta, deta, T, eps, anij, bnij, cnijk, muad2, npol, sigma3):
     return A
 
 
-def d2Apol_drho(rho, eta, deta, T, eps, anij, bnij, cnijk, muad2,
-                npol, sigma3):
+def d2Apol_drho(rho, eta, deta, epsa, anij, bnij, cnijk, muad2, npol, sigma3):
 
     etavec = np.array([[1., eta, eta**2, eta**3, eta**4],
                       [0., 1., 2*eta, 3*eta**2, 4*eta**3],
                       [0., 0., 2., 6*eta, 12*eta**2]])
 
-    epsa = eps / T / kb
     J2Dij, dJ2Dij, d2J2Dij = np.tensordot(etavec, anij + bnij * epsa,
                                           axes=((1), (0)))
 
