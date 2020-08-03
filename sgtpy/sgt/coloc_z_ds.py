@@ -65,7 +65,7 @@ def dfobj_z_newton(rointer, Binter, dro20, dro21, mu0, T, cij, n, ro_1,
 
 
 def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
-             z=20., n=20, ds=50, itmax=100, rho_tol=1e-2,
+             z=20., n=20, ds=100, itmax=50, rho_tol=1e-2,
              full_output=False, solver_opt=None):
     """
     SGT for mixtures and beta != 0 (rho1, rho2, T, P) -> interfacial tension
