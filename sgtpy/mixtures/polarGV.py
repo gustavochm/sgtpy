@@ -1,7 +1,5 @@
 import numpy as np
-from ..constants import kb, Na
 
-R = kb * Na
 
 # Expansion of polar term
 aij = np.array([[0.3043504, 0.9534641, -1.1610080],
@@ -23,15 +21,14 @@ cij = np.array([[-0.0646774, -0.9520876, -0.6260979],
                [0.,  0., 0.]])
 
 
-def Apolar(rho, x, T, anij, bnij, cnij,
-           eta, eps, epsij, sigma3, sigmaij3, sigmaijk3,  npol, muad2):
+def Apolar(rho, x, anij, bnij, cnij,
+           eta, epsa, epsija, sigma3, sigmaij3, sigmaijk3,  npol, muad2):
 
     etavec = np.power(eta, [0, 1, 2, 3, 4])
 
-    epsija = epsij / kb / T
     J2DDij = np.tensordot(anij + bnij * epsija, etavec, axes=((0), (0)))
 
-    ter1 = x * sigma3 * (eps/kb/T) * npol * muad2
+    ter1 = x * sigma3 * epsa * npol * muad2
     outer_ter1 = np.outer(ter1, ter1)
     ter2 = - np.pi * outer_ter1 / sigmaij3
     A2 = rho * np.sum(ter2 * J2DDij)
@@ -49,10 +46,9 @@ def Apolar(rho, x, T, anij, bnij, cnij,
     return Apol
 
 
-def dApolar_drho(rho, x, T, anij, bnij, cnij, eta, deta, eps, epsij, sigma3,
+def dApolar_drho(rho, x, anij, bnij, cnij, eta, deta, epsa, epsija, sigma3,
                  sigmaij3, sigmaijk3,  npol, muad2):
 
-    epsija = epsij / kb / T
     etavec = np.array([[1., eta, eta**2, eta**3, eta**4],
                       [0., 1., 2*eta, 3*eta**2, 4*eta**3]])
 
@@ -62,7 +58,7 @@ def dApolar_drho(rho, x, T, anij, bnij, cnij, eta, deta, eps, epsij, sigma3,
     J3DDijk, dJ3DDijk = np.tensordot(etavec, cnij, axes=((1), (0)))
     dJ3DDijk *= deta
 
-    ter1 = x * sigma3 * (eps/kb/T) * npol * muad2
+    ter1 = x * sigma3 * epsa * npol * muad2
     outer_ter1 = np.outer(ter1, ter1)
     ter2 = - np.pi * outer_ter1 / sigmaij3
     A2 = rho * np.sum(ter2 * J2DDij)
@@ -85,10 +81,9 @@ def dApolar_drho(rho, x, T, anij, bnij, cnij, eta, deta, eps, epsij, sigma3,
     return A
 
 
-def d2Apolar_drho(rho, x, T, anij, bnij, cnij, eta, deta, eps, epsij, sigma3,
+def d2Apolar_drho(rho, x, anij, bnij, cnij, eta, deta, epsa, epsija, sigma3,
                   sigmaij3, sigmaijk3,  npol, muad2):
 
-    epsija = epsij / kb / T
     etavec = np.array([[1., eta, eta**2, eta**3, eta**4],
                       [0., 1., 2*eta, 3*eta**2, 4*eta**3],
                       [0., 0., 2., 6*eta, 12*eta**2]])
@@ -102,7 +97,7 @@ def d2Apolar_drho(rho, x, T, anij, bnij, cnij, eta, deta, eps, epsij, sigma3,
     dJ3DDijk *= deta
     d2J3DDijk *= deta**2
 
-    ter1 = x * sigma3 * (eps/kb/T) * npol * muad2
+    ter1 = x * sigma3 * epsa * npol * muad2
     outer_ter1 = np.outer(ter1, ter1)
     ter2 = - np.pi * outer_ter1 / sigmaij3
     A2 = rho * np.sum(ter2 * J2DDij)
@@ -134,10 +129,9 @@ def d2Apolar_drho(rho, x, T, anij, bnij, cnij, eta, deta, eps, epsij, sigma3,
     return A
 
 
-def dApolar_dx(rho, x, T, anij, bnij, cnij, eta, deta_dx, eps, epsij, sigma3,
+def dApolar_dx(rho, x, anij, bnij, cnij, eta, deta_dx, epsa, epsija, sigma3,
                sigmaij3, sigmaijk3,  npol, muad2):
 
-    epsija = epsij / kb / T
     etavec = np.array([[1., eta, eta**2, eta**3, eta**4],
                       [0., 1., 2*eta, 3*eta**2, 4*eta**3]])
 
@@ -147,12 +141,12 @@ def dApolar_dx(rho, x, T, anij, bnij, cnij, eta, deta_dx, eps, epsij, sigma3,
     J3DDijk, dJ3DDijk = np.tensordot(etavec, cnij, axes=((1), (0)))
     dJ3DDijk_dx = np.multiply.outer(deta_dx, dJ3DDijk)
 
-    ter1 = x * sigma3 * (eps/kb/T) * npol * muad2
+    ter1 = x * sigma3 * epsa * npol * muad2
     outer_ter1 = np.outer(ter1, ter1)
     ter2 = - np.pi * outer_ter1 / sigmaij3
     A2 = rho * np.sum(ter2 * J2DDij)
 
-    ter1x = sigma3 * (eps/kb/T) * npol * muad2
+    ter1x = sigma3 * epsa * npol * muad2
     outer_ter1x = np.outer(ter1x, ter1x)
     ter2x = - np.pi * outer_ter1x * J2DDij/sigmaij3
     dA2x = rho * (2*ter2x@x + np.sum(ter2 * dJ2DDij_dx, axis=(1, 2)))
@@ -174,10 +168,9 @@ def dApolar_dx(rho, x, T, anij, bnij, cnij, eta, deta_dx, eps, epsij, sigma3,
     return Apol, np.nan_to_num(dApolarx)
 
 
-def dApolar_dxrho(rho, x, T, anij, bnij, cnij, eta, deta, deta_dx, eps, epsij,
+def dApolar_dxrho(rho, x, anij, bnij, cnij, eta, deta, deta_dx, epsa, epsija,
                   sigma3, sigmaij3, sigmaijk3,  npol, muad2):
 
-    epsija = epsij / kb / T
     etavec = np.array([[1., eta, eta**2, eta**3, eta**4],
                       [0., 1., 2*eta, 3*eta**2, 4*eta**3]])
 
@@ -189,13 +182,13 @@ def dApolar_dxrho(rho, x, T, anij, bnij, cnij, eta, deta, deta_dx, eps, epsij,
     dJ3DDijk_dx = np.multiply.outer(deta_dx, dJ3DDijk)
     dJ3DDijk *= deta
 
-    ter1 = x * sigma3 * (eps/kb/T) * npol * muad2
+    ter1 = x * sigma3 * epsa * npol * muad2
     outer_ter1 = np.outer(ter1, ter1)
     ter2 = - np.pi * outer_ter1 / sigmaij3
     A2 = rho * np.sum(ter2 * J2DDij)
     dA2 = np.sum(ter2 * (J2DDij + rho * dJ2DDij))
 
-    ter1x = sigma3 * (eps/kb/T) * npol * muad2
+    ter1x = sigma3 * epsa * npol * muad2
     outer_ter1x = np.outer(ter1x, ter1x)
     ter2x = - np.pi * outer_ter1x * J2DDij/sigmaij3
     dA2x = rho * (2*ter2x@x + np.sum(ter2 * dJ2DDij_dx, axis=(1, 2)))
