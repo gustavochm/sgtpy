@@ -1,5 +1,5 @@
 import numpy as np
-
+from scipy.optimize import fsolve
 
 def association_config(sitesmix, eos):
 
@@ -221,30 +221,24 @@ def fobj_xass(Xass, rho, DIJ, Dabij, xj):
     return fo
 
 
+def Xass_solverNRANK(Xass0, rho, DIJ, Dabij, xj):
+    Xass = fsolve(fobj_xass, x0=Xass0, args=(rho, DIJ, Dabij, xj))
+    return Xass
+
+
 def Xass_solver(nsites, xj, KIJ, diagasso, Xass0=None):
 
-    if Xass0 is None:
-        Xass = 0.2 * np.ones(nsites)
-    else:
-        Xass = 1. * Xass0
-
-    nrank = np.linalg.matrix_rank(KIJ)
-    if nrank < nsites:
-        nmin = 0
-        nss = 15
-    else:
-        nmin = 20
-        nss = 5
+    Xass = 1. * Xass0
 
     omega = 0.2
-    for i in range(nss):
+    for i in range(5):
         den = (xj + KIJ@Xass)
         den[den == 0] = 1.
         fo = xj / den
         dXass = (1 - omega) * (fo - Xass)
         Xass += dXass
 
-    for i in range(nmin):
+    for i in range(15):
         KIJXass = KIJ@Xass
         dQ = xj * (1/Xass - 1) - KIJXass
         HIJ = -1 * KIJ
