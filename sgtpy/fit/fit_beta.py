@@ -21,6 +21,27 @@ def fobj_beta(beta, iftexp, rho1, rho2, T, P, eos):
 
 
 def fit_beta(beta0, ExpTension, EquilibriumInfo, eos):
+    """
+    fit_beta
+    Optimize beta for SGT for binary mixtures
+
+    Parameters
+    ----------
+    beta0 : tuple
+        boundaries for beta as needed for SciPy's minimize_scalar
+    ExpTension : array
+        Experimental interfacial tension of the mixture
+    EquilibriumInfo : tuple
+        tuple containing computes density vectors, and temperature and pressure
+        tuple = (rho1, rho2, T, P)
+    eos : model
+        saft vr mie model set up with the binary mixture
+
+    Returns
+    -------
+    ten : float
+        interfacial tension between the phases
+    """
     rho1, rho2, T, P = EquilibriumInfo
     args = (ExpTension, rho1, rho2, T, P, eos)
     opti = minimize_scalar(fobj_beta, beta0, args=args)

@@ -1,6 +1,6 @@
 from __future__ import division, print_function, absolute_import
 import numpy as np
-from ..equilibrium import bubblePy, lle, tpd_min, vlleb, haz
+from ..equilibrium import bubblePy, lle, tpd_min, vlleb
 
 
 def fobj_elv(model, Xexp, Yexp, Texp, Pexp):
@@ -89,39 +89,4 @@ def fobj_hazb(model, Xellv, Wellv, Yellv, Tellv, Pellv, info=[1, 1, 1]):
     error += ((P/Pellv-1)**2).sum()
     error /= n
 
-    return error
-
-
-def fobj_hazt(model, Xellv, Wellv, Yellv, Tellv, Pellv):
-    """
-    Objective function to fit parameters for ELLV in multicomponent mixtures
-    """
-
-    n = len(Tellv)
-    n1, n2 = Xellv.shape
-    if n2 == n:
-        Xellv = Xellv.T
-        Wellv = Wellv.T
-        Yellv = Yellv.T
-
-    X = np.zeros_like(Xellv)
-    W = np.zeros_like(Wellv)
-    Y = np.zeros_like(Yellv)
-
-    error = 0
-    for i in range(n):
-        try:
-            X[i], W[i], Y[i] = haz(Xellv[i], Wellv[i], Yellv[i],
-                                   Tellv[i], Pellv[i], model, True)
-        except ValueError:
-            X[i], W[i], Y[i], T = haz(Xellv[i], Wellv[i], Yellv[i], Tellv[i],
-                                      Pellv[i], model, True)
-            error += (T/Tellv[i]-1)**2
-        except:
-            pass
-
-    error += ((np.nan_to_num(X)-Xellv)**2).sum()
-    error += ((np.nan_to_num(Y)-Yellv)**2).sum()
-    error += ((np.nan_to_num(W)-Wellv)**2).sum()
-    error /= n
     return error

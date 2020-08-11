@@ -3,6 +3,31 @@ from ..math import gauss
 
 
 def fit_cii(tension, Tsat, Psat, rhol, rhov, eos, n=100):
+    """
+    fit_cii
+    Optimize influence parameter for SGT for pure componentes
+
+
+    Parameters
+    ----------
+    tension : array
+        Experimental interfacial tension array
+    Tsat : array
+        Experimental saturation temperature in K
+    Psat : array
+        Computed saturation pressure in Pa
+    rhol : array
+        Computed liquid density in mol/m3
+    rhov : array
+        Computed vapor density in mol/m3
+    eos : model
+        saft vr mie model set up with the binary mixture
+
+    Returns
+    -------
+    cii : float
+        Influence Parameter of the Mixture
+    """
     n = 100
     roots, weigths = gauss(n)
     tena = np.zeros_like(Tsat)
