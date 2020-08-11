@@ -39,13 +39,15 @@ Getting Started
 ---------------
 
 .. code-block:: python
+
       >>> import numpy as np
       >>> from SGTPy import component, mixture, saftvrmie
       >>>> ethanol = component('ethanol2C', ms=1.7728, sigma=3.5592 , eps=224.50,
                     lambda_r=11.319, lambda_a=6., eAB=3018.05, rcAB=0.3547,
                     rdAB=0.4, sites=[1,0,1], cii=5.3141080872882285e-20)
-      >>> hexane = component('hexane', ms=1.96720036, sigma=4.54762477, eps=377.60127994,
-                   lambda_r=18.41193194, cii=3.581510586936205e-19)
+       >>> hexane = component('hexane', ms=1.96720036, sigma=4.54762477,
+                               eps=377.60127994, lambda_r=18.41193194,
+                               cii=3.581510586936205e-19)
        >>> mix = mixture(hexane, ethanol)
        >>> # fitted to experimental data
        >>> kij = 0.011818492037463553
