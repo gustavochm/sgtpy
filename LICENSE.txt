@@ -1,6 +1,7 @@
 MIT License
 
-Copyright (C) 2020, Gustavo Chaparro <gutstavochaparro@udec.cl>
+Copyright (C) 2020, Andrés Mejía (amejia@udec.cl), Gustavo Chaparro (gustavochaparro@udec.cl),
+Erich Muller (e.muller@imperial.ac.uk).
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
