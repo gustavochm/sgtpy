@@ -20,7 +20,8 @@ def fobj_kij(kij, mix, datavle=None, datalle=None, datavlle=None):
     return error
 
 
-def fit_kij(kij_bounds, mix, datavle=None, datalle=None, datavlle=None):
+def fit_kij(kij_bounds, mix, datavle=None, datalle=None, datavlle=None,
+            minimize_options={}):
     """
     fit_kij: attemps to fit kij to LVE, LLE, LLVE
 
@@ -36,6 +37,8 @@ def fit_kij(kij_bounds, mix, datavle=None, datalle=None, datavlle=None):
         (Xexp, Wexp, Texp, Pexp)
     datavlle: tuple, optional
         (Xexp, Wexp, Yexp, Texp, Pexp)
+     minimize_options: dict
+        Dictionary of any additional spefication for scipy minimize_scalar
 
     Returns
     -------
@@ -43,8 +46,8 @@ def fit_kij(kij_bounds, mix, datavle=None, datalle=None, datavlle=None):
         Result of SciPy minimize
 
     """
-    fit = minimize_scalar(fobj_kij, kij_bounds,
-                          args=(mix, datavle, datalle, datavlle))
+    fit = minimize_scalar(fobj_kij, kij_bounds, args=(mix, datavle, datalle,
+                          datavlle), **minimize_options)
     return fit
 
 
@@ -66,7 +69,8 @@ def fobj_asso(x, mix, datavle=None, datalle=None, datavlle=None):
     return error
 
 
-def fit_asso(x0, mix, datavle=None, datalle=None, datavlle=None):
+def fit_asso(x0, mix, datavle=None, datalle=None, datavlle=None,
+             minimize_options={}):
     """
     fit_asso: attemps to fit kij to LVE, LLE, LLVE
 
@@ -82,6 +86,8 @@ def fit_asso(x0, mix, datavle=None, datalle=None, datavlle=None):
         (Xexp, Wexp, Texp, Pexp)
     datavlle: tuple, optional
         (Xexp, Wexp, Yexp, Texp, Pexp)
+     minimize_options: dict
+        Dictionary of any additional spefication for scipy minimize
 
     Returns
     -------
@@ -89,7 +95,8 @@ def fit_asso(x0, mix, datavle=None, datalle=None, datavlle=None):
         Result of SciPy minimize
 
     """
-    fit = minimize(fobj_asso, x0, args=(mix, datavle, datalle, datavlle))
+    fit = minimize(fobj_asso, x0, args=(mix, datavle, datalle, datavlle),
+                   **minimize_options)
     return fit
 
 
@@ -114,7 +121,8 @@ def fobj_cross(x, mix, assoc, datavle=None, datalle=None, datavlle=None):
     return error
 
 
-def fit_cross(x0, mix, assoc, datavle=None, datalle=None, datavlle=None):
+def fit_cross(x0, mix, assoc, datavle=None, datalle=None, datavlle=None,
+              minimize_options={}):
     """
     fit_asso: attemps to fit kij to LVE, LLE, LLVE
 
@@ -132,6 +140,8 @@ def fit_cross(x0, mix, assoc, datavle=None, datalle=None, datavlle=None):
         (Xexp, Wexp, Texp, Pexp)
     datavlle: tuple, optional
         (Xexp, Wexp, Yexp, Texp, Pexp)
+    minimize_options: dict
+        Dictionary of any additional spefication for scipy minimize
 
     Returns
     -------
@@ -140,5 +150,5 @@ def fit_cross(x0, mix, assoc, datavle=None, datalle=None, datavlle=None):
 
     """
     fit = minimize(fobj_cross, x0, args=(mix, assoc, datavle, datalle,
-                   datavlle))
+                   datavlle), **minimize_options)
     return fit

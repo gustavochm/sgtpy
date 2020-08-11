@@ -39,8 +39,8 @@ def fit_beta(beta0, ExpTension, EquilibriumInfo, eos):
 
     Returns
     -------
-    ten : float
-        interfacial tension between the phases
+    ten : OptimizeResult
+        Result of SciPy minimize_scalar
     """
     rho1, rho2, T, P = EquilibriumInfo
     args = (ExpTension, rho1, rho2, T, P, eos)
