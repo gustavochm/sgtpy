@@ -190,8 +190,8 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False,
     return X, W, Y
 
 
-def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None], K_tol=1e-10,
-         full_output=False):
+def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
+         Xass0=[None, None, None], K_tol=1e-10, full_output=False):
     """
     Liquid liquid vapor Multiflash (Z, T,P) -> (x, w, y)
 
@@ -258,11 +258,13 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None], K_tol=1e-10,
             return out
         return X, W, Y, T
 
-    out = multiflash(x0, b0, ['L', 'L', 'V'], Z, T, P, model, v0, K_tol, True)
+    out = multiflash(x0, b0, ['L', 'L', 'V'], Z, T, P, model, v0, Xass0,
+                     K_tol, True)
 
     Xm, beta, tetha, equilibrio = out.X, out.beta, out.tetha, out.states
     error_inner = out.error_inner
     v = out.v
+    Xass = out.Xass
 
     if error_inner > 1e-6:
         order = [2, 0, 1]  # Y, X, W
@@ -270,8 +272,9 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None], K_tol=1e-10,
         betatetha = np.hstack([beta[order], tetha])
         equilibrio = np.asarray(equilibrio)[order]
         v0 = np.asarray(v)[order]
+        np.asarray(out.Xass)[order]
         out = multiflash(Xm, betatetha, equilibrio, Z, T, P, model, v0,
-                         K_tol, full_output=True)
+                         Xass, K_tol, full_output=True)
         order = [1, 2, 0]
         Xm, beta, tetha, equilibrio = out.X, out.beta, out.tetha, out.states
         error_inner = out.error_inner
@@ -281,8 +284,9 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None], K_tol=1e-10,
             betatetha = np.hstack([beta[order], tetha])
             equilibrio = np.asarray(equilibrio)[order]
             v0 = np.asarray(out.v)[order]
+            Xass0 = np.asarray(out.Xass)[order]
             out = multiflash(Xm, betatetha, equilibrio, Z, T, P, model, v0,
-                             K_tol, full_output=True)
+                             Xass0, K_tol, full_output=True)
             order = [1, 0, 2]
             Xm, beta, tetha = out.X, out.beta, out.tetha
             equilibrio = out.states
@@ -292,13 +296,15 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None], K_tol=1e-10,
         tetha = np.hstack([0., tetha])
         tetha = tetha[order]
         v = (out.v)[order]
+        Xass = np.asarray(out.Xass)[order]
     else:
         tetha = np.hstack([0., tetha])
 
     if full_output:
         info = {'T': T, 'P': P, 'error_outer': out.error_outer,
                 'error_inner': error_inner, 'iter': out.iter, 'beta': beta,
-                'tetha': tetha, 'X': Xm, 'v': v, 'states': ['L', 'L', 'V']}
+                'tetha': tetha, 'X': Xm, 'v': v, 'Xass': Xass,
+                 'states': ['L', 'L', 'V']}
         out = EquilibriumResult(info)
         return out
 

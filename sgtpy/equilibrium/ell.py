@@ -4,7 +4,7 @@ from .stability import tpd_minimas
 from .multiflash import multiflash
 
 
-def lle(x0, w0, Z, T, P, model, v0=[None, None],
+def lle(x0, w0, Z, T, P, model, v0=[None, None], Xass0 =[None, None],
         K_tol=1e-8, full_output=False):
     """
     Liquid liquid equilibrium (z,T,P) -> (x,w,beta)
@@ -48,16 +48,13 @@ def lle(x0, w0, Z, T, P, model, v0=[None, None],
     if len(x0) != nc or len(w0) != nc or len(Z) != nc:
         raise Exception('Composition vector lenght must be equal to nc')
 
-    '''
-    equilibrio = ['L', 'L']
-    out = flash(x0, w0, equilibrio, Z, T, P, model, v0, K_tol , True)
-    X, W, beta = out.X, out.Y, out.beta
-    v1, v2 = out.v1, out.v2
-    '''
+    temp_aux = model.temperature_aux(T)
 
     equilibrio = ['L', 'L']
-    fugx, v1 = model.logfugef(x0, T, P, equilibrio[0], v0[0])
-    fugw, v2 = model.logfugef(w0, T, P, equilibrio[1], v0[1])
+    fugx, v1, Xass1 = model.logfugef_aux(x0, temp_aux, P, equilibrio[0], v0[0],
+                                     Xass0[0])
+    fugw, v2, Xass2 = model.logfugef_aux(w0, temp_aux, P, equilibrio[1], v0[1],
+                                     Xass0[1])
     lnK = fugx - fugw
     K = np.exp(lnK)
 
@@ -69,15 +66,16 @@ def lle(x0, w0, Z, T, P, model, v0=[None, None],
     beta0 = np.array([1-beta, beta, 0.])
 
     out = multiflash(X0, beta0, equilibrio, Z, T, P, model,
-                     [v1, v2], K_tol, True)
-    Xm, beta, tetha, v = out.X, out.beta, out.tetha, out.v
+                     [v1, v2], [Xass1, Xass2], K_tol, True)
+    Xm, beta, tetha, v, Xass = out.X, out.beta, out.tetha, out.v, out.Xass
 
     if tetha > 0:
         xes, tpd_min2 = tpd_minimas(2, Xm[0], T, P, model, 'L', 'L',
                                     v[0], v[0])
         X0 = np.asarray(xes)
         beta0 = np.hstack([beta, 0.])
-        out = multiflash(X0, beta0, equilibrio, Z, T, P, model, v, K_tol, True)
+        out = multiflash(X0, beta0, equilibrio, Z, T, P, model, v, Xass,
+                         K_tol, True)
         Xm, beta, tetha, v = out.X, out.beta, out.tetha, out.v
 
     X, W = Xm

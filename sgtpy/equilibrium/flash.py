@@ -38,7 +38,7 @@ def rachfordrice(beta, K, Z):
     return beta, D, singlephase
 
 
-def Gibbs_obj(v, phases, Z, T, P, model, v10, v20):
+def Gibbs_obj(v, phases, Z, temp_aux, P, model):
     '''
     Objective function to minimize Gibbs energy in biphasic flash
     '''
@@ -47,9 +47,11 @@ def Gibbs_obj(v, phases, Z, T, P, model, v10, v20):
     l[l < 1e-8] = 1e-8
     X = l/l.sum()
     Y = v/v.sum()
-
-    lnfugl, v1 = model.logfugef(X, T, P, phases[0], v10)
-    lnfugv, v2 = model.logfugef(Y, T, P, phases[1], v20)
+    global v1, v2, Xass1, Xass2
+    lnfugl, v1, Xass1 = model.logfugef_aux(X, temp_aux, P, phases[0], v1,
+                                           Xass1)
+    lnfugv, v2, Xass2 = model.logfugef_aux(Y, temp_aux, P, phases[1], v2,
+                                           Xass2)
     fugl = np.log(X) + lnfugl
     fugv = np.log(Y) + lnfugv
     fo = v*fugv + l*fugl
@@ -58,50 +60,8 @@ def Gibbs_obj(v, phases, Z, T, P, model, v10, v20):
     return f, df
 
 
-def dGibbs_obj(v, phases, Z, T, P, model, v10, v20):
-    '''
-    Objective function to minimize Gibbs energy in biphasic flash when second
-    order derivatives are available
-    '''
-
-    l = Z - v
-    v[v < 1e-8] = 1e-8
-    l[l < 1e-8] = 1e-8
-    vt = np.sum(v)
-    lt = np.sum(l)
-    X = l/lt
-    Y = v/vt
-    nc = len(l)
-    eye = np.eye(nc)
-
-    lnfugl, dlnfugl, v1 = model.dlogfugef(X, T, P, phases[0], v10)
-    lnfugv, dlnfugv, v2 = model.dlogfugef(Y, T, P, phases[1], v20)
-
-    fugl = np.log(X) + lnfugl
-    fugv = np.log(Y) + lnfugv
-    fo = v*fugv + l*fugl
-    f = np.sum(fo)
-    df = fugv - fugl
-
-    global dfugv, dfugl
-    dfugv = eye/v - 1/vt + dlnfugv/vt
-    dfugl = eye/l - 1/lt + dlnfugl/lt
-
-    return f, df
-
-
-def dGibbs_hess(v, phases, Z, T, P, model, v10, v20):
-    '''
-    Hessian to minimize Gibbs energy in biphasic flash when second
-    order derivatives are available
-    '''
-    global dfugv, dfugl
-    d2fo = dfugv + dfugl
-    return d2fo
-
-
-def flash(x_guess, y_guess, equilibrium, Z, T, P, model,
-          v0=[None, None], K_tol=1e-8, full_output=False):
+def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
+          Xass0=[None, None], K_tol=1e-8, full_output=False):
     """
     Isothermic isobaric flash (z,T,P) -> (x,y,beta)
 
@@ -143,8 +103,9 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model,
     if len(x_guess) != nc or len(y_guess) != nc or len(Z) != nc:
         raise Exception('Composition vector lenght must be equal to nc')
 
+    temp_aux = model.temperature_aux(T)
     v10, v20 = v0
-
+    Xass10, Xass20 = Xass0
     e1 = 1
     itacc = 0
     it = 0
@@ -153,9 +114,11 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model,
     nacc = 3
     X = x_guess
     Y = y_guess
-
-    fugl, v1 = model.logfugef(X, T, P, equilibrium[0], v10)
-    fugv, v2 = model.logfugef(Y, T, P, equilibrium[1], v20)
+    global v1, v2, Xass1, Xass2
+    fugl, v1, Xass1 = model.logfugef_aux(X, temp_aux, P, equilibrium[0], v10,
+                                         Xass10)
+    fugv, v2, Xass2 = model.logfugef_aux(Y, temp_aux, P, equilibrium[1], v20,
+                                         Xass20)
     lnK = fugl - fugv
     K = np.exp(lnK)
 
@@ -173,8 +136,10 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model,
         Y = X*K
         X /= X.sum()
         Y /= Y.sum()
-        fugl, v1 = model.logfugef(X, T, P, equilibrium[0], v1)
-        fugv, v2 = model.logfugef(Y, T, P, equilibrium[1], v2)
+        fugl, v1, Xass1 = model.logfugef_aux(X, temp_aux, P, equilibrium[0],
+                                             v1, Xass1)
+        fugv, v2, Xass2 = model.logfugef_aux(Y, temp_aux, P, equilibrium[1],
+                                             v2, Xass2)
 
         lnK = fugl-fugv
         if it == (n-3):
@@ -192,19 +157,12 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model,
         e1 = ((lnK-lnK_old)**2).sum()
 
     if e1 > K_tol and itacc == nacc and not singlephase:
-        if model.secondorder:
-            fobj = dGibbs_obj
-            jac = True
-            hess = dGibbs_hess
-            method = 'trust-ncg'
-        else:
-            fobj = Gibbs_obj
-            jac = True
-            hess = None
-            method = 'BFGS'
-
-        vsol = minimize(fobj, beta*Y, args=(equilibrium, Z, T, P, model,
-                        v1, v2), jac=jac, method=method, hess=hess, tol=K_tol)
+        fobj = Gibbs_obj
+        jac = True
+        hess = None
+        method = 'BFGS'
+        vsol = minimize(fobj, beta*Y, args=(equilibrium, Z, T, P, model),
+                        jac=jac, method=method, hess=hess, tol=K_tol)
 
         it2 += vsol.nit
         e1 = np.linalg.norm(vsol.jac)
@@ -224,8 +182,8 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model,
 
     if full_output:
         sol = {'T': T, 'P': P, 'beta': beta, 'error': e1, 'iter': it2,
-               'X': X, 'v1': v1, 'state1': equilibrium[0],
-               'Y': Y, 'v2': v2, 'state2': equilibrium[1]}
+               'X': X, 'v1': v1, 'Xass1': Xass1, 'state1': equilibrium[0],
+               'Y': Y, 'v2': v2, 'Xass2': Xass2, 'state2': equilibrium[1]}
         out = EquilibriumResult(sol)
         return out
 

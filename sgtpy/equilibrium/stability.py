@@ -41,12 +41,12 @@ def tpd(X, state, Z, T, P, model, v0=[None, None]):
     return np.sum(np.nan_to_num(tpdi))
 
 
-def tpd_obj(a, T, P, di, model, state, v0):
+def tpd_obj(a, temp_aux, P, di, model, state, vg):
 
     W = a**2/4.  # change from alpha to mole numbers
     w = W/W.sum()  # change to mole fraction
-
-    logfugW, _ = model.logfugef(w, T, P, state, v0)
+    # global vg
+    logfugW, vg, _ = model.logfugef_aux(w, temp_aux, P, state, vg)
 
     dtpd = np.log(W) + logfugW - di
     tpdi = np.nan_to_num(W*(dtpd-1.))
@@ -90,14 +90,17 @@ def tpd_min(W, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
     if len(W) != nc or len(Z) != nc:
         raise Exception('Composition vector lenght must be equal to nc')
     # Fugacity of phase Zl
+
+    temp_aux = model.temperature_aux(T)
     Z[Z < 1e-8] = 1e-8
-    logfugZ, vz = model.logfugef(Z, T, P, stateZ, vz)
+    logfugZ, vz, Xassz = model.logfugef_aux(Z, temp_aux, P, stateZ, vz)
     di = np.log(Z) + logfugZ
 
     alpha0 = 2*W**0.5
     alpha0[alpha0 < 1e-8] = 1e-8  # To avoid negative compositions
-
-    alpha = minimize(tpd_obj, alpha0, args=(T, P, di, model, stateW, vw),
+    # global vg
+    # vg = vw
+    alpha = minimize(tpd_obj, alpha0, args=(temp_aux, P, di, model, stateW, vw),
                      jac=True, method='BFGS')
 
     W = alpha.x**2/2
@@ -144,8 +147,10 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
     if len(Z) != nc:
         raise Exception('Composition vector lenght must be equal to nc')
 
+    temp_aux = model.temperature_aux(T)
+
     Z[Z < 1e-8] = 1e-8
-    logfugZ, vz = model.logfugef(Z, T, P, stateZ, vz)
+    logfugZ, vz, Xassz = model.logfugef_aux(Z, temp_aux, P, stateZ, vz)
     di = np.log(Z) + logfugZ
 
     nc = model.nc
@@ -155,8 +160,11 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
     # search from pures
     Id = np.eye(nc)
     alpha0 = 2*Id[0]**0.5
-    alpha0[alpha0 < 1e-5] = 1e-5  # no negative or zero compositions
-    alpha = minimize(tpd_obj, alpha0, args=(T, P, di, model, stateW, vw),
+    alpha0[alpha0 < 1e-1] = 1e-1  # no negative or zero compositions
+    # global vg
+    vg = vw
+    # Xassg = None
+    alpha = minimize(tpd_obj, alpha0, args=(temp_aux, P, di, model, stateW, vg),
                      jac=True, method='BFGS')
     W = alpha.x**2/4
     w = W/W.sum()  # normalized composition
@@ -166,8 +174,10 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
 
     for i in range(1, nc):
         alpha0 = 2*Id[i]**0.5
-        alpha0[alpha0 < 1e-5] = 1e-5
-        alpha = minimize(tpd_obj, alpha0, args=(T, P, di, model, stateW, vw),
+        alpha0[alpha0 < 1e-1] = 1e-1
+        vg = vw
+        # Xassg = None
+        alpha = minimize(tpd_obj, alpha0, args=(temp_aux, P, di, model, stateW, vg),
                          jac=True, method='BFGS')
         W = alpha.x**2/4
         w = W/W.sum()  # normalized composition
@@ -187,8 +197,10 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
         Al = np.random.rand(nc)
         Al = Al/np.sum(Al)
         alpha0 = 2*Al**0.5
-        alpha0[alpha0 < 1e-5] = 1e-5
-        alpha = minimize(tpd_obj, alpha0, args=(T, P, di, model, stateW, vw),
+        alpha0[alpha0 < 1e-1] = 1e-1
+        vg = vw
+        #Xassg = None
+        alpha = minimize(tpd_obj, alpha0, args=(temp_aux, P, di, model, stateW, vg),
                          jac=True, method='BFGS')
         W = alpha.x**2/4
         w = W/W.sum()  # normalized composition
