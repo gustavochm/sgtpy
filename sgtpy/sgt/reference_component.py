@@ -6,10 +6,12 @@ from .cijmix_cy import cmix_cy
 from .tensionresult import TensionResult
 
 
-def fobj_beta0(ro, ro_s, s, T, mu0, sqrtci, model):
+def fobj_beta0(ro, ro_s, s, temp_aux, mu0, sqrtci, model):
     nc = model.nc
     ro = np.insert(ro, s, ro_s)
-    dmu = model.muad(ro, T) - mu0
+    global Xass
+    mu, Xass =  model.muad_aux(ro, temp_aux, Xass)
+    dmu = mu - mu0
 
     f1 = sqrtci[s]*dmu
     f2 = sqrtci*dmu[s]
@@ -33,9 +35,11 @@ def ten_beta0_reference(rho1, rho2, Tsat, Psat, model, s=0,
     ci = np.diag(cij)
     sqrtci = np.sqrt(ci)
 
-    mu0 = model.muad(ro1a, Tsat)
+    temp_aux = model.temperature_aux(Tsat)
 
-    mu02 = model.muad(ro2a, Tsat)
+    mu0, Xass01 = model.muad_aux(ro1a, temp_aux)
+
+    mu02, Xass02 = model.muad_aux(ro2a, temp_aux)
     if not np.allclose(mu0, mu02):
         raise Exception('Not equilibria compositions, mu1 != mu2')
     # roots and weights for Lobatto quadrature
@@ -49,9 +53,12 @@ def ten_beta0_reference(rho1, rho2, Tsat, Psat, model, s=0,
 
     rodep = np.zeros([nc-1, n])
     rodep[:, 0] = ro1a[np.arange(nc) != s]
+
+    global Xass
+    Xass = Xass01
     for i in range(1, n):
         rodep[:, i] = fsolve(fobj_beta0, rodep[:, i-1],
-                             args=(ro_s[i], s, Tsat, mu0, sqrtci, model))
+                             args=(ro_s[i], s, temp_aux, mu0, sqrtci, model))
     ro = np.insert(rodep, s, ro_s, axis=0)
     dro = rodep@A.T
     dro = np.insert(dro, s, np.ones(n), axis=0)
@@ -59,8 +66,9 @@ def ten_beta0_reference(rho1, rho2, Tsat, Psat, model, s=0,
     suma = cmix_cy(dro, cij)
 
     dom = np.zeros(n)
+    Xass = Xass01
     for k in range(1, n-1):
-        dom[k] = model.dOm(ro[:, k], Tsat, mu0, Pad)
+        dom[k], Xass = model.dOm_aux(ro[:, k], temp_aux, mu0, Pad, Xass)
 
     intten = np.nan_to_num(np.sqrt(suma*(2*dom)))
     ten = np.dot(intten, wreal)
