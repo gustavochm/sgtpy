@@ -515,7 +515,7 @@ class saftvrmie_mix():
     def dOm(self, rhoi, T, mu, Psat, Xass0=None):
         temp_aux = self.temperature_aux(T)
         dom, Xass = self.dOm_aux(rhoi, temp_aux, mu, Psat, Xass0)
-        return dom, Xass
+        return dom
 
     def sgt_adim(self, T):
         beta = 1 / (kb*T)

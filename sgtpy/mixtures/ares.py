@@ -24,7 +24,7 @@ from .a2new_chain import da2new_dx_dxhi00, da2new_dxxhi_dxhi00
 from .lngmie_chain import lngmie, dlngmie_dxhi00, d2lngmie_dxhi00
 from .lngmie_chain import dlngmie_dx, dlngmie_dxxhi
 
-from .association_aux import Iab, dIab_drho, d2Iab_drho, Xass_solverNRANK
+from .association_aux import Iab, dIab_drho, d2Iab_drho
 from .association_aux import Xass_solver, dXass_drho, d2Xass_drho, dXass_dx
 from .association_aux import dIab_dx, dIab_dxrho, CIJ_matrix
 
@@ -154,12 +154,9 @@ def ares(self, x, rho, temp_aux, Xass0=None):
         Dab = self.sigmaij3 * Fab * iab
         Dabij = np.zeros([self.nsites, self.nsites])
         Dabij[self.indexabij] = Dab[self.indexab]
-        KIJ = rho * np.outer(xj, xj) * (self.DIJ * Dabij)
-        nrank = np.linalg.matrix_rank(KIJ)
-        if nrank < self.nsites:
-            Xass = Xass_solverNRANK(Xass, rho, self.DIJ, Dabij, xj)
-        else:
-            Xass = Xass_solver(self.nsites, xj, KIJ, self.diagasso, Xass)
+
+        Xass = Xass_solver(self.nsites, xj, rho, self.DIJ, Dabij,
+                           self.diagasso, Xass)
         ares += np.dot(self.S * xj, (np.log(Xass) - Xass/2 + 1/2))
     else:
         Xass = None
@@ -272,15 +269,10 @@ def dares_drho(self, x, rho, temp_aux, Xass0=None):
         dDabij_drho = np.zeros([self.nsites, self.nsites])
         Dabij[self.indexabij] = Dab[self.indexab]
         dDabij_drho[self.indexabij] = dDab_drho[self.indexab]
-        KIJ = rho * np.outer(xj, xj) * (self.DIJ * Dabij)
-        nrank = np.linalg.matrix_rank(KIJ)
-        if nrank < self.nsites:
-            Xass = Xass_solverNRANK(Xass, rho, self.DIJ, Dabij, xj)
-        else:
-            Xass = Xass_solver(self.nsites, xj, KIJ, self.diagasso, Xass)
+        Xass = Xass_solver(self.nsites, xj, rho, self.DIJ, Dabij,
+                           self.diagasso, Xass)
         CIJ = CIJ_matrix(rho, xj, Xass, self.DIJ, Dabij, self.diagasso)
-        dXass = dXass_drho(rho, xj, Xass, self.DIJ, Dabij, dDabij_drho,
-                           CIJ)
+        dXass = dXass_drho(rho, xj, Xass, self.DIJ, Dabij, dDabij_drho, CIJ)
         ares[0] += np.dot(self.S * xj, (np.log(Xass) - Xass/2 + 1/2))
         ares[1] += np.dot(self.S*xj, (1/Xass - 1/2) * dXass)
     else:
@@ -407,20 +399,24 @@ def d2ares_drho(self, x, rho, temp_aux, Xass0=None):
         dDabij_drho[self.indexabij] = dDab_drho[self.indexab]
         d2Dabij_drho[self.indexabij] = d2Dab_drho[self.indexab]
 
-        KIJ = rho * np.outer(xj, xj) * (self.DIJ * Dabij)
-        nrank = np.linalg.matrix_rank(KIJ)
-        if nrank < self.nsites:
-            Xass = Xass_solverNRANK(Xass, rho, self.DIJ, Dabij, xj)
-        else:
-            Xass = Xass_solver(self.nsites, xj, KIJ, self.diagasso, Xass)
+        Xass = Xass_solver(self.nsites, xj, rho, self.DIJ, Dabij,
+                           self.diagasso, Xass)
         CIJ = CIJ_matrix(rho, xj, Xass, self.DIJ, Dabij, self.diagasso)
         dXass = dXass_drho(rho, xj, Xass, self.DIJ, Dabij, dDabij_drho,
                            CIJ)
         d2Xass = d2Xass_drho(rho, xj, Xass, dXass, self.DIJ, Dabij,
                              dDabij_drho, d2Dabij_drho, CIJ)
-        ares[0] += np.dot(self.S*xj, (np.log(Xass) - Xass/2 + 1/2))
-        ares[1] += np.dot(self.S*xj, (1/Xass - 1/2) * dXass)
-        ares[2] += np.dot(self.S*xj, -(dXass/Xass)**2+d2Xass*(1/Xass-1/2))
+
+        aux1 = np.log(Xass) - Xass/2 + 1/2
+        aux2 = 1/Xass - 1/2
+
+        # ares[0] += np.dot(self.S*xj, (np.log(Xass) - Xass/2 + 1/2))
+        # ares[1] += np.dot(self.S*xj, (1/Xass - 1/2) * dXass)
+        # ares[2] += np.dot(self.S*xj, -(dXass/Xass)**2+d2Xass*(1/Xass-1/2))
+
+        ares[0] += np.dot(self.S*xj, aux1)
+        ares[1] += np.dot(self.S*xj, aux2 * dXass)
+        ares[2] += np.dot(self.S*xj, -(dXass/Xass)**2+d2Xass*aux2)
     else:
         Xass = None
 
@@ -597,18 +593,20 @@ def dares_dx(self, x, rho, temp_aux, Xass0=None):
 
         dDabij_dx[:, self.indexabij[0], self.indexabij[1]] = dDab_dx[:, self.indexab[0], self.indexab[1]]
 
-        KIJ = rho * np.outer(xj, xj) * (self.DIJ * Dabij)
-        nrank = np.linalg.matrix_rank(KIJ)
-        if nrank < self.nsites:
-            Xass = Xass_solverNRANK(Xass, rho, self.DIJ, Dabij, xj)
-        else:
-            Xass = Xass_solver(self.nsites, xj, KIJ, self.diagasso, Xass)
+        Xass = Xass_solver(self.nsites, xj, rho, self.DIJ, Dabij,
+                           self.diagasso, Xass)
         CIJ = CIJ_matrix(rho, xj, Xass, self.DIJ, Dabij, self.diagasso)
         dXassx = dXass_dx(rho, xj, Xass, self.DIJ, Dabij, dDabij_dx,
                           self.dxjdx, CIJ)
 
-        aasso = np.dot(self.S*xj, (np.log(Xass) - Xass/2 + 1/2))
-        daassox = (self.dxjdx * (np.log(Xass) - Xass/2 + 1/2) + dXassx * xj * (1/Xass - 1/2))@self.S
+        # aasso = np.dot(self.S*xj, (np.log(Xass) - Xass/2 + 1/2))
+        # daassox = (self.dxjdx * (np.log(Xass) - Xass/2 + 1/2) + dXassx * xj * (1/Xass - 1/2))@self.S
+
+        aux1 = np.log(Xass) - Xass/2 + 1/2
+        aux2 = 1/Xass - 1/2
+
+        aasso = np.dot(self.S*xj, aux1)
+        daassox = (self.dxjdx * aux1 + dXassx * xj * aux2)@self.S
         ares += aasso
         daresx += daassox
     else:
@@ -809,24 +807,26 @@ def dares_dxrho(self, x, rho, temp_aux, Xass0=None):
         dDabij_drho[self.indexabij] = dDab_drho[self.indexab]
         dDabij_dx[:, self.indexabij[0], self.indexabij[1]] = dDab_dx[:, self.indexab[0], self.indexab[1]]
 
-        KIJ = rho * np.outer(xj, xj) * (self.DIJ * Dabij)
-        nrank = np.linalg.matrix_rank(KIJ)
-        if nrank < self.nsites:
-            Xass = Xass_solverNRANK(Xass, rho, self.DIJ, Dabij, xj)
-        else:
-            Xass = Xass_solver(self.nsites, xj, KIJ, self.diagasso, Xass)
+        Xass = Xass_solver(self.nsites, xj, rho, self.DIJ, Dabij,
+                           self.diagasso, Xass)
         CIJ = CIJ_matrix(rho, xj, Xass, self.DIJ, Dabij, self.diagasso)
         dXassx = dXass_dx(rho, xj, Xass, self.DIJ, Dabij, dDabij_dx,
                           self.dxjdx, CIJ)
-        dXass = dXass_drho(rho, xj, Xass, self.DIJ, Dabij, dDabij_drho,
-                           CIJ)
-        aasso = np.dot(self.S*xj, (np.log(Xass) - Xass/2 + 1/2))
-        daasso = np.dot(self.S*xj, (1/Xass - 1/2) * dXass)
+        dXass = dXass_drho(rho, xj, Xass, self.DIJ, Dabij, dDabij_drho, CIJ)
+
+        aux1 = np.log(Xass) - Xass/2 + 1/2
+        aux2 = 1/Xass - 1/2
+
+        aasso = np.dot(self.S*xj, aux1)
+        daasso = np.dot(self.S*xj, aux2 * dXass)
+        # aasso = np.dot(self.S*xj, (np.log(Xass) - Xass/2 + 1/2))
+        # daasso = np.dot(self.S*xj, (1/Xass - 1/2) * dXass)
 
         ares[0] += aasso
         ares[1] += daasso
 
-        daassox = (self.dxjdx * (np.log(Xass) - Xass/2 + 1/2) + dXassx * xj * (1/Xass - 1/2))@self.S
+        # daassox = (self.dxjdx * (np.log(Xass) - Xass/2 + 1/2) + dXassx * xj * (1/Xass - 1/2))@self.S
+        daassox = (self.dxjdx * aux1 + dXassx * xj * aux2)@self.S
         daresx += daassox
     else:
         Xass = None

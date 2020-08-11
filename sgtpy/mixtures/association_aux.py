@@ -221,33 +221,56 @@ def fobj_xass(Xass, rho, DIJ, Dabij, xj):
     return fo
 
 
-def Xass_solverNRANK(Xass0, rho, DIJ, Dabij, xj):
-    Xass = fsolve(fobj_xass, x0=Xass0, args=(rho, DIJ, Dabij, xj))
-    return Xass
-
-
-def Xass_solver(nsites, xj, KIJ, diagasso, Xass0=None):
+def Xass_solver(nsites, xj, rho, DIJ, Dabij, diagasso, Xass0):
 
     Xass = 1. * Xass0
 
-    omega = 0.2
-    for i in range(5):
-        den = (xj + KIJ@Xass)
-        den[den == 0] = 1.
-        fo = xj / den
-        dXass = (1 - omega) * (fo - Xass)
-        Xass += dXass
+    KIJ = rho * np.outer(xj, xj) * (DIJ * Dabij)
 
-    for i in range(15):
+    omega = 0.2
+    with np.errstate(divide='ignore', invalid='ignore'):
+        for i in range(5):
+            den = (xj + KIJ@Xass)
+            fo = xj / den
+            fo[np.isnan(fo)] = 1.
+            dXass = (1 - omega) * (fo - Xass)
+            Xass += dXass
+
+    nrank = np.linalg.matrix_rank(KIJ)
+
+    if nrank == nsites:
+        '''
         KIJXass = KIJ@Xass
         dQ = xj * (1/Xass - 1) - KIJXass
         HIJ = -1 * KIJ
         HIJ[diagasso] -= (xj + KIJXass)/Xass
-        dXass = np.linalg.solve(HIJ, -dQ)
-        Xass += dXass
-        sucess = np.linalg.norm(dXass) < 1e-8
-        if sucess:
-            break
+        for i in range(15):
+            dXass = np.linalg.solve(HIJ, -dQ)
+            Xnew = Xass + dXass
+            Xnew_neg = Xnew < 0
+            Xnew[Xnew_neg] = 0.2*Xass[Xnew_neg]
+            Xass = Xnew
+            KIJXass = KIJ@Xass
+            dQ = xj * (1/Xass - 1) - KIJXass
+            sucess = np.linalg.norm(dQ) < 1e-8
+            if sucess:
+                break
+            HIJ = -1 * KIJ
+            HIJ[diagasso] -= (xj + KIJXass)/Xass
+        '''
+        for i in range(15):
+            KIJXass = KIJ@Xass
+            dQ = xj * (1/Xass - 1) - KIJXass
+            HIJ = -1 * KIJ
+            HIJ[diagasso] -= (xj + KIJXass)/Xass
+            dXass = np.linalg.solve(HIJ, -dQ)
+            Xass += dXass
+            sucess = np.linalg.norm(dXass) < 1e-8
+            if sucess:
+                break
+
+    else:
+        Xass = fsolve(fobj_xass, x0=Xass, args=(rho, DIJ, Dabij, xj))
 
     return Xass
 
