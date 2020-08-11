@@ -38,6 +38,10 @@ To get the git version, run:
 Getting Started
 ---------------
 
+SGTPy easily allows you to perform phase equilibria and interfacial properties
+calculations using SAFT-VR-Mie EoS. First, components are defined with their
+molecular parameters, then a mixture can be created with them.
+
 .. code-block:: python
 
       >>> import numpy as np
@@ -54,6 +58,39 @@ Getting Started
       >>> Kij = np.array([[0, kij], [kij, 0]])
       >>> mix.kij_saft(Kij)
       >>> eos = saftvrmie(mix)
+
+The eos object can be used to compute phase equilibria.
+
+.. code-block:: python
+
+      >>> from SGTPy.equilibrium import bubblePy
+      >>> # computing bubble point
+      >>> T = 298.15 # K
+      >>> x = np.array([0.3, 0.7])
+      >>> # initial guesses for vapor compotision and pressure
+      >>> y0 = 1.*x
+      >>> P0 = 8000. # Pa
+      >>> sol = bubblePy(y0, P0, x, T, eos, full_output=True)
+
+Finally, the equilibria results can be used to model the interfacial behavior of
+the mixture using SGT.
+
+.. code-block:: python
+
+      >>> from SGTPy.sgt import sgt_mix
+      >>> # reading solution object
+      >>> y, P = sol.Y, sol.P
+      >>> vl, vv = sol.v1, sol.v2
+      >>> #density vector of each phase
+      >>> rhox = x/vl
+      >>> rhoy = y/vv
+      >>> bij = 0.05719272059410664
+      >>> beta = np.array([[0, bij], [bij, 0]])
+      >>> eos.beta_sgt(beta)
+      >>> #solving BVP of SGT with 25 colocation points
+      >>> solsgt = sgt_mix(rhoy, rhox, T, P, eos, n = 25, full_output = True)
+
+
 
 Latest source code
 ------------------
