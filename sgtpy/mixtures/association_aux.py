@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import fsolve
 
+
 def association_config(sitesmix, eos):
 
     compindex = []
@@ -215,31 +216,36 @@ def dIab_dxrho(xhi, dxhi_dxhi00, dxhi00_drho, dxhi_dx, dii, dij, rcij, rdij,
     return iab, diab, diabx
 
 
-def fobj_xass(Xass, rho, DIJ, Dabij, xj):
-    fo = 1 / (1 + rho * (DIJ*Dabij)@(xj*Xass))
-    fo -= Xass
+def fobj_xass(Xass, xj, aux_asso, diagasso):
+    fo = Xass - 1 / (1 + aux_asso@(xj*Xass))
     return fo
+
+
+def fobj_xass_jac(Xass, xj, aux_asso, diagasso):
+    den = 1 + aux_asso@(xj*Xass)
+    dfo = ((aux_asso*xj).T/den**2).T
+    dfo[diagasso] += 1.
+    return dfo
 
 
 def Xass_solver(nsites, xj, rho, DIJ, Dabij, diagasso, Xass0):
 
     Xass = 1. * Xass0
 
-    KIJ = rho * np.outer(xj, xj) * (DIJ * Dabij)
+    aux_asso = rho * DIJ * Dabij
 
     omega = 0.2
-    with np.errstate(divide='ignore', invalid='ignore'):
-        for i in range(5):
-            den = (xj + KIJ@Xass)
-            fo = xj / den
-            fo[np.isnan(fo)] = 1.
-            dXass = (1 - omega) * (fo - Xass)
-            Xass += dXass
+    for i in range(5):
+        den = 1. + aux_asso@(xj*Xass)
+        fo = 1. / den
+        dXass = (1 - omega) * (fo - Xass)
+        Xass += dXass
 
-    nrank = np.linalg.matrix_rank(KIJ)
+    bool_method = not np.any(xj == 0.)
 
-    if nrank == nsites:
-        '''
+    if bool_method:
+        KIJ = np.outer(xj, xj) * aux_asso
+
         KIJXass = KIJ@Xass
         dQ = xj * (1/Xass - 1) - KIJXass
         HIJ = -1 * KIJ
@@ -268,9 +274,10 @@ def Xass_solver(nsites, xj, rho, DIJ, Dabij, diagasso, Xass0):
             sucess = np.linalg.norm(dXass) < 1e-8
             if sucess:
                 break
-
+         '''
     else:
-        Xass = fsolve(fobj_xass, x0=Xass, args=(rho, DIJ, Dabij, xj))
+        Xass = fsolve(fobj_xass, x0=Xass, args=(xj, aux_asso, diagasso),
+                      fprime=fobj_xass_jac)
 
     return Xass
 
