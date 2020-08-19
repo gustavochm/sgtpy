@@ -145,20 +145,23 @@ def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
     A, B = colocAB(rootsf)
 
     # Initial profiles
-    if rho0 == 'linear':
-        # Linear Profile
-        pend = (rho2a - rho1a)
-        b = rho1a
-        pfl = (np.outer(roots, pend) + b)
-        ro_1 = (pfl.T).copy()
-        rointer = (pfl.T).copy()
-    elif rho0 == 'hyperbolic':
-        # Hyperbolic profile
-        inter = 8*roots - 4
-        thb = np.tanh(2*inter)
-        pft = np.outer(thb, (rho2a-rho1a))/2 + (rho1a+rho2a)/2
-        rointer = pft.T
-        ro_1 = rointer.copy()
+    if isinstance(rho0, str):
+        if rho0 == 'linear':
+            # Linear Profile
+            pend = (rho2a - rho1a)
+            b = rho1a
+            pfl = (np.outer(roots, pend) + b)
+            ro_1 = (pfl.T).copy()
+            rointer = (pfl.T).copy()
+        elif rho0 == 'hyperbolic':
+            # Hyperbolic profile
+            inter = 8*roots - 4
+            thb = np.tanh(2*inter)
+            pft = np.outer(thb, (rho2a-rho1a))/2 + (rho1a+rho2a)/2
+            rointer = pft.T
+            ro_1 = rointer.copy()
+        else:
+            raise Exception('Initial density profile not known')
     elif isinstance(rho0,  TensionResult):
         _z0 = rho0.z
         _ro0 = rho0.rho
@@ -174,6 +177,8 @@ def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
             ro_1 = rointer.copy()
         else:
             raise Exception('Shape of initial value must be nc x n')
+    else:
+        raise Exception('Initial density profile not known')
 
     zad = z*zfactor
     Ar = A/zad

@@ -141,18 +141,21 @@ def sgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
     A, B = colocAB(rootsf)
 
     # Initial profiles
-    if rho0 == 'linear':
-        # Linear Profile
-        pend = (rho2a - rho1a)
-        b = rho1a
-        pfl = (np.outer(roots, pend) + b)
-        rointer = (pfl.T).copy()
-    elif rho0 == 'hyperbolic':
-        # Hyperbolic profile
-        inter = 8*roots - 4
-        thb = np.tanh(2*inter)
-        pft = np.outer(thb, (rho2a-rho1a))/2+(rho1a+rho2a)/2
-        rointer = pft.T
+    if isinstance(rho0, str):
+        if rho0 == 'linear':
+            # Linear Profile
+            pend = (rho2a - rho1a)
+            b = rho1a
+            pfl = (np.outer(roots, pend) + b)
+            rointer = (pfl.T).copy()
+        elif rho0 == 'hyperbolic':
+            # Hyperbolic profile
+            inter = 8*roots - 4
+            thb = np.tanh(2*inter)
+            pft = np.outer(thb, (rho2a-rho1a))/2+(rho1a+rho2a)/2
+            rointer = pft.T
+        else:
+            raise Exception('Initial density profile not known')
     elif isinstance(rho0,  TensionResult):
         _z0 = rho0.z
         _ro0 = rho0.rho
@@ -166,6 +169,8 @@ def sgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
             rointer *= rofactor
         else:
             raise Exception('Shape of initial value must be nc x n')
+    else:
+        raise Exception('Initial density profile not known')
 
     if model.secondordersgt:
         fobj = dfobj_z_newton
