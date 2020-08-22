@@ -34,7 +34,6 @@ def dfobj_z_newton(rointer, Binter, dro20, dro21, mu0, temp_aux, cij, n, ro_1,
     index0 = rointer < 0
     rointer = np.abs(rointer.reshape([nc, n]))
     dmu = np.zeros([n, nc])
-    dmu = np.zeros([n, nc])
     d2mu = np.zeros([n, nc, nc])
 
     i = 0
@@ -69,8 +68,8 @@ def dfobj_z_newton(rointer, Binter, dro20, dro21, mu0, temp_aux, cij, n, ro_1,
 
 
 def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
-             z=20., n=20, ds=100, itmax=50, rho_tol=1e-2,
-             full_output=False, solver_opt=None):
+             z=20., n=20, ds=100, itmax=20, rho_tol=2e-2,
+             full_output=False, root_method='lm', solver_opt=None):
     """
     SGT for mixtures and beta != 0 (rho1, rho2, T, P) -> interfacial tension
 
@@ -103,6 +102,10 @@ def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
         desired tolerance for density profiles
     full_output : bool, optional
         wheter to outputs all calculation info
+    root_method: string, optional
+        Method used un SciPy's root function
+        default 'lm',  other options: 'krylov', 'hybr'. See SciPy documentation
+        for more info
     solver_opt : dict, optional
         aditional solver options passed to SciPy solver
 
@@ -196,9 +199,13 @@ def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
     dro10 = np.outer(rho1a, A0)  # cte
     dro11 = np.outer(rho2a, A1)  # cte
 
-    if model.secondordersgt:
-        fobj = dfobj_z_newton
-        jac = True
+    if root_method == 'lm' or root_method == 'hybr':
+        if model.secondordersgt:
+            fobj = dfobj_z_newton
+            jac = True
+        else:
+            fobj = fobj_z_newton
+            jac = None
     else:
         fobj = fobj_z_newton
         jac = None
@@ -206,17 +213,17 @@ def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
     s = 0.
     for i in range(itmax):
         s += ds
-        sol = root(fobj, rointer.flatten(), method='lm', jac=jac,
+        sol = root(fobj, rointer.flatten(), method=root_method, jac=jac,
                    args=(Binter, dro20, dro21, mu0, temp_aux, cij, n, ro_1,
                    ds, nc, model, Xass01), options=solver_opt)
 
         rointer = sol.x
         rointer = np.abs(rointer.reshape([nc, n]))
-        error = np.linalg.norm(rointer/ro_1 - 1)
+        error = np.mean(np.abs(rointer/ro_1 - 1))
         if error < rho_tol:
             break
         ro_1 = rointer.copy()
-        ds *= 1.1
+        # ds *= 1.1
 
     dro = np.matmul(rointer, Ainter.T)
     dro += dro10
@@ -239,7 +246,7 @@ def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
         ro = np.insert(rointer, 0, rho1a, axis=1)
         ro = np.insert(ro, n+1, rho2a, axis=1)
         ro /= rofactor
-        fun_error = np.linalg.norm(sol.fun)/n/nc
+        fun_error = np.linalg.norm(sol.fun) #/n/nc
         dictresult = {'tension': ten, 'rho': ro, 'z': znodes,
                       'GPT': np.hstack([0, dom, 0]), 'rho_error': error,
                       'fun_error': fun_error, 'iter': i, 'time': s, 'ds': ds}
