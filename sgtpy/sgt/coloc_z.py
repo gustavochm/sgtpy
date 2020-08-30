@@ -70,7 +70,7 @@ def dfobj_z_newton(rointer, Binter, dro20, dro21, mu0, temp_aux, cij, n, nc,
 
 def sgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
             z0=10., dz=1.5, itmax=10, n=20, full_output=False,
-            ten_tol=1e-2, solver_opt=None):
+            ten_tol=1e-2, root_method='lm', solver_opt=None):
     """
     SGT for mixtures and beta != 0 (rho1, rho2, T, P) -> interfacial tension
 
@@ -101,6 +101,10 @@ def sgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
         number points to solve density profiles
     full_output : bool, optional
         wheter to outputs all calculation info
+    root_method: string, optional
+        Method used un SciPy's root function
+        default 'lm',  other options: 'krylov', 'hybr'. See SciPy documentation
+        for more info
     solver_opt : dict, optional
         aditional solver options passed to SciPy solver
 
@@ -172,9 +176,13 @@ def sgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
     else:
         raise Exception('Initial density profile not known')
 
-    if model.secondordersgt:
-        fobj = dfobj_z_newton
-        jac = True
+    if root_method == 'lm' or root_method == 'hybr':
+        if model.secondordersgt:
+            fobj = dfobj_z_newton
+            jac = True
+        else:
+            fobj = fobj_z_newton
+            jac = None
     else:
         fobj = fobj_z_newton
         jac = None
