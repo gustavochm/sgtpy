@@ -139,7 +139,9 @@ def ares(self, x, rho, temp_aux, Xass0=None):
     g2s = (1 + gc) * g2m
 
     lng = lngmie(gHS, g1s, g2s, beta, self.eps)
-    achain = - np.dot(x * (self.ms - 1), lng)
+    # achain = - np.dot(x * (self.ms - 1), lng)
+    etai = xhi00 * xmi * di03[:, -1]
+    achain = - np.dot(x * (self.ms - 1 + etai*self.ring), lng)
 
     ares = amono + achain
 
@@ -248,7 +250,12 @@ def dares_drho(self, x, rho, temp_aux, Xass0=None):
     g2s = g2m * (1 + gc[0])
     g2s[1] += g2m[0] * gc[1]
     lng = dlngmie_dxhi00(gHS, g1s, g2s, beta, self.eps)
-    achain = - lng@(x * (self.ms - 1))
+    # achain = - lng@(x * (self.ms - 1)) #original
+
+    detai_dxhi00 = xmi * di03[:, -1]
+    etai = xhi00 * detai_dxhi00
+    achain = - lng@(x * (self.ms - 1. + etai*self.ring))
+    achain[1] += - np.dot(x*self.ring*detai_dxhi00, lng[0])
 
     ares = amono + achain
     ares *= np.array([1, dxhi00_drho])
@@ -366,12 +373,18 @@ def d2ares_drho(self, x, rho, temp_aux, Xass0=None):
     suma_g2 = sumg2_chain[[0, 1, 2]]
     g2m = d2g2mca_dxhi00(xhi00, khs, dkhs, d2khs, xm, da2new, d2a2new,
                          d3a2new, suma_g2, self.eps, dii)
-    g2s = g2m * (1 + gc[0])
+    g2s = g2m * (1. + gc[0])
     g2s[1] += g2m[0] * gc[1]
     g2s[2] += 2. * g2m[1] * gc[1] + g2m[0] * gc[2]
 
     lng = d2lngmie_dxhi00(gHS, g1s, g2s, beta, self.eps)
-    achain = - lng@(x * (self.ms - 1))
+    # achain = - lng@(x * (self.ms - 1)) # original
+
+    detai_dxhi00 = xmi * di03[:, -1]
+    etai = xhi00 * detai_dxhi00
+    achain = - lng@(x * (self.ms - 1. + etai*self.ring))
+    achain[1] += - np.dot(x*self.ring*detai_dxhi00, lng[0])
+    achain[2] += - 2*np.dot(x*self.ring*detai_dxhi00, lng[1])
 
     ares = amono + achain
 
@@ -409,10 +422,6 @@ def d2ares_drho(self, x, rho, temp_aux, Xass0=None):
 
         aux1 = np.log(Xass) - Xass/2 + 1/2
         aux2 = 1/Xass - 1/2
-
-        # ares[0] += np.dot(self.S*xj, (np.log(Xass) - Xass/2 + 1/2))
-        # ares[1] += np.dot(self.S*xj, (1/Xass - 1/2) * dXass)
-        # ares[2] += np.dot(self.S*xj, -(dXass/Xass)**2+d2Xass*(1/Xass-1/2))
 
         ares[0] += np.dot(self.S*xj, aux1)
         ares[1] += np.dot(self.S*xj, aux2 * dXass)
@@ -567,10 +576,15 @@ def dares_dx(self, x, rho, temp_aux, Xass0=None):
     g2s = g2m * (1 + gc)
     dg2s = dgc * g2m + (1+gc)*dg2m
 
-    lng, dlngx = dlngmie_dx(gHS, g1s, g2s, dgHS, dg1s, dg2s, beta,
-                            self.eps)
-    achain = - lng@(x * (self.ms - 1))
-    dachainx = - ((self.ms - 1) * lng + dlngx@(x*(self.ms - 1)))
+    lng, dlngx = dlngmie_dx(gHS, g1s, g2s, dgHS, dg1s, dg2s, beta, self.eps)
+    # achain = - lng@(x * (self.ms - 1)) # original
+    # dachainx = - ((self.ms - 1) * lng + dlngx@(x*(self.ms - 1)))
+
+    detai_dx = xhi00 * self.ms * di03[:, -1]
+    etai = xhi00 * xmi * di03[:, -1]
+    achain = - lng@(x * (self.ms - 1 + etai*self.ring))
+    dachainx = -  dlngx@(x*(self.ms - 1 + etai*self.ring))
+    dachainx += - lng * (self.ms - 1. + etai*self.ring + self.ring*detai_dx*x)
 
     ares = amono + achain
     daresx = damonox + dachainx
@@ -599,9 +613,6 @@ def dares_dx(self, x, rho, temp_aux, Xass0=None):
         dXassx = dXass_dx(rho, xj, Xass, self.DIJ, Dabij, dDabij_dx,
                           self.dxjdx, CIJ)
 
-        # aasso = np.dot(self.S*xj, (np.log(Xass) - Xass/2 + 1/2))
-        # daassox = (self.dxjdx * (np.log(Xass) - Xass/2 + 1/2) + dXassx * xj * (1/Xass - 1/2))@self.S
-
         aux1 = np.log(Xass) - Xass/2 + 1/2
         aux2 = 1/Xass - 1/2
 
@@ -621,21 +632,12 @@ def dares_dx(self, x, rho, temp_aux, Xass0=None):
                             self.mupolad2)
         ares += a
         daresx += dax
-        '''
-    print('amono:', amono)
-    print('achain:', achain)
-    print('assoc:', aasso)
-    print('apol', a)
 
-    print('damono_dx:', damonox)
-    print('dachain_dx:', dachainx)
-    print('dassoc_dx:', daassox)
-    print('dapol_dx', dax)
-    '''
     return ares, daresx, Xass
 
 
 def dares_dxrho(self, x, rho, temp_aux, Xass0=None):
+
     beta, dii, dij, x0, x0i, di03, dij3 = temp_aux[0:7]
     a1vdw_cteij, a1vdwij, tetha, a1vdw_cte, a1vdw = temp_aux[7:12]
 
@@ -776,10 +778,18 @@ def dares_dxrho(self, x, rho, temp_aux, Xass0=None):
     g2s = g2m * (1 + gc[0])
     g2s[1] += g2m[0] * gc[1]
     dg2s = dgc*g2m[0] + (1+gc[0])*dg2m
-    lng, dlngx = dlngmie_dxxhi(gHS, g1s, g2s, dgHS, dg1s, dg2s, beta,
-                               self.eps)
-    achain = - lng@(x * (self.ms - 1))
-    dachainx = - ((self.ms - 1) * lng[0] + dlngx@(x*(self.ms - 1)))
+    lng, dlngx = dlngmie_dxxhi(gHS, g1s, g2s, dgHS, dg1s, dg2s, beta, self.eps)
+
+    # achain = - lng@(x * (self.ms - 1)) # original
+    # dachainx = - ((self.ms - 1) * lng[0] + dlngx@(x*(self.ms - 1)))
+    detai_dxhi00 = xmi * di03[:, -1]
+    etai = xhi00 * detai_dxhi00
+    achain = - lng@(x * (self.ms - 1. + etai*self.ring))
+    achain[1] += - np.dot(x*self.ring*detai_dxhi00, lng[0])
+
+    detai_dx = xhi00 * self.ms * di03[:, -1]
+    dachainx = -  dlngx@(x*(self.ms - 1 + etai*self.ring))
+    dachainx -= lng[0] * (self.ms - 1. + etai*self.ring + self.ring*detai_dx*x)
 
     ares = amono + achain
     daresx = damonox + dachainx
@@ -819,13 +829,10 @@ def dares_dxrho(self, x, rho, temp_aux, Xass0=None):
 
         aasso = np.dot(self.S*xj, aux1)
         daasso = np.dot(self.S*xj, aux2 * dXass)
-        # aasso = np.dot(self.S*xj, (np.log(Xass) - Xass/2 + 1/2))
-        # daasso = np.dot(self.S*xj, (1/Xass - 1/2) * dXass)
 
         ares[0] += aasso
         ares[1] += daasso
 
-        # daassox = (self.dxjdx * (np.log(Xass) - Xass/2 + 1/2) + dXassx * xj * (1/Xass - 1/2))@self.S
         daassox = (self.dxjdx * aux1 + dXassx * xj * aux2)@self.S
         daresx += daassox
     else:
@@ -843,15 +850,5 @@ def dares_dxrho(self, x, rho, temp_aux, Xass0=None):
                                self.npol, self.mupolad2)
         ares += a
         daresx += dax
-        '''
-    print('amono:', amono)
-    print('achain:', achain)
-    print('assoc:', aasso)
-    print('apol', a)
 
-    print('damono_dx:', damonox)
-    print('dachain_dx:', dachainx)
-    print('dassoc_dx:', daassox)
-    print('dapol_dx', dax)
-    '''
     return ares, daresx, Xass

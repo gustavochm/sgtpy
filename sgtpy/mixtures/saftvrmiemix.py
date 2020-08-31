@@ -66,6 +66,7 @@ class saftvrmie_mix():
         self.sigma = np.asarray(mixture.sigma)
         self.eps = np.asarray(mixture.eps)
         self.ms = np.asarray(mixture.ms)
+        self.ring = np.asarray(mixture.ring)
 
         self.nc = mixture.nc
 
@@ -362,7 +363,7 @@ class saftvrmie_mix():
 
     def dafcn_dxrho(self, x, rho, T, Xass0=None):
         temp_aux = self.temperature_aux(T)
-        a, ax, Xass = self.dafcn_dx_aux(x, rho, temp_aux, Xass0)
+        a, ax, Xass = self.dafcn_dxrho_aux(x, rho, temp_aux, Xass0)
         return a, ax
 
     def density_aux(self, x, temp_aux, P, state, rho0=None, Xass0=None):

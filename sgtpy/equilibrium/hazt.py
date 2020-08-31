@@ -60,8 +60,8 @@ def haz_objt(inc, T, P, model, v0=[None, None, None]):
     return np.hstack([K1*X-Y, K2*X-W, X.sum()-1, Y.sum()-1, W.sum()-1])
 
 
-def haz(X0, W0, Y0, T, P, model, good_initial=False,
-        v0=[None, None, None], K_tol=1e-10, full_output=False):
+def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
+        Xass0=[None, None, None], K_tol=1e-10, full_output=False):
     """
     Liquid liquid vapor (T,P) -> (x, w, y)
 
@@ -130,7 +130,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False,
         return X, W, Y, T
 
     if not good_initial:
-        out = multiflash(x0, b0, ['L', 'L', 'V'], Z0, T, P, model, v0,
+        out = multiflash(x0, b0, ['L', 'L', 'V'], Z0, T, P, model, v0, Xass0,
                          K_tol, True)
     else:
         global vx, vw, vy
@@ -138,7 +138,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False,
         x0 = sol.reshape([model.nc, 3])
         Z0 = x0.mean(axis=0)
         out = multiflash(x0, b0, ['L', 'L', 'V'], Z0, T, P, model,
-                         [vx, vw, vy], K_tol, True)
+                         [vx, vw, vy], Xass0, K_tol, True)
 
     Xm, beta, tetha, equilibrio = out.X, out.beta, out.tetha, out.states
     error_inner = out.error_inner
@@ -150,7 +150,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False,
         betatetha = np.hstack([beta[order], tetha])
         equilibrio = np.asarray(equilibrio)[order]
         v0 = np.asarray(v)[order]
-        out = multiflash(Xm, betatetha, equilibrio, Z0, T, P, model, v0,
+        out = multiflash(Xm, betatetha, equilibrio, Z0, T, P, model, v0, Xass0,
                          K_tol, full_output=True)
         order = [1, 2, 0]
         Xm, beta, tetha, equilibrio = out.X, out.beta, out.tetha, out.states
@@ -162,7 +162,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False,
             equilibrio = np.asarray(equilibrio)[order]
             v0 = np.asarray(out.v)[order]
             out = multiflash(Xm, betatetha, equilibrio, Z0, T, P, model, v0,
-                             K_tol, full_output=True)
+                             Xass0, K_tol, full_output=True)
             order = [1, 0, 2]
             Xm, beta, tetha = out.X, out.beta, out.tetha
             equilibrio = out.states

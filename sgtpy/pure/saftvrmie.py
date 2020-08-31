@@ -50,6 +50,7 @@ class saftvrmie_pure():
         self.ms = pure.ms
         self.sigma = pure.sigma
         self.eps = pure.eps
+        self.ring = pure.ring
         self.lambda_a = pure.lambda_a
         self.lambda_r = pure.lambda_r
         self.lambda_ar = self.lambda_r + self.lambda_a

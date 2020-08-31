@@ -53,9 +53,10 @@ class component(object):
     ci :  evaluates influence parameter polynomial
     '''
 
-    def __init__(self, name='None', ms=1, sigma=0, eps=0, lambda_r=12.,
+    def __init__(self, name='None', ms=1., sigma=0., eps=0., lambda_r=12.,
                  lambda_a=6., eAB=0., rcAB=1., rdAB=0.4, sites=[0, 0, 0],
-                 mupol=0, npol=0., Tc=0, Pc=0, Zc=0, Vc=0, w=0, cii=0):
+                 mupol=0, npol=0., ring=0., Tc=0., Pc=0., Zc=0., Vc=0.,
+                 w=0., cii=0.):
 
         self.name = name
         self.Tc = Tc  # Critical Temperature in K
@@ -74,6 +75,9 @@ class component(object):
         self.lambda_a = np.asarray(lambda_a)
         self.lambda_r = np.asarray(lambda_r)
         self.lambda_ar = self.lambda_r + self.lambda_a
+
+        # For ring molecules
+        self.ring = ring
 
         # Association Parameters
         self.eAB = eAB * kb
@@ -190,6 +194,7 @@ class mixture(object):
         self.sigma = [component1.sigma, component2.sigma]
         self.eps = [component1.eps, component2.eps]
         self.ms = [component1.ms, component2.ms]
+        self.ring = [component1.ring, component2.ring]
         self.eAB = [component1.eAB, component2.eAB]
         self.rc = [component1.rcAB, component2.rcAB]
         self.rd = [component1.rdAB, component2.rdAB]
@@ -215,6 +220,7 @@ class mixture(object):
         self.sigma.append(component.sigma)
         self.eps.append(component.eps)
         self.ms.append(component.ms)
+        self.ring.append(component.ring)
         self.eAB.append(component.eAB)
         self.rc.append(component.rcAB)
         self.rd.append(component.rdAB)

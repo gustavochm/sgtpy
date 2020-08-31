@@ -47,7 +47,7 @@ def ares(self, rho, temp_aux, Xass0=None):
     a_chain = achain(x0, eta, x0_a12, a1sb_a1[0], a1m_eval[1], x03, nsigma,
                      self.alpha, tetha, x0_a22, a1sb_a2[0], da2m_new,
                      dkhs[0], dia, deta, rho, beta,  self.eps, self.c,
-                     self.ms)
+                     self.ms, self.ring)
 
     # Total Helmolthz
     a = a_mono + a_chain
@@ -111,7 +111,7 @@ def dares_drho(self, rho, temp_aux, Xass0=None):
     a_chain = dachain_drho(x0, eta, x0_a12, a1sb_a1[:2], a1m_eval, x03,
                            nsigma, self.alpha, tetha, x0_a22, a1sb_a2[:2],
                            da2m_new, dkhs[:2], dia, drho, rho, beta,
-                           self.eps, self.c, self.ms)
+                           self.eps, self.c, self.ms, self.ring)
 
     # Total helmolthz
     a = a_mono + a_chain
@@ -188,7 +188,7 @@ def d2ares_drho(self, rho, temp_aux, Xass0=None):
     a_chain = d2achain_drho(x0, eta, x0_a12, a1sb_a1[:3], a1m_eval, x03,
                             nsigma, self.alpha, tetha, x0_a22, a1sb_a2[:3],
                             da2m_new, dkhs[:3], dia, drho, rho, beta,
-                            self.eps, self.c, self.ms)
+                            self.eps, self.c, self.ms, self.ring)
 
     # Total Helmolthz
     a = a_mono + a_chain
