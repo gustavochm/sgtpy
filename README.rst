@@ -90,7 +90,9 @@ the mixture using SGT.
       >>> #solving BVP of SGT with 25 colocation points
       >>> solsgt = sgt_mix(rhoy, rhox, T, P, eos, n = 25, full_output = True)
 
-
+For more examples, please have a look at the Jupyter Notebook files
+located in the *examples* folder of the sources or
+`view examples in github <https://github.com/gustavochm/SGTPy/tree/master/Examples>`_.
 
 Latest source code
 ------------------
