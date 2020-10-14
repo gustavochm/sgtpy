@@ -114,9 +114,9 @@ License information
 
 This package is part of the article SGTPy: A Python open-source code for
 calculating the interfacial properties of fluids based on the Square Gradient
- Theory using the SAFT-VR Mie equation of state by Andrés Mejía,
- Erich A. Müller and Gustavo Chaparro. Currently under revision
- in Journal of Chemical & Engineering Data.
+Theory using the SAFT-VR Mie equation of state by Andrés Mejía,
+Erich A. Müller and Gustavo Chaparro. Currently under revision
+in Journal of Chemical & Engineering Data.
 
 See ``LICENSE.txt`` for information on the terms & conditions for usage
 of this software, and a DISCLAIMER OF ALL WARRANTIES.
