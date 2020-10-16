@@ -18,7 +18,7 @@ setup(
   license='MIT',
   version='0.0.1',
   description='SAFT-VR-MIE EOS and SGT',
-  author='Gustavo Chaparro Maldonado, Andres Mejia Matallana',
+  author='Gustavo Chaparro Maldonado, Andres Mejia Matallana, Erich A. Muller',
   author_email='gustavochaparro@udec.cl',
   url='https://github.com/gustavochm/SGTPy',
   download_url='https://github.com/gustavochm/SGTPy.git',

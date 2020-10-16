@@ -19,6 +19,7 @@ Installation Prerequisites
 --------------------------
 - numpy
 - scipy
+- cython
 
 Installation
 ------------
