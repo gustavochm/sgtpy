@@ -7,7 +7,7 @@ from .a1sB_monomer import x0lambda_eval
 
 from .pertubaciones_eval import ahs, dahs_deta, d2ahs_deta
 from .pertubaciones_eval import a1m
-from .pertubaciones_eval import a2m,  da2m_deta, d2a2m_deta
+from .pertubaciones_eval import a2m, da2m_deta, d2a2m_deta
 from .pertubaciones_eval import da2m_new_deta, d2a2m_new_deta, d3a2m_new_deta
 from .pertubaciones_eval import a3m, da3m_deta, d2a3m_deta
 
@@ -134,11 +134,9 @@ def dares_drho(self, rho, temp_aux, Xass0=None):
         dDabij_drho[self.indexabij] = dDab
         KIJ = rho * (self.DIJ*Dabij)
         Xass = Xass_solver(self.nsites, KIJ, self.diagasso, Xass0)
-        CIJ = rho * Xass**2 * Dabij * self.DIJ
 
+        CIJ = rho * np.tile(Xass**2, (self.nsites, 1)).T * Dabij * self.DIJ
         CIJ[self.diagasso] += 1.
-        CIJ = CIJ.T
-
         dXass = dXass_drho(rho, Xass, self.DIJ, Dabij, dDabij_drho, CIJ)
         a[0] += np.dot(self.S, (np.log(Xass) - Xass/2 + 1/2))
         a[1] += np.dot(self.S, (1/Xass - 1/2) * dXass)
@@ -216,10 +214,9 @@ def d2ares_drho(self, rho, temp_aux, Xass0=None):
 
         KIJ = rho * (self.DIJ*Dabij)
         Xass = Xass_solver(self.nsites, KIJ, self.diagasso, Xass0)
-        CIJ = rho * Xass**2 * Dabij * self.DIJ
 
+        CIJ = rho * np.tile(Xass**2, (self.nsites, 1)).T * Dabij * self.DIJ
         CIJ[self.diagasso] += 1.
-        CIJ = CIJ.T
         dXass = dXass_drho(rho, Xass, self.DIJ, Dabij, dDabij_drho, CIJ)
         d2Xass = d2Xass_drho(rho, Xass, dXass, self.DIJ, Dabij, dDabij_drho,
                              d2Dabij_drho, CIJ)

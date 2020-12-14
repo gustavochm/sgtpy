@@ -117,12 +117,13 @@ def dXass_drho(rho, Xass, DIJ, Dabij, dDabij_drho, CIJ):
 
 def d2Xass_drho(rho, Xass, dXass_drho, DIJ, Dabij, dDabij_drho, d2Dabij_drho,
                 CIJ):
-    b2rho = Xass @ (DIJ * d2Dabij_drho)
-    b2rho += 2 * dXass_drho@(DIJ*dDabij_drho)
+
+    b2rho = np.sum(DIJ*(Xass*d2Dabij_drho + 2*dXass_drho*dDabij_drho), axis=1)
     b2rho *= - rho
     b2rho += 2 * (1/Xass - 1) / (rho**2)
     b2rho *= Xass**2
     b2rho += 2 * dXass_drho / (rho)
     b2rho += 2 * dXass_drho**2 / (Xass)
+
     d2Xass_drho = np.linalg.solve(CIJ, b2rho)
     return d2Xass_drho
