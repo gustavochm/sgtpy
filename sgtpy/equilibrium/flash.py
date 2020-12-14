@@ -161,7 +161,8 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
         jac = True
         hess = None
         method = 'BFGS'
-        vsol = minimize(fobj, beta*Y, args=(equilibrium, Z, temp_aux, P, model),
+        y0 = beta*Y
+        vsol = minimize(fobj, y0, args=(equilibrium, Z, temp_aux, P, model),
                         jac=jac, method=method, hess=hess, tol=K_tol)
 
         it2 += vsol.nit
