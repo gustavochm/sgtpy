@@ -5,7 +5,7 @@ from ..equilibrium import bubblePy, lle, tpd_min, vlleb
 
 def fobj_elv(model, Xexp, Yexp, Texp, Pexp):
     """
-    Objective function to fit parameters for ELV in multicomponent mixtures
+    Objective function to fit parameters for VLE in multicomponent mixtures
     """
 
     n = Pexp.shape[0]
@@ -28,7 +28,7 @@ def fobj_elv(model, Xexp, Yexp, Texp, Pexp):
 
 def fobj_ell(model, Xexp, Wexp, Texp, Pexp, tpd=True):
     """
-    Objective function to fit parameters for ELL in multicomponent mixtures
+    Objective function to fit parameters for LLE in multicomponent mixtures
     """
     n = Pexp.shape[0]
     n1, n2 = Xexp.shape
@@ -57,7 +57,7 @@ def fobj_ell(model, Xexp, Wexp, Texp, Pexp, tpd=True):
 
 def fobj_hazb(model, Xellv, Wellv, Yellv, Tellv, Pellv, info=[1, 1, 1]):
     """
-    Objective function to fit parameters for ELLV in binary mixtures
+    Objective function to fit parameters for VLLE in binary mixtures
     """
     n = len(Tellv)
     n1, n2 = Xellv.shape

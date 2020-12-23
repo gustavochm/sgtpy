@@ -23,7 +23,7 @@ def fobj_kij(kij, mix, datavle=None, datalle=None, datavlle=None):
 def fit_kij(kij_bounds, mix, datavle=None, datalle=None, datavlle=None,
             minimize_options={}):
     """
-    fit_kij: attemps to fit kij to LVE, LLE, LLVE
+    fit_kij: attemps to fit kij to VLE, LLE, VLLE
 
     Parameters
     ----------
@@ -72,7 +72,7 @@ def fobj_asso(x, mix, datavle=None, datalle=None, datavlle=None):
 def fit_asso(x0, mix, datavle=None, datalle=None, datavlle=None,
              minimize_options={}):
     """
-    fit_asso: attemps to fit kij to LVE, LLE, LLVE
+    fit_asso: attemps to fit kij and lij to VLE, LLE, VLLE
 
     Parameters
     ----------
@@ -124,7 +124,7 @@ def fobj_cross(x, mix, assoc, datavle=None, datalle=None, datavlle=None):
 def fit_cross(x0, mix, assoc, datavle=None, datalle=None, datavlle=None,
               minimize_options={}):
     """
-    fit_asso: attemps to fit kij to LVE, LLE, LLVE
+    fit_asso: attemps to fit kij and rcij to VLE, LLE, VLLE
 
     Parameters
     ----------

@@ -32,7 +32,7 @@ def fit_beta(beta0, ExpTension, EquilibriumInfo, eos):
     ExpTension : array
         Experimental interfacial tension of the mixture
     EquilibriumInfo : tuple
-        tuple containing computes density vectors, and temperature and pressure
+        tuple containing density vectors, temperature and pressure
         tuple = (rho1, rho2, T, P)
     eos : model
         saft vr mie model set up with the binary mixture
