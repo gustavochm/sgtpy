@@ -4,7 +4,7 @@ from .stability import tpd_minimas
 from .multiflash import multiflash
 
 
-def lle(x0, w0, Z, T, P, model, v0=[None, None], Xass0 =[None, None],
+def lle(x0, w0, Z, T, P, model, v0=[None, None], Xass0=[None, None],
         K_tol=1e-8, full_output=False):
     """
     Liquid liquid equilibrium (z,T,P) -> (x,w,beta)
@@ -22,11 +22,11 @@ def lle(x0, w0, Z, T, P, model, v0=[None, None], Xass0 =[None, None],
     z : array_like
         overal composition of mix
     T : float
-        absolute temperature in K.
+        absolute temperature [K].
     P : float
-        pressure in en bar
+        pressure [Pa]
     model : object
-        created from mixture, eos and mixrule
+        created from mixture and saftvrmie function
     v0 : list, optional
         if supplied volume used as initial value to compute fugacities
     K_tol : float, optional
@@ -52,9 +52,9 @@ def lle(x0, w0, Z, T, P, model, v0=[None, None], Xass0 =[None, None],
 
     equilibrio = ['L', 'L']
     fugx, v1, Xass1 = model.logfugef_aux(x0, temp_aux, P, equilibrio[0], v0[0],
-                                     Xass0[0])
+                                         Xass0[0])
     fugw, v2, Xass2 = model.logfugef_aux(w0, temp_aux, P, equilibrio[1], v0[1],
-                                     Xass0[1])
+                                         Xass0[1])
     lnK = fugx - fugw
     K = np.exp(lnK)
 

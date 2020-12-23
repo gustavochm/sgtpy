@@ -80,11 +80,11 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
     Y0 : array_like
          guess composition of vapour 1
     T : float
-        absolute temperature in K.
+        absolute temperature [K].
     P : float
-        pressure in bar
+        pressure [Pa]
     model : object
-        Created from mixture, eos and mixrule
+        created from mixture and saftvrmie function
     good_initial: bool, optional
         if True skip Gupta's method and solves full system of equations.
     v0 : list, optional
@@ -304,7 +304,7 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
         info = {'T': T, 'P': P, 'error_outer': out.error_outer,
                 'error_inner': error_inner, 'iter': out.iter, 'beta': beta,
                 'tetha': tetha, 'X': Xm, 'v': v, 'Xass': Xass,
-                 'states': ['L', 'L', 'V']}
+                'states': ['L', 'L', 'V']}
         out = EquilibriumResult(info)
         return out
 

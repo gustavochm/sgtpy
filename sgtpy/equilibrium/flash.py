@@ -63,7 +63,7 @@ def Gibbs_obj(v, phases, Z, temp_aux, P, model):
 def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
           Xass0=[None, None], K_tol=1e-8, full_output=False):
     """
-    Isothermic isobaric flash (z,T,P) -> (x,y,beta)
+    Isothermic isobaric flash (z, T, P) -> (x,y,beta)
 
     Parameters
     ----------
@@ -73,16 +73,15 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
     y_guess : array_like
         guess composition of phase 2
     equilibrium : string
-        'LL' for ELL, 'LV' for ELV
+        'LL' for LLE, 'LV' for VLE
     z : array_like
         overall system composition
     T : float
-        absolute temperature in K.
+        absolute temperature [K].
     P : float
-        pressure in bar
-
+        pressure [Pa]
     model : object
-        created from mixture, eos and mixrule
+        created from mixture and saftvrmie function
     v0 : list, optional
         if supplied volume used as initial value to compute fugacities
     K_tol : float, optional

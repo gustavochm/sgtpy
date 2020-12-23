@@ -4,7 +4,7 @@ from scipy.optimize import root
 from .equilibriumresult import EquilibriumResult
 
 
-def haz_objb(inc, T_P, tipo, modelo, v0):
+def haz_objb(inc, T_P, tipo, model, v0):
 
     X, W, Y, P_T = np.array_split(inc, 4)
 
@@ -18,17 +18,17 @@ def haz_objb(inc, T_P, tipo, modelo, v0):
     global vx, vw, vy
     vx, vw, vy = v0
 
-    fugX, vx = modelo.logfugef(X, T, P, 'L', vx)
-    fugW, vw = modelo.logfugef(W, T, P, 'L', vw)
-    fugY, vy = modelo.logfugef(Y, T, P, 'V', vy)
+    fugX, vx = model.logfugef(X, T, P, 'L', vx)
+    fugW, vw = model.logfugef(W, T, P, 'L', vw)
+    fugY, vy = model.logfugef(Y, T, P, 'V', vy)
 
     K1 = np.exp(fugX-fugY)
     K2 = np.exp(fugX-fugW)
     return np.hstack([K1*X-Y, K2*X-W, X.sum()-1, Y.sum()-1, W.sum()-1])
 
 
-def vlleb(X0, W0, Y0, P_T, T_P, spec, model,
-          v0=[None, None, None], full_output=False):
+def vlleb(X0, W0, Y0, P_T, T_P, spec, model, v0=[None, None, None],
+          full_output=False):
     '''
     Solves liquid liquid vapour equilibrium for binary mixtures.
     (T,P) -> (x,w,y)
@@ -43,13 +43,13 @@ def vlleb(X0, W0, Y0, P_T, T_P, spec, model,
     Y0 : array_like
         guess composition of phase 2
     P_T : float
-        absolute temperature or pressure
+        absolute temperature [K] or pressure [Pa]
     T_P : floar
-        absolute temperature or pressure
+        absolute temperature [K] or pressure [Pa]
     spec: string
         'T' if T_P is temperature or 'P' if pressure.
     model : object
-        created from mixture, eos and mixrule
+        created from mixture and saftvrmie function
     v0 : list, optional
         if supplied volume used as initial value to compute fugacities
     full_output: bool, optional

@@ -78,7 +78,7 @@ def gibbs_obj(ind, phases, Z, temp_aux, P, model):
 def multiflash(X0, betatetha, equilibrium, z, T, P, model, v0=[None],
                Xass0=[None], K_tol=1e-10, full_output=False):
     """
-    multiflash (z,T,P) -> (x,w,y,beta)
+    multiflash (z,T,P) -> (x, w, y, ..., beta)
 
     Parameters
     ----------
@@ -91,11 +91,11 @@ def multiflash(X0, betatetha, equilibrium, z, T, P, model, v0=[None],
     z : array_like
         overall system composition
     T : float
-        absolute temperature in K.
+        absolute temperature [K].
     P : float
-        pressure in bar
+        pressure [Pa]
     model : object
-        created from mixture, eos and mixrule
+        created from mixture and saftvrmie function
     v0 : list, optional
         if supplied volume used as initial value to compute fugacities
     K_tol : float, optional

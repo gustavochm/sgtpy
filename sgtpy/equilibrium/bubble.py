@@ -103,13 +103,13 @@ def bubblePy(y_guess, P_guess, X, T, model, good_initial=False,
     y_guess : array_like
         guess of vapour phase composition
     P_guess : float
-        guess of equilibrium pressure in bar.
-    x : array_like
+        guess of equilibrium pressure [Pa].
+    X : array_like
         liquid phase composition
     T : float
-        absolute temperature of the liquid in K.
+        absolute temperature of the liquid [K].
     model : object
-        create from mixture, eos and mixrule
+        created from mixture and saftvrmie function
     good_initial: bool, optional
         if True skip succesive substitution and solves by Newton's Method.
     v0 : list, optional
@@ -122,7 +122,7 @@ def bubblePy(y_guess, P_guess, X, T, model, good_initial=False,
     Returns
     -------
     Y : array_like, vector of vapour fraction moles
-    P : float, equilibrium pressure in bar
+    P : float, equilibrium pressure [Pa]
 
     """
     nc = model.nc
@@ -164,8 +164,6 @@ def bubblePy(y_guess, P_guess, X, T, model, good_initial=False,
 
     if error > tol:
         inc0 = np.hstack([lnK, P])
-        # sol1 = root(bubble_newton, inc0, args=(X, temp_aux, 'T', model, vl, vv,
-        #            Xassl, Xassv))
         sol1 = root(bubble_newton, inc0, args=(X, temp_aux, 'T', model))
         sol = sol1.x
         lnK = sol[:-1]
@@ -200,14 +198,13 @@ def bubbleTy(y_guess, T_guess, X, P, model, good_initial=False,
     y_guess : array_like
         guess of vapour phase composition
     T_guess : float
-        guess of equilibrium temperature of the liquid in K.
-
-    x : array_like
+        guess of equilibrium temperature of the liquid [K].
+    X : array_like
         liquid phase composition
     P : float
-        pressure of the liquid in bar
+        pressure of the liquid [Pa]
     model : object
-        create from mixture, eos and mixrule
+        created from mixture and saftvrmie function
     good_initial: bool, optional
         if True skip succesive substitution and solves by Newton's Method.
     v0 : list, optional
@@ -223,7 +220,7 @@ def bubbleTy(y_guess, T_guess, X, P, model, good_initial=False,
     Y : array_like
         vector of vapour fraction moles
     T : float
-        equilibrium temperature in K
+        equilibrium temperature [K]
     """
 
     nc = model.nc

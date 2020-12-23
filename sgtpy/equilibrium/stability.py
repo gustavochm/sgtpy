@@ -19,13 +19,13 @@ def tpd(X, state, Z, T, P, model, v0=[None, None]):
     Z : array_like
         mole fraction array of overall mixture
     T :  float
-        absolute temperature, in K
+        absolute temperature [K]
     P:  float
-        absolute pressure in bar
+        absolute pressure [Pa]
     model : object
-        create from mixture, eos and mixrule
+        created from mixture and saftvrmie function
     v0 : list, optional
-        values to solve fugacity, if supplied
+        initial volume to solve fugacity, if supplied
 
     Returns
     -------
@@ -68,8 +68,10 @@ def tpd_min(W, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
         mole fraction array of trial fase
     Z : array_like
         mole fraction array of overall mixture
-    T :  absolute temperature, in K
-    P:  absolute pressure in bar
+    T : float
+        absolute temperature [K]
+    P:  float
+        absolute pressure [Pa]
     model : object create from mixture, eos and mixrule
     stateW : string
         'L' for liquid phase, 'V' for vapor phase
@@ -100,8 +102,8 @@ def tpd_min(W, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
     alpha0[alpha0 < 1e-8] = 1e-8  # To avoid negative compositions
     # global vg
     # vg = vw
-    alpha = minimize(tpd_obj, alpha0, args=(temp_aux, P, di, model, stateW, vw),
-                     jac=True, method='BFGS')
+    alpha = minimize(tpd_obj, alpha0, jac=True, method='BFGS',
+                     args=(temp_aux, P, di, model, stateW, vw))
 
     W = alpha.x**2/2
     w = W/W.sum()
@@ -123,9 +125,9 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
     Z : array_like
         mole fraction array of overall mixture
     T : float
-        absolute temperature, in K
+        absolute temperature [K]
     P:  float
-        absolute pressure in bar
+        absolute pressure [Pa]
     model : object
         create from mixture, eos and mixrule
     stateW : string
@@ -164,8 +166,8 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
     # global vg
     vg = vw
     # Xassg = None
-    alpha = minimize(tpd_obj, alpha0, args=(temp_aux, P, di, model, stateW, vg),
-                     jac=True, method='BFGS')
+    alpha = minimize(tpd_obj, alpha0, jac=True, method='BFGS',
+                     args=(temp_aux, P, di, model, stateW, vg))
     W = alpha.x**2/4
     w = W/W.sum()  # normalized composition
     tpd = alpha.fun
@@ -177,8 +179,8 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
         alpha0[alpha0 < 1e-1] = 1e-1
         vg = vw
         # Xassg = None
-        alpha = minimize(tpd_obj, alpha0, args=(temp_aux, P, di, model, stateW, vg),
-                         jac=True, method='BFGS')
+        alpha = minimize(tpd_obj, alpha0, jac=True, method='BFGS',
+                         args=(temp_aux, P, di, model, stateW, vg))
         W = alpha.x**2/4
         w = W/W.sum()  # normalized composition
         tpd = alpha.fun
@@ -199,9 +201,8 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
         alpha0 = 2*Al**0.5
         alpha0[alpha0 < 1e-1] = 1e-1
         vg = vw
-        #Xassg = None
-        alpha = minimize(tpd_obj, alpha0, args=(temp_aux, P, di, model, stateW, vg),
-                         jac=True, method='BFGS')
+        alpha = minimize(tpd_obj, alpha0, jac=True, method='BFGS',
+                         args=(temp_aux, P, di, model, stateW, vg))
         W = alpha.x**2/4
         w = W/W.sum()  # normalized composition
         tpd = alpha.fun
@@ -229,9 +230,9 @@ def lle_init(Z, T, P, model, v0=None):
     z : array_like
         overall molar fraction array
     T : float
-        absolute temperature in K
+        absolute temperature [K]
     P : float
-        absolute pressure in bar
+        absolute pressure [Pa]
     model : object
         created from eos and mixture
     v0 : float, optional

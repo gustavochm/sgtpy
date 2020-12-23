@@ -106,13 +106,13 @@ def dewPx(x_guess, P_guess, y, T, model, good_initial=False,
     x_guess : array_like
         guess of liquid phase composition
     P_guess : float
-        guess of equilibrium pressure of the liquid in bar.
+        guess of equilibrium pressure of the liquid [Pa]
     y : array_like
         vapour phase composition
     T : float
-        temperaure of the vapour in K
+        temperaure of the vapour [K]
     model : object
-        create from mixture, eos and mixrule
+        created from mixture and saftvrmie function
     good_initial: bool, optional
         if True skip succesive substitution and solves by Newton's Method.
     v0 : list, optional
@@ -127,7 +127,7 @@ def dewPx(x_guess, P_guess, y, T, model, good_initial=False,
     X : array_like
         liquid mole fraction vector
     P : float
-        equilibrium pressure in bar
+        equilibrium pressure [Pa]
 
     """
     nc = model.nc
@@ -203,13 +203,13 @@ def dewTx(x_guess, T_guess, y, P, model, good_initial=False,
     x_guess : array_like
         guess of liquid phase composition
     T_guess : float
-        guess of equilibrium temperature of the liquid in K.
+        guess of equilibrium temperature of the liquid [K]
     y : array_like
         vapour phase composition
     P : float
-        pressure of the liquid in bar
+        pressure of the liquid [Pa]
     model : object
-        create from mixture, eos and mixrule
+        created from mixture and saftvrmie function
     good_initial: bool, optional
         if True skip succesive substitution and solves by Newton's Method.
     v0 : list, optional
@@ -224,7 +224,7 @@ def dewTx(x_guess, T_guess, y, P, model, good_initial=False,
     X : array_like
         liquid mole fraction vector
     T : float
-        equilibrium temperature in K
+        equilibrium temperature [K]
 
     """
 
