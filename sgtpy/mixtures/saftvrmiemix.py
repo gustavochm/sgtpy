@@ -13,12 +13,6 @@ from .density_solver import density_topliss, density_newton
 from ..constants import kb, Na
 
 
-# from .ares import ares as ares2
-# from .ares import dares_drho as dares_drho2
-# from .ares import d2ares_drho as d2ares_drho2
-# from .ares import dares_dx as dares_dx2
-# from .ares import dares_dxrho as dares_dxrho2
-
 R = Na * kb
 
 
@@ -56,6 +50,130 @@ def fi(alphaij, i):
 
 
 class saftvrmie_mix():
+    '''
+    SAFT-VR-Mie EoS for mixtures Object
+
+    This object have implemeted methods for phase equilibrium
+    as for interfacial properties calculations.
+
+    Parameters
+    ----------
+    mixture : object
+        mixture created with mixture class
+
+    Attributes
+    ----------
+    nc: integrer
+        number of component in the mixture
+    ms: array_like
+        number of chain segments
+    sigma: array_like
+        size parameter of Mie potential [m]
+    eps: array_like
+        well-depth of Mie potential [J]
+    la: array_like
+        attractive exponent for Mie potential
+    lr: array_like
+        repulsive exponent for Mie potential
+
+    ring: geometric parameter for ring molecules
+          (see Langmuir 2017, 33, 11518-11529, Table I.)
+
+    sigmaij: array_like
+        size parameters matrix for Mie potential [m]
+    epsij: array_like
+        well-depth energy matrix of Mie potential [J]
+    laij: array_like
+        attractive exponent matrix for Mie potential
+    lrij: array_like
+        repulsive exponent matrix for Mie potential
+    alphaij: array_like
+        matrix of alpha van der waals constant
+
+    eABij: array_like
+        association energy matrix [J]
+    rcij: array_like
+        association range matrix [m]
+    rdij: array_like
+        association site position matrix [m]
+    sites: list
+        triplet of number of association sites [B, P, N]
+
+    mupol: array_like
+        dipolar moment [Debye]
+    npol: array_like
+        number of dipolar sites
+
+    cii : array_like
+        influence factor for SGT [J m^5 / mol^2]
+    cij : array_like
+        cross influence parameter matrix for SGT [J m^5 / mol^2]
+    beta: array_like
+        correction to cross influence parameter matrix
+
+    secondorder: bool
+        bool to indicate if composition derivatives of fugacity coefficient
+        are available
+    secondordersgt: bool
+        bool to indicate if composition derivatives of chemical potential
+        are available
+
+
+    Methods
+    -------
+    cii_correlation : correlates the influence parameter of the fluid.
+    diameter : computes the diameter at given temperature.
+    temperature_aux : computes temperature depedent parameters of the fluid.
+
+    ares: computes the residual dimentionless Helmholtz free energy
+    dares_drho: computes the residual dimentionless Helmholtz free energy and
+        and its density first density derivative
+    d2ares_drho: computes the residual dimentionless Helmholtz free energy and
+        and its density first and second density derivatives
+    dares_dx: computes the residual dimentionless Helmholtz free energy and
+        and its composition derivatives
+    dares_dxrho: computes the residual dimentionless Helmholtz free energy and
+        and its composition and density derivatives
+
+
+    afcn: computes total Helmholtz energy
+    dafcn_drho: computes total Helmholtz energy and its density derivative
+    d2afcn_drho: computes total Helmholtz energy and it density derivatives
+    dafcn_dx: computes total Helmholtz energy and its composition derivative
+    dafcn_dxrho:computes total Helmholtz energy and its composition and
+        density derivatives
+
+
+    density: computes the density of the fluid.
+    pressure: computes the pressure.
+    dP_drho: computes pressure and its density derivative.
+
+    logfugmix: computes the fugacity coefficient of the mixture.
+    logfugef: computes the effective fugacity coefficients of the components
+        in the mixture
+    a0ad: computes adimentional Helmholtz density energy
+    muad: computes adimentional chemical potential
+    dmuad: computes the adimentional chemical potential and its derivatives
+    dOm : computes adimentional Thermodynamic Grand Potential
+    ci :  computes influence parameters matrix for SGT
+    sgt_adim : computes adimentional factors for SGT
+
+    beta_sgt: method for setting beta correction used in SGT
+
+    Auxiliar methods (computed using temperature_aux output list)
+    -------------------------------------------------------------
+    density_aux : computes density
+    afcn_aux : computes afcn
+    dafcn_aux : computes dafcn_drho
+    d2afcn_aux : computes d2afcn_drho
+    pressure_aux : computes pressure
+    dP_drho_aux : computes dP_drho
+    logfugmix_aux : computes logfug
+    a0ad_aux : compute a0ad
+    muad_aux : computes muad
+    dmuad_aux : computes dmuad
+    dOm_aux : computes dOm
+    '''
 
     def __init__(self, mixture):
 
@@ -216,6 +334,26 @@ class saftvrmie_mix():
         self.beta = np.zeros([self.nc, self.nc])
 
     def cii_correlation(self, overwrite=False):
+        """
+        cii_corelation()
+
+        Method that computes the influence parameter of coarsed-grained
+        molecules
+
+        AIChE Journal, 62, 5, 1781-1794 (2016)
+        Eq. (23)
+
+        Parameters
+        ----------
+
+        overwrite : bool
+            If true it will overwrite the actual influence parameter.
+
+        Returns
+        -------
+        cii : array_like
+            correlated influence parameter [J m^5 / mol^2]
+        """
         cii = self.ms * (0.12008072630855947 + 2.2197907527439655 * self.alpha)
         cii *= np.sqrt(Na**2 * self.eps * self.sigma**5)
         cii **= 2
@@ -225,13 +363,73 @@ class saftvrmie_mix():
         return cii
 
     def diameter(self, beta):
+        """
+        diameter(beta)
+
+        Method that computes the diameter of the fluids at given
+        beta = 1 / kb T
+
+        Journal of Chemical Physics, 139(15), 1–37 (2013)
+        Eq. (7)
+
+        Parameters
+        ----------
+
+        beta : float
+            Boltzmann's factor: beta = 1 / kb T [1/J]
+
+        Returns
+        -------
+        d : array_like
+            computed diameters [m]
+        """
         # umie = U_mie(1/roots, c, eps, lambda_r, lambda_a)
         integrer = np.exp(-beta * self.umie)
         d = self.sigma * (1. - np.matmul(self.weights, integrer))
         return d
 
     def temperature_aux(self, T):
+        """
+        temperature_aux(T)
 
+        Method that computes temperature dependent parameters.
+        It returns the following list:
+
+        temp_aux = [beta, dii, dij, x0, x0i, di03, dij3, a1vdw_cteij, a1vdwij,
+                    tetha, a1vdw_cte, a1vdw, Fab, epsa, epsija]
+
+        Journal of Chemical Physics, 139(15), 1–37 (2013)
+
+        beta: Boltzmann's factor [1/J]
+        dii: computed diameters [m] (Eq A9)
+        dij: diameters matrix [m] (Eq A46)
+        tetha: exp(beta*eps)-1 [Adim] (Below Eq. A37)
+        x0: sigmaij/dij [Adim] (Below Eq. A11)
+        x0i: sigma/dii [Adim]
+        di03: dii^3 [m^3]
+        dij3: dij^3 [m^3]
+
+        a1vdw_cteij: -12 * epsij * dij3
+        a1vdwij: tuple using a1vdw_cteij with different lamda_ij exponents
+
+        a1vdw: -12 * eps * di03
+        a1vdw: tuple using a1vdw_cteij with different lamda exponents
+
+        Fab: association strength [Adim] (Eq. A41)
+        epsa: eps / kb / T [Adim]
+        epsija: epsij / kb / T [Adim]
+
+        Parameters
+        ----------
+
+        T : float
+            Absolute temperature [K]
+
+        Returns
+        -------
+        temp_aux : list
+             list of computed parameters
+        """
         diag_index = self.diag_index
 
         beta = 1 / (kb * T)
@@ -276,31 +474,163 @@ class saftvrmie_mix():
         return temp_aux
 
     def ares(self, x, rho, T, Xass0=None):
+        """
+        ares(x, rho, T, Xass0)
+        Method that computes the residual Helmholtz free energy of the mixture.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molecular density [molecules/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: float
+           residual dimentionless Helmholtz free energy [Adim]
+        """
         temp_aux = self.temperature_aux(T)
         a, Xass = ares(self, x, rho, temp_aux, Xass0)
         return a
 
     def dares_drho(self, x, rho, T, Xass0=None):
+        """
+        dares_drho(x, rho, T, Xass0)
+        Method that computes the residual Helmholtz free energy of the mixture
+        and its first density derivative.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molecular density [molecules/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: array_like
+           residual dimentionless Helmholtz free energy [Adim, m^3]
+        """
         temp_aux = self.temperature_aux(T)
         a, Xass = dares_drho(self, x, rho, temp_aux, Xass0)
         return a
 
     def d2ares_drho(self, x, rho, T, Xass0=None):
+        """
+        d2ares_drho(x, rho, T, Xass0)
+        Method that computes the residual Helmholtz free energy of the mixture
+        and its first and second density derivatives.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molecular density [molecules/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: array_like
+           residual dimentionless Helmholtz free energy [Adim, m^3, m^6]
+        """
         temp_aux = self.temperature_aux(T)
         a, Xass = d2ares_drho(self, x, rho, temp_aux, Xass0)
         return a
 
     def dares_dx(self, x, rho, T, Xass0=None):
+        """
+        dares_dx(x, rho, T, Xass0)
+        Method that computes the residual Helmholtz free energy of the mixture
+        and its composition derivatives.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molecular density [molecules/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: float
+           residual dimentionless Helmholtz free energy [Adim]
+        ax: array_like
+           composition derivatives of residual dimentionless Helmholtz
+           free energy [Adim]
+        """
         temp_aux = self.temperature_aux(T)
         a, ax, Xass = dares_dx(self, x, rho, temp_aux, Xass0)
         return a, ax
 
     def dares_dxrho(self, x, rho, T, Xass0=None):
+        """
+        dares_dx(x, rho, T, Xass0)
+        Method that computes the residual Helmholtz free energy of the mixture
+        and its density and composition derivatives.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molecular density [molecules/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: array_like
+           residual dimentionless Helmholtz free energy [Adim, m^3]
+        ax: array_like
+           composition derivatives of residual dimentionless Helmholtz
+           free energy [Adim]
+        """
         temp_aux = self.temperature_aux(T)
         a, ax, Xass = dares_dxrho(self, x, rho, temp_aux, Xass0)
         return a, ax
 
     def afcn_aux(self, x, rho, temp_aux, Xass0=None):
+        """
+        afcn_aux(x, rho, T, Xass0)
+        Method that computes the total Helmholtz free energy of the mixture.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molecular density [molecules/m3]
+        temp_aux : list
+            temperature dependend parameters computed with temperature_aux(T)
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: float
+           total Helmholtz free energy [J/mol]
+        Xass : array
+            computed fraction of nonbonded sites
+        """
         beta = temp_aux[0]
         a, Xass = ares(self, x, rho, temp_aux, Xass0)
         a += aideal(x, rho, beta)
@@ -308,6 +638,29 @@ class saftvrmie_mix():
         return a, Xass
 
     def dafcn_drho_aux(self, x, rho, temp_aux, Xass0=None):
+        """
+        dafcn_drho_aux(x, rho, temp_aux, Xass0)
+        Method that computes the total Helmholtz free energy of the mixture
+        and its first density derivative.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molecular density [molecules/m3]
+        temp_aux : list
+            temperature dependend parameters computed with temperature_aux(T)
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: array_like
+           toal Helmholtz free energy [J/mol, J m^3/mol]
+        Xass : array
+            computed fraction of nonbonded sites
+        """
         beta = temp_aux[0]
         a, Xass = dares_drho(self, x, rho, temp_aux, Xass0)
         a += daideal_drho(x, rho, beta)
@@ -315,6 +668,29 @@ class saftvrmie_mix():
         return a, Xass
 
     def d2afcn_drho_aux(self, x, rho, temp_aux, Xass0=None):
+        """
+        d2afcn_drho_aux(x, rho, temp_aux, Xass0)
+        Method that computes the total Helmholtz free energy of the mixture
+        and its first and second density derivatives.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molecular density [molecules/m3]
+        temp_aux : list
+            temperature dependend parameters computed with temperature_aux(T)
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: array_like
+           toal Helmholtz free energy [J/mol, J m^3/mol, J m^6/mol]
+        Xass : array
+            computed fraction of nonbonded sites
+        """
         beta = temp_aux[0]
         a, Xass = d2ares_drho(self, x, rho, temp_aux, Xass0)
         a += d2aideal_drho(x, rho, beta)
@@ -322,6 +698,32 @@ class saftvrmie_mix():
         return a, Xass
 
     def dafcn_dx_aux(self, x, rho, temp_aux, Xass0=None):
+        """
+        dafcn_dx_aux(x, rho, temp_aux, Xass0)
+        Method that computes the total Helmholtz free energy of the mixture
+        and its composition derivatives.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molecular density [molecules/m3]
+        temp_aux : list
+            temperature dependend parameters computed with temperature_aux(T)
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: float
+           total dimentionless Helmholtz free energy [J/mol]
+        ax: array_like
+           composition derivatives of total dimentionless Helmholtz
+           free energy [J/mol]
+        Xass : array
+            computed fraction of nonbonded sites
+        """
         beta = temp_aux[0]
         ar, aresx, Xass = dares_dx(self, x, rho, temp_aux, Xass0)
         aideal, aidealx = daideal_dx(x, rho, beta)
@@ -332,6 +734,32 @@ class saftvrmie_mix():
         return a, ax, Xass
 
     def dafcn_dxrho_aux(self, x, rho, temp_aux, Xass0=None):
+        """
+        dafcn_dxrho_aux(x, rho, temp_aux, Xass0)
+        Method that computes the total Helmholtz free energy of the mixture
+        and its composition a density derivatives.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molecular density [molecules/m3]
+        temp_aux : list
+            temperature dependend parameters computed with temperature_aux(T)
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: array_like
+           total dimentionless Helmholtz free energy [J/mol, J m^3/mol]
+        ax: array_like
+           composition derivatives of total dimentionless Helmholtz
+           free energy [J/mol]
+        Xass : array
+            computed fraction of nonbonded sites
+        """
         beta = temp_aux[0]
         ar, aresx, Xass = dares_dxrho(self, x, rho, temp_aux, Xass0)
         aideal, aidealx = daideal_dxrho(x, rho, beta)
@@ -342,31 +770,168 @@ class saftvrmie_mix():
         return a, ax, Xass
 
     def afcn(self, x, rho, T, Xass0=None):
+        """
+        afcn(x, rho, T, Xass0)
+        Method that computes the total Helmholtz free energy of the mixture.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molecular density [molecules/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: float
+           total Helmholtz free energy [J/mol]
+        """
         temp_aux = self.temperature_aux(T)
         a, Xass = self.afcn_aux(x, rho, temp_aux, Xass0)
         return a
 
     def dafcn_drho(self, x, rho, T, Xass0=None):
+        """
+        dafcn_drho(x, rho, T, Xass0)
+        Method that computes the total Helmholtz free energy of the mixture
+        and its first density derivative.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molecular density [molecules/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: array_like
+           toal Helmholtz free energy [J/mol, J m^3/mol]
+        """
         temp_aux = self.temperature_aux(T)
         a, Xass = self.dafcn_drho_aux(x, rho, temp_aux, Xass0)
         return a
 
     def d2afcn_drho(self, x, rho, T, Xass0=None):
+        """
+        d2afcn_drho(x, rho, T, Xass0)
+        Method that computes the total Helmholtz free energy of the mixture
+        and its first and second density derivatives.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molecular density [molecules/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: array_like
+           toal Helmholtz free energy [J/mol, J m^3/mol, J m^6/mol]
+        """
         temp_aux = self.temperature_aux(T)
         a, Xass = self.d2afcn_drho_aux(x, rho, temp_aux, Xass0)
         return a
 
     def dafcn_dx(self, x, rho, T, Xass0=None):
+        """
+        dafcn_dx(x, rho, T, Xass0)
+        Method that computes the total Helmholtz free energy of the mixture
+        and its composition derivatives.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molecular density [molecules/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: float
+           total dimentionless Helmholtz free energy [J/mol]
+        ax: array_like
+           composition derivatives of total dimentionless Helmholtz
+           free energy [J/mol]
+        """
         temp_aux = self.temperature_aux(T)
         a, ax, Xass = self.dafcn_dx_aux(x, rho, temp_aux, Xass0)
         return a, ax
 
     def dafcn_dxrho(self, x, rho, T, Xass0=None):
+        """
+        dafcn_dxrho(x, rho, T, Xass0)
+        Method that computes the total Helmholtz free energy of the mixture
+        and its composition a density derivatives.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molecular density [molecules/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: array_like
+           total dimentionless Helmholtz free energy [J/mol, J m^3/mol]
+        ax: array_like
+           composition derivatives of total dimentionless Helmholtz
+           free energy [J/mol]
+        """
         temp_aux = self.temperature_aux(T)
         a, ax, Xass = self.dafcn_dxrho_aux(x, rho, temp_aux, Xass0)
         return a, ax
 
     def density_aux(self, x, temp_aux, P, state, rho0=None, Xass0=None):
+        """
+        density_aux(x, temp_aux, P, state)
+        Method that computes the density of the mixture at given composition,
+        temperature, pressure and aggregation state.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        temp_aux : list
+            temperature dependend parameters computed with temperature_aux(T)
+        P : float
+            pressure [Pa]
+        state : string
+            'L' for liquid phase and 'V' for vapor phase
+        rho0 : float, optional
+            initial guess to compute density root [mol/m^3]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        density: float
+            density [mol/m^3]
+        Xass : array
+            computed fraction of nonbonded sites
+        """
         if rho0 is None:
             rho, Xass = density_topliss(state, x, temp_aux, P, Xass0, self)
         else:
@@ -374,11 +939,60 @@ class saftvrmie_mix():
         return rho, Xass
 
     def density(self, x, T, P, state, rho0=None, Xass0=None):
+        """
+        density(x, T, P, state)
+        Method that computes the density of the mixture at given composition,
+        temperature, pressure and aggregation state.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        T : float
+            absolute temperature [K]
+        P : float
+            pressure [Pa]
+        state : string
+            'L' for liquid phase and 'V' for vapor phase
+        rho0 : float, optional
+            initial guess to compute density root [mol/m^3]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        density: float
+            density [mol/m^3]
+        """
         temp_aux = self.temperature_aux(T)
         rho, Xass = self.density_aux(x, temp_aux, P, state, rho0, Xass0)
         return rho
 
     def pressure_aux(self, x, rho, temp_aux, Xass0=None):
+        """
+        pressure_aux(x, rho, temp_aux, Xass0)
+
+        Method that computes the pressure at given composition,
+        density [mol/m3] and temperature [K]
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            density [mol/m3]
+        temp_aux : list
+            temperature dependend parameters computed with temperature_aux(T)
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        P : float
+            pressure [Pa]
+        Xass : array
+            computed fraction of nonbonded sites
+        """
         rhomolecular = Na * rho
         da, Xass = self.dafcn_drho_aux(x, rhomolecular, temp_aux, Xass0)
         afcn, dafcn = da
@@ -386,6 +1000,32 @@ class saftvrmie_mix():
         return Psaft, Xass
 
     def dP_drho_aux(self, x, rho, temp_aux, Xass0=None):
+        """
+        dP_drho_aux(rho, temp_aux, Xass0)
+
+        Method that computes the pressure and its density derivative at given
+        composition, density [mol/m3] and temperature [K]
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            density [mol/m3]
+        temp_aux : list
+            temperature dependend parameters computed with temperature_aux(T)
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        P : float
+            pressure [Pa]
+        dP: float
+            derivate of pressure respect density [Pa m^3 / mol]
+        Xass : array
+            computed fraction of nonbonded sites
+        """
         rhomolecular = Na * rho
         da, Xass = self.d2afcn_drho_aux(x, rhomolecular, temp_aux, Xass0)
         afcn, dafcn, d2afcn = da
@@ -394,16 +1034,92 @@ class saftvrmie_mix():
         return Psaft, dPsaft, Xass
 
     def pressure(self, x, rho, T, Xass0=None):
+        """
+        pressure(x, rho, T, Xass0)
+
+        Method that computes the pressure at given composition,
+        density [mol/m3] and temperature [K]
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            density [mol/m3]
+        T : float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        P : float
+            pressure [Pa]
+        """
         temp_aux = self.temperature_aux(T)
         Psaft, Xass = self.pressure_aux(x, rho, temp_aux, Xass0)
         return Psaft
 
     def dP_drho(self, x, rho, T, Xass0=None):
+        """
+        dP_drho(rho, T, Xass0)
+
+        Method that computes the pressure and its density derivative at given
+        composition, density [mol/m3] and temperature [K]
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            density [mol/m3]
+        T : float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        P : float
+            pressure [Pa]
+        dP: float
+            derivate of pressure respect density [Pa m^3 / mol]
+        """
         temp_aux = self.temperature_aux(T)
         Psaft, dPsaft, Xass = self.dP_drho_aux(x, rho, temp_aux, Xass0)
         return Psaft, dPsaft
 
     def logfugmix_aux(self, x, temp_aux, P, state, v0=None, Xass0=None):
+        """
+        logfugmix_aux(x, temp_aux, P, state, v0, Xass0)
+
+        Method that computes the fugacity coefficient of the mixture at given
+        composition, temperature and pressure.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        temp_aux : list
+            temperature dependend parameters computed with temperature_aux(T)
+        P: float
+            pressure [Pa]
+        state: string
+            'L' for liquid phase and 'V' for vapour phase
+        v0: float, optional
+            initial guess for volume root [m^3/mol]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        lnphi: float
+            fugacity coefficient of the mixture
+        v: float
+            computed volume of the phase [m^3/mol]
+        Xass : array
+            computed fraction of nonbonded sites
+        """
         beta = temp_aux[0]
         RT = Na/beta
 
@@ -421,11 +1137,70 @@ class saftvrmie_mix():
         return lnphi, v, Xass
 
     def logfugmix(self, x, T, P, state, v0=None, Xass0=None):
+        """
+        logfugmix(x, T, P, state, v0, Xass0)
+
+        Method that computes the fugacity coefficient of the mixture at given
+        composition, temperature and pressure.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        T: float
+            absolute temperature [K]
+        P: float
+            pressure [Pa]
+        state: string
+            'L' for liquid phase and 'V' for vapour phase
+        v0: float, optional
+            initial guess for volume root [m^3/mol]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        lnphi: float
+            fugacity coefficient of the mixture
+        v: float
+            computed volume of the phase [m^3/mol]
+        """
         temp_aux = self.temperature_aux(T)
         lnphi, v, Xass = self.logfugmix_aux(x, temp_aux, P, state, v0, Xass0)
         return lnphi, v
 
     def logfugef_aux(self, x, temp_aux, P, state, v0=None, Xass0=None):
+        """
+        logfugef_aux(x, temp_aux, P, state, v0, Xass0)
+
+        Method that computes the effective fugacity coefficient of the
+        components in the mixture at given composition, temperature
+        and pressure.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        temp_aux : list
+            temperature dependend parameters computed with temperature_aux(T)
+        P: float
+            pressure [Pa]
+        state: string
+            'L' for liquid phase and 'V' for vapour phase
+        v0: float, optional
+            initial guess for volume root [m^3/mol]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        lnphi: array_like
+            effective fugacity coefficient of the components
+        v: float
+            computed volume of the phase [m^3/mol]
+        Xass : array
+            computed fraction of nonbonded sites
+        """
 
         beta = temp_aux[0]
         RT = Na/beta
@@ -445,11 +1220,63 @@ class saftvrmie_mix():
         return lnphi, v, Xass
 
     def logfugef(self, x, T, P, state, v0=None, Xass0=None):
+        """
+        logfugef(x, T, P, state, v0, Xass0)
+
+        Method that computes the effective fugacity coefficient of the
+        components in the mixture at given composition, temperature
+        and pressure.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        T: float
+            absolute temperature [K]
+        P: float
+            pressure [Pa]
+        state: string
+            'L' for liquid phase and 'V' for vapour phase
+        v0: float, optional
+            initial guess for volume root [m^3/mol]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        lnphi: array_like
+            effective fugacity coefficient of the components
+        v: float
+            computed volume of the phase [m^3/mol]
+        """
         temp_aux = self.temperature_aux(T)
         lnphi, v, Xass = self.logfugef_aux(x, temp_aux, P, state, v0, Xass0)
         return lnphi, v
 
     def a0ad_aux(self, rhoi, temp_aux, Xass0=None):
+        """
+        a0ad_aux(rhoi, temp_aux, Xass0)
+
+        Method that computes the Helmholtz density energy divided by RT at
+        given density vector and temperature.
+
+        Parameters
+        ----------
+
+        rhoi : array_like
+            density vector [mol/m^3]
+        temp_aux : list
+            temperature dependend parameters computed with temperature_aux(T)
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a0ad: float
+            Helmholtz density energy divided by RT [mol/m^3]
+        Xass : array
+            computed fraction of nonbonded sites
+        """
 
         rho = np.sum(rhoi)
         x = rhoi/rho
@@ -464,11 +1291,54 @@ class saftvrmie_mix():
         return a0, Xass
 
     def a0ad(self, rhoi, T, Xass0=None):
+        """
+        a0ad(rhoi, T, Xass0)
+
+        Method that computes the Helmholtz density energy divided by RT at
+        given density vector and temperature.
+
+        Parameters
+        ----------
+
+        rhoi : array_like
+            density vector [mol/m^3]
+        T : float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a0ad: float
+            Helmholtz density energy divided by RT [mol/m^3]
+        """
         temp_aux = self.temperature_aux(T)
         a0, Xass = self.a0ad_aux(rhoi, temp_aux, Xass0)
         return a0
 
     def muad_aux(self, rhoi, temp_aux, Xass0=None):
+        """
+        muad_aux(rhoi, temp_aux, Xass0)
+
+        Method that computes the dimentionless chemical potential at given
+        density vector and temperature.
+
+        Parameters
+        ----------
+        rhoi : array_like
+            density vector [mol/m^3]
+        temp_aux : list
+            temperature dependend parameters computed with temperature_aux(T)
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        muad: array_like
+            chemical potential [Adim]
+        Xass : array
+            computed fraction of nonbonded sites
+        """
         rho = np.sum(rhoi)
         x = rhoi/rho
         rhom = Na * rho
@@ -483,11 +1353,55 @@ class saftvrmie_mix():
         return mu, Xass
 
     def muad(self, rhoi, T, Xass0=None):
+        """
+        muad(rhoi, T, Xass0)
+
+        Method that computes the dimentionless chemical potential at given
+        density vector and temperature.
+
+        Parameters
+        ----------
+        rhoi : array_like
+            density vector [mol/m^3]
+        T : float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        muad: array_like
+            chemical potential [Adim]
+        """
         temp_aux = self.temperature_aux(T)
         mu, Xass = self.muad_aux(rhoi, temp_aux, Xass0)
         return mu
 
     def dmuad_aux(self, rhoi, temp_aux, Xass0=None):
+        """
+        dmuad_aux(rhoi, temp_aux, Xass0)
+
+        Method that computes the chemical potential and its numerical
+        derivative at given density vector and temperature.
+
+        Parameters
+        ----------
+        rhoi : array_like
+            density vector [mol/m^3]
+        temp_aux : list
+            temperature dependend parameters computed with temperature_aux(T)
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        muad: array_like
+            chemical potential [J/mol]
+        dmuad: array_like
+            derivavites of the chemical potential respect to rhoi [J m^3/mol^2]
+        Xass : array
+            computed fraction of nonbonded sites
+        """
         nc = self.nc
         h = 1e-3
         diff = h * np.eye(nc)
@@ -504,21 +1418,118 @@ class saftvrmie_mix():
         return mu, dmu, Xass
 
     def dmuad(self, rhoi, T, Xass0=None):
+        """
+        dmuad(rhoi, T, Xass0)
+
+        Method that computes the chemical potential and its numerical
+        derivative at given density vector and temperature.
+
+        Parameters
+        ----------
+        rhoi : array_like
+            density vector [mol/m^3]
+        T : float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        muad: array_like
+            chemical potential [J/mol]
+        dmuad: array_like
+            derivavites of the chemical potential respect to rhoi [J m^3/mol^2]
+        """
         temp_aux = self.temperature_aux(T)
         mu, dmu, Xass = self.dmuad_aux(rhoi, temp_aux, Xass0)
         return mu, dmu
 
     def dOm_aux(self, rhoi, temp_aux, mu, Psat, Xass0=None):
+        """
+        dOm_aux(rhoi, temp_aux, mu, Psat, Xass0)
+
+        Method that computes the Thermodynamic Grand potential
+        at given density and temperature.
+
+        Parameters
+        ----------
+        rhoi : array_like
+            density vector [mol/m^3]
+        temp_aux : list
+            temperature dependend parameters computed with temperature_aux(T)
+        mu : float
+            adimentional chemical potential at equilibrium
+        Psat : float
+            equilibrium pressure divided by RT [Pa mol / J]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        dom: float
+            Thermodynamic Grand potential [Pa mol / J]
+        Xass : array
+            computed fraction of nonbonded sites
+        """
         a0ad, Xass = self.a0ad_aux(rhoi, temp_aux, Xass0)
         dom = a0ad - np.sum(np.nan_to_num(rhoi*mu)) + Psat
         return dom, Xass
 
     def dOm(self, rhoi, T, mu, Psat, Xass0=None):
+        """
+        dOm(rhoi, T, mu, Psat, Xass0)
+
+        Method that computes the Thermodynamic Grand potential
+        at given density and temperature.
+
+        Parameters
+        ----------
+        rhoi : array_like
+            density vector [mol/m^3]
+        T : float
+            absolute temperature [K]
+        mu : float
+            adimentional chemical potential at equilibrium
+        Psat : float
+            equilibrium pressure divided by RT [Pa mol / J]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        Out: float
+            Thermodynamic Grand potential [Pa]
+        """
         temp_aux = self.temperature_aux(T)
         dom, Xass = self.dOm_aux(rhoi, temp_aux, mu, Psat, Xass0)
         return dom
 
     def sgt_adim(self, T):
+        '''
+        sgt_adim(T)
+
+        Method that evaluates adimentional factor for temperature, pressure,
+        density, tension and distance for interfacial properties computations
+        with SGT.
+
+        Parameters
+        ----------
+        T : float
+        absolute temperature [K]
+
+        Returns
+        -------
+        Tfactor : float
+            factor to obtain dimentionless temperature (K -> K)
+        Pfactor : float
+            factor to obtain dimentionless pressure (Pa -> Pa/RT)
+        rofactor : float
+            factor to obtain dimentionless density (mol/m3 -> mol/m3)
+        tenfactor : float
+            factor to obtain dimentionless surface tension (mN/m)
+        zfactor : float
+            factor to obtain dimentionless distance  (Amstrong -> m)
+        '''
         beta = 1 / (kb*T)
         RT = (Na/beta)
 
@@ -530,7 +1541,37 @@ class saftvrmie_mix():
         return Tfactor, Pfactor, rofactor, tenfactor, zfactor
 
     def beta_sgt(self, beta):
-        self.beta = beta
+        r"""
+        beta_sgt(beta)
+
+        Method that adds beta correction for cross influence parameters used
+        in SGT.
+
+        """
+        nc = self.nc
+        Beta = np.asarray(beta)
+        shape = Beta.shape
+        isSquare = shape == (nc, nc)
+        isSymmetric = np.allclose(Beta, Beta.T)
+        if isSquare and isSymmetric:
+            self.beta = Beta
+        else:
+            raise Exception('beta matrix is not square or symmetric')
 
     def ci(self, T):
+        """
+        Method that computes the matrix of cij interaction parameter for SGT at
+        given temperature.
+
+        Parameters
+        ----------
+        T : float
+            absolute temperature [K]
+
+        Returns
+        -------
+        ci : array_like
+            influence parameter matrix at given temperature [J m^5 / mol^2]
+
+        """
         return self.cij * (1 - self.beta)
