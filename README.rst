@@ -100,19 +100,21 @@ Available calculations
 
 Property calculation from SAFT-VR-Mie EoS
 
-| Property                              |  Available?        |
-| --------------------------------------| ------------------ |
-| Density                               | :heavy_check_mark: |
-| Pressure                              | :heavy_check_mark: |
-| Helmholtz free energy                 | :heavy_check_mark: |
-| Chemical Potential                    | :heavy_check_mark: |
-| Fugacity coefficient                  | :heavy_check_mark: |
-| Helmholtz Free Energy                 | :heavy_check_mark: |
-| Residual Entropy*                     | :heavy_check_mark: |
-| Residual Enthalpy*                    | :heavy_check_mark: |
-| Residual isochoric heat capacity*     | :heavy_check_mark: |
-| Residual isobaric heat capacity*      | :heavy_check_mark: |
-| Speed of sound*                       | :heavy_check_mark: |
+==================================  ==================
+Property                            Available?
+==================================  ==================
+Density                             :heavy_check_mark:
+Pressure                            :heavy_check_mark:
+Helmholtz free energy               :heavy_check_mark:
+Chemical Potential                  :heavy_check_mark:
+Fugacity coefficient                :heavy_check_mark:
+Helmholtz Free Energy               :heavy_check_mark:
+Residual Entropy*                   :heavy_check_mark:
+Residual Enthalpy*                  :heavy_check_mark:
+Residual isochoric heat capacity*   :heavy_check_mark:
+Residual isobaric heat capacity*    :heavy_check_mark:
+Speed of sound*                     :heavy_check_mark:
+==================================  ==================
 
 * Temperature derivatives of Helmholtz free energy are computed numerically
 
