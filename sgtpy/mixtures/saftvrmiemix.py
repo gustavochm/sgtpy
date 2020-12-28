@@ -121,9 +121,9 @@ class saftvrmie_mix():
 
     Methods
     -------
-    cii_correlation : correlates the influence parameter of the fluid.
-    diameter : computes the diameter at given temperature.
-    temperature_aux : computes temperature depedent parameters of the fluid.
+    cii_correlation : correlates the influence parameter of the fluid
+    diameter : computes the diameter at given temperature
+    temperature_aux : computes temperature depedent parameters of the fluid
 
     ares: computes the residual dimentionless Helmholtz free energy
     dares_drho: computes the residual dimentionless Helmholtz free energy and
@@ -144,11 +144,11 @@ class saftvrmie_mix():
         density derivatives
 
 
-    density: computes the density of the fluid.
-    pressure: computes the pressure.
-    dP_drho: computes pressure and its density derivative.
+    density: computes the density of the fluid
+    pressure: computes the pressure
+    dP_drho: computes pressure and its density derivative
 
-    logfugmix: computes the fugacity coefficient of the mixture.
+    logfugmix: computes the fugacity coefficient of the mixture
     logfugef: computes the effective fugacity coefficients of the components
         in the mixture
     a0ad: computes adimentional Helmholtz density energy
@@ -159,6 +159,12 @@ class saftvrmie_mix():
     sgt_adim : computes adimentional factors for SGT
 
     beta_sgt: method for setting beta correction used in SGT
+
+    EntropyR : computes the residual entropy of the fluid
+    EnthalpyR : computes the residual enthalpy of the fluid
+    CvR : computes the residual isochoric heat capacity
+    CpR : computes the residual heat capacity
+    speed_sound : computes the speed of sound
 
     Auxiliar methods (computed using temperature_aux output list)
     -------------------------------------------------------------
@@ -176,6 +182,9 @@ class saftvrmie_mix():
     '''
 
     def __init__(self, mixture):
+
+        self.mixture = mixture
+        self.Mw = np.asarray(mixture.Mw)
 
         # Pure component parameters
         self.lr = np.asarray(mixture.lr)
@@ -1575,3 +1584,361 @@ class saftvrmie_mix():
 
         """
         return self.cij * (1 - self.beta)
+
+    def EntropyR(self, x, T, P, state, v0=None, Xass0=None, T_step=0.1):
+        """
+        EntropyR(x, T, P, state, v0, Xass0, T_step)
+
+        Method that computes the residual entropy of the mixture at given
+        temperature and pressure.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        T : float
+            absolute temperature [K]
+        P : float
+            pressure [Pa]
+        state : string
+            'L' for liquid phase and 'V' for vapour phase
+        v0: float, optional
+            initial guess for volume root [m^3/mol]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+        T_step: float, optional
+            Step to compute the numerical temperature derivates of Helmholtz
+            free energy
+
+        Returns
+        -------
+        Sr : float
+            residual entropy [J/mol K]
+
+        """
+
+        temp_aux = self.temperature_aux(T)
+        if v0 is None:
+            rho0 = None
+        else:
+            rho0 = 1./v0
+
+        rho, Xass = self.density_aux(x, temp_aux, P, state, rho0, Xass0)
+
+        v = 1/rho
+        rhomolecular = Na * rho
+        a, Xass = ares(self, x, rhomolecular, temp_aux, Xass)
+        beta = temp_aux[0]
+        RT = Na/beta
+        Z = P * v / RT
+
+        h = T_step
+        temp_aux1 = self.temperature_aux(T+h)
+        temp_aux2 = self.temperature_aux(T+2*h)
+        temp_aux_1 = self.temperature_aux(T-h)
+        temp_aux_2 = self.temperature_aux(T-2*h)
+
+        a1, Xass1 = ares(self, x, rhomolecular, temp_aux1, Xass)
+        a2, Xass2 = ares(self, x, rhomolecular, temp_aux2, Xass)
+        a_1, Xass_1 = ares(self, x, rhomolecular, temp_aux_1, Xass)
+        a_2, Xass_2 = ares(self, x, rhomolecular, temp_aux_2, Xass)
+
+        F = a
+        dFdT = (a_2/12 - 2*a_1/3 + 2*a1/3 - a2/12)/h
+
+        Sr_TVN = -T*dFdT - F  # residual entropy (TVN) divided by R
+        Sr_TPN = Sr_TVN - np.log(Z)  # residual entropy (TPN) divided by R
+        Sr_TPN *= R
+        return Sr_TPN
+
+    def EnthalpyR(self, x, T, P, state, v0=None, Xass0=None, T_step=0.1):
+        """
+        EnthalpyR(x, T, P, state, v0, Xass0, T_step)
+
+        Method that computes the residual enthalpy of the mixture at given
+        temperature and pressure.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        T : float
+            absolute temperature [K]
+        P : float
+            pressure [Pa]
+        state : string
+            'L' for liquid phase and 'V' for vapour phase
+        v0: float, optional
+            initial guess for volume root [m^3/mol]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+        T_step: float, optional
+            Step to compute the numerical temperature derivates of Helmholtz
+            free energy
+
+        Returns
+        -------
+        Hr : float
+            residual enthalpy [J/mol]
+
+        """
+        temp_aux = self.temperature_aux(T)
+        if v0 is None:
+            rho0 = None
+        else:
+            rho0 = 1./v0
+        rho, Xass = self.density_aux(x, temp_aux, P, state, rho0, Xass0)
+
+        v = 1/rho
+        rhomolecular = Na * rho
+        a, Xass = ares(self, x, rhomolecular, temp_aux, Xass)
+        beta = temp_aux[0]
+        RT = Na/beta
+        Z = P * v / RT
+
+        h = T_step
+        temp_aux1 = self.temperature_aux(T+h)
+        temp_aux2 = self.temperature_aux(T+2*h)
+        temp_aux_1 = self.temperature_aux(T-h)
+        temp_aux_2 = self.temperature_aux(T-2*h)
+
+        a1, Xass1 = ares(self, x, rhomolecular, temp_aux1, Xass)
+        a2, Xass2 = ares(self, x, rhomolecular, temp_aux2, Xass)
+        a_1, Xass_1 = ares(self, x, rhomolecular, temp_aux_1, Xass)
+        a_2, Xass_2 = ares(self, x, rhomolecular, temp_aux_2, Xass)
+
+        F = a
+        dFdT = (a_2/12 - 2*a_1/3 + 2*a1/3 - a2/12)/h
+
+        Sr_TVN = -T*dFdT - F  # residual entropy (TVN) divided by R
+        Hr_TPN = F + Sr_TVN + Z - 1.  # residual entalphy divided by RT
+        Hr_TPN *= RT
+        return Hr_TPN
+
+    def CvR(self, x, rho, T, Xass0=None, T_step=0.1):
+        """
+        CvR(x, rho, T, Xass0, T_step)
+
+        Method that computes the residual isochrotic heat capacity of the
+        mixture at given density and temperature.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho : float
+            density [mol/m^3]
+        T : float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+        T_step: float, optional
+            Step to compute temperature numerical derivates of Helmholtz
+            free energy
+
+        Returns
+        -------
+        Cv: float
+            isochoric heat capacity [J/mol K]
+        """
+        temp_aux = self.temperature_aux(T)
+
+        rhomolecular = Na * rho
+
+        a, Xass = ares(self, x, rhomolecular, temp_aux, Xass0)
+
+        h = T_step
+        temp_aux1 = self.temperature_aux(T+h)
+        temp_aux2 = self.temperature_aux(T+2*h)
+        temp_aux_1 = self.temperature_aux(T-h)
+        temp_aux_2 = self.temperature_aux(T-2*h)
+
+        a1, Xass1 = ares(self, x, rhomolecular, temp_aux1, Xass)
+        a2, Xass2 = ares(self, x, rhomolecular, temp_aux2, Xass)
+        a_1, Xass_1 = ares(self, x, rhomolecular, temp_aux_1, Xass)
+        a_2, Xass_2 = ares(self, x, rhomolecular, temp_aux_2, Xass)
+
+        dFdT = (a_2/12 - 2*a_1/3 + 2*a1/3 - a2/12)/h
+        d2FdT = (-a_2/12 + 4*a_1/3 - 5*a/2 + 4*a1/3 - a2/12)/h**2
+
+        Cvr_TVN = -T**2*d2FdT - 2*T*dFdT  # residual isochoric heat capacity
+        Cvr_TVN *= R
+        return Cvr_TVN
+
+    def CpR(self, x, T, P, state, v0=None, Xass0=None, T_step=0.1):
+        """
+        Cpr(T, P, state, v0, Xass0, T_step)
+
+        Method that computes the residual heat capacity of the mixture at given
+        temperature and pressure.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        T : float
+            absolute temperature [K]
+        P : float
+            pressure [Pa]
+        state : string
+            'L' for liquid phase and 'V' for vapour phase
+        v0: float, optional
+            initial guess for volume root [m^3/mol]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+        T_step: float, optional
+            Step to compute the numerical temperature derivates of Helmholtz
+            free energy
+
+        Returns
+        -------
+        Cp: float
+            residual heat capacity [J/mol K]
+        """
+
+        temp_aux = self.temperature_aux(T)
+        if v0 is None:
+            rho0 = None
+        else:
+            rho0 = 1./v0
+        rho, Xass = self.density_aux(x, temp_aux, P, state, rho0, Xass0)
+
+        rhomolecular = Na * rho
+
+        d2a, Xass = d2ares_drho(self, x, rhomolecular, temp_aux, Xass)
+        beta = temp_aux[0]
+        RT = Na/beta
+
+        h = T_step
+        temp_aux1 = self.temperature_aux(T+h)
+        temp_aux2 = self.temperature_aux(T+2*h)
+        temp_aux_1 = self.temperature_aux(T-h)
+        temp_aux_2 = self.temperature_aux(T-2*h)
+
+        a1, Xass1 = dares_drho(self, x, rhomolecular, temp_aux1, Xass)
+        a2, Xass2 = dares_drho(self, x, rhomolecular, temp_aux2, Xass)
+        a_1, Xass_1 = dares_drho(self, x, rhomolecular, temp_aux_1, Xass)
+        a_2, Xass_2 = dares_drho(self, x, rhomolecular, temp_aux_2, Xass)
+
+        a = d2a[:2]
+        da_drho = a[1] * Na
+        d2a_drho = d2a[2] * Na**2
+
+        dFdT = (a_2/12 - 2*a_1/3 + 2*a1/3 - a2/12)/h
+        dFdT[1] *= Na
+
+        d2FdT = (-a_2/12 + 4*a_1/3 - 5*a/2 + 4*a1/3 - a2/12) / h**2
+        d2FdT[1] *= Na
+
+        dP_dT = RT*(rho**2 * dFdT[1]) + P/T
+
+        dP_drho = 2*rho*da_drho + 2.
+        dP_drho += rho**2 * d2a_drho - 1.
+        dP_drho *= RT
+
+        dP_dV = -rho**2 * dP_drho
+        # residual isochoric heat capacity
+        Cvr_TVN = R * (-T**2*d2FdT[0] - 2*T*dFdT[0])
+        # residual heat capacity
+        Cpr = Cvr_TVN - R - T*dP_dT**2/dP_dV
+        return Cpr
+
+    def speed_sound(self, x, T, P, state, v0=None, Xass0=None, T_step=0.1,
+                    CvId=3*R/2, CpId=5*R/2):
+        """
+        speed_sound(x, T, P, state, v0, Xass0, T_step)
+
+        Method that computes the speed of sound of the mixture at given
+        temperature and pressure.
+
+        This calculation requires that the molar weight of the fluids has been
+        set in the component function.
+
+        By default the ideal gas Cv and Cp are set to 3R/2 and 5R/2, the user
+        can supply better values if available.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        T : float
+            absolute temperature [K]
+        P : float
+            pressure [Pa]
+        state : string
+            'L' for liquid phase and 'V' for vapour phase
+        v0: float, optional
+            initial guess for volume root [m^3/mol]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+        T_step: float, optional
+            Step to compute the numerical temperature derivates of Helmholtz
+            free energy
+        CvId: float, optional
+            Ideal gas isochoric heat capacity, set to 3R/2 by default [J/mol K]
+        CpId: float, optional
+            Ideal gas heat capacity, set to 3R/2 by default [J/mol K]
+
+        Returns
+        -------
+        w: float
+            speed of sound [m/s]
+        """
+
+        temp_aux = self.temperature_aux(T)
+        if v0 is None:
+            rho0 = None
+        else:
+            rho0 = 1./v0
+        rho, Xass = self.density_aux(x, temp_aux, P, state, rho0, Xass0)
+
+        rhomolecular = Na * rho
+
+        d2a, Xass = d2ares_drho(self, x, rhomolecular, temp_aux, Xass)
+        beta = temp_aux[0]
+        RT = Na/beta
+
+        h = T_step
+        temp_aux1 = self.temperature_aux(T+h)
+        temp_aux2 = self.temperature_aux(T+2*h)
+        temp_aux_1 = self.temperature_aux(T-h)
+        temp_aux_2 = self.temperature_aux(T-2*h)
+
+        a1, Xass1 = dares_drho(self, x, rhomolecular, temp_aux1, Xass)
+        a2, Xass2 = dares_drho(self, x, rhomolecular, temp_aux2, Xass)
+        a_1, Xass_1 = dares_drho(self, x, rhomolecular, temp_aux_1, Xass)
+        a_2, Xass_2 = dares_drho(self, x, rhomolecular, temp_aux_2, Xass)
+
+        a = d2a[:2]
+        da_drho = a[1] * Na
+        d2a_drho = d2a[2] * Na**2
+
+        dFdT = (a_2/12 - 2*a_1/3 + 2*a1/3 - a2/12)/h
+        dFdT[1] *= Na
+
+        d2FdT = (-a_2/12 + 4*a_1/3 - 5*a/2 + 4*a1/3 - a2/12) / h**2
+        d2FdT[1] *= Na
+
+        dP_dT = RT*(rho**2 * dFdT[1]) + P/T
+
+        dP_drho = 2*rho*da_drho + 2.
+        dP_drho += rho**2 * d2a_drho - 1.
+        dP_drho *= RT
+
+        dP_dV = -rho**2 * dP_drho
+        # residual isochoric heat capacity
+        Cvr_TVN = R * (-T**2*d2FdT[0] - 2*T*dFdT[0])
+        # residual heat capacity
+        Cpr = Cvr_TVN - R - T*dP_dT**2/dP_dV
+
+        # speed of sound calculation
+        Cp = CpId + Cpr
+        Cv = CvId + Cvr_TVN
+
+        betas = -rho * (Cv/Cp) / dP_dV
+
+        Mwx = np.dot(x, self.Mw)
+        w2 = 1000./(rho * betas * Mwx)
+        w = np.sqrt(w2)
+
+        return w

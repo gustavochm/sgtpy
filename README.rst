@@ -95,6 +95,54 @@ For more examples, please have a look at the Jupyter Notebook files
 located in the *examples* folder of the sources or
 `view examples in github <https://github.com/gustavochm/SGTPy/tree/master/Examples>`_.
 
+Available calculations
+----------------------
+
+Property calculation from SAFT-VR-Mie EoS
+
+| Property                              |  Available?        |
+| --------------------------------------| ------------------ |
+| Density                               | :heavy_check_mark: |
+| Pressure                              | :heavy_check_mark: |
+| Helmholtz free energy                 | :heavy_check_mark: |
+| Chemical Potential                    | :heavy_check_mark: |
+| Fugacity coefficient                  | :heavy_check_mark: |
+| Helmholtz Free Energy                 | :heavy_check_mark: |
+| Residual Entropy*                     | :heavy_check_mark: |
+| Residual Enthalpy*                    | :heavy_check_mark: |
+| Residual isochoric heat capacity*     | :heavy_check_mark: |
+| Residual isobaric heat capacity*      | :heavy_check_mark: |
+| Speed of sound*                       | :heavy_check_mark: |
+
+* Temperature derivatives of Helmholtz free energy are computed numerically
+
+
+Phase Equilibria
+
+| Phase equilibria                               |  Available?        |
+|------------------------------------------------| ------------------ |
+| Phase stability (tpd minimization)             | :heavy_check_mark: |
+| TP flash                                       | :heavy_check_mark: |
+| Bubble points                                  | :heavy_check_mark: |
+| Dew points                                     | :heavy_check_mark: |
+| Liquid-Liquid Equilibria (multiplash)          | :heavy_check_mark: |
+| Vapor-Liquid-Liquid Equilibria (multiplash)    | :heavy_check_mark: |
+| HP flash                                       |                    |
+| SP flash                                       |                    |
+
+Square Gradient Theory solution methods
+
+| Calculation method                         |  Available?        |
+|--------------------------------------------| ------------------ |
+| Pure fluid                                 | :heavy_check_mark: |
+| Reference component (mixtures)             | :heavy_check_mark: |
+| Path function (mixtures)                   | :heavy_check_mark: |
+| Orthogonal collocation (mixtures)          | :heavy_check_mark: |
+| Stabilized BVP (mixtures)                  | :heavy_check_mark: |
+
+
+
+
 Latest source code
 ------------------
 

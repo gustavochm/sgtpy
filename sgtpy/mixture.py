@@ -48,6 +48,8 @@ class component(object):
         critical volume [m^3/mol]
     w  : float
         acentric factor
+    Mw : float
+        molar weight [g/mol]
     cii : list
         polynomial coefficient for influence parameter in SGT [J m^5 / mol^2]
 
@@ -61,7 +63,7 @@ class component(object):
     def __init__(self, name='None', ms=1., sigma=0., eps=0., lambda_r=12.,
                  lambda_a=6., eAB=0., rcAB=1., rdAB=0.4, sites=[0, 0, 0],
                  mupol=0, npol=0., ring=0., Tc=0., Pc=0., Zc=0., Vc=0.,
-                 w=0., cii=0.):
+                 w=0., Mw=1., cii=0.):
 
         self.name = name
         self.Tc = Tc  # Critical Temperature in K
@@ -70,6 +72,7 @@ class component(object):
         self.Vc = Vc  # Critical volume in m3/mol
         self.w = w  # Acentric Factor
         self.cii = cii  # Influence factor SGT, list or array
+        self.Mw = Mw # molar weight in g/mol
         self.nc = 1
 
         # Saft Parameters
@@ -222,6 +225,7 @@ class mixture(object):
         self.w = [component1.w, component2.w]
         self.Vc = [component1.Vc, component2.Vc]
         self.cii = [component1.cii, component2.cii]
+        self.Mw = [component1.Mw, component2.Mw]
         self.nc = 2
 
         self.lr = [component1.lambda_r, component2.lambda_r]
@@ -256,6 +260,7 @@ class mixture(object):
         self.Vc.append(component.Vc)
         self.w.append(component.w)
         self.cii.append(component.cii)
+        self.Mw.append(component.Mw)
 
         self.lr.append(component.lambda_r)
         self.la.append(component.lambda_a)
