@@ -58,7 +58,10 @@ def psat(saft, T, P0=None, v0=[None, None], Xass0=[None, None]):
         lnphil, vl, Xassv = saft.logfug_aux(temp_aux, P, 'L', vl, Xassl)
         FO = lnphiv - lnphil
         dFO = (vv - vl)/RT
-        P -= FO/dFO
+        dP = FO/dFO
+        if dP > P:
+            dP /= 2
+        P -= dP
         for i in range(10):
             lnphiv, vv, Xassv = saft.logfug_aux(temp_aux, P, 'V', vv, Xassv)
             lnphil, vl, Xassv = saft.logfug_aux(temp_aux, P, 'L', vl, Xassl)

@@ -124,42 +124,28 @@ class saftvrmie_mix():
     cii_correlation : correlates the influence parameter of the fluid
     diameter : computes the diameter at given temperature
     temperature_aux : computes temperature depedent parameters of the fluid
-
     ares: computes the residual dimentionless Helmholtz free energy
-    dares_drho: computes the residual dimentionless Helmholtz free energy and
-        and its density first density derivative
-    d2ares_drho: computes the residual dimentionless Helmholtz free energy and
-        and its density first and second density derivatives
-    dares_dx: computes the residual dimentionless Helmholtz free energy and
-        and its composition derivatives
-    dares_dxrho: computes the residual dimentionless Helmholtz free energy and
-        and its composition and density derivatives
-
-
+    dares_drho: computes the residual dimentionless Helmholtz free energy and its density first density derivative
+    d2ares_drho: computes the residual dimentionless Helmholtz free energy and its density first and second density derivatives
+    dares_dx: computes the residual dimentionless Helmholtz free energy and its composition derivatives
+    dares_dxrho: computes the residual dimentionless Helmholtz free energy and its composition and density derivatives
     afcn: computes total Helmholtz energy
     dafcn_drho: computes total Helmholtz energy and its density derivative
     d2afcn_drho: computes total Helmholtz energy and it density derivatives
     dafcn_dx: computes total Helmholtz energy and its composition derivative
-    dafcn_dxrho:computes total Helmholtz energy and its composition and
-        density derivatives
-
-
+    dafcn_dxrho:computes total Helmholtz energy and its composition and density derivative
     density: computes the density of the fluid
     pressure: computes the pressure
     dP_drho: computes pressure and its density derivative
-
     logfugmix: computes the fugacity coefficient of the mixture
-    logfugef: computes the effective fugacity coefficients of the components
-        in the mixture
+    logfugef: computes the effective fugacity coefficients of the components in the mixture
     a0ad: computes adimentional Helmholtz density energy
     muad: computes adimentional chemical potential
     dmuad: computes the adimentional chemical potential and its derivatives
     dOm : computes adimentional Thermodynamic Grand Potential
     ci :  computes influence parameters matrix for SGT
     sgt_adim : computes adimentional factors for SGT
-
     beta_sgt: method for setting beta correction used in SGT
-
     EntropyR : computes the residual entropy of the fluid
     EnthalpyR : computes the residual enthalpy of the fluid
     CvR : computes the residual isochoric heat capacity
@@ -1647,7 +1633,7 @@ class saftvrmie_mix():
         dFdT = (a_2/12 - 2*a_1/3 + 2*a1/3 - a2/12)/h
 
         Sr_TVN = -T*dFdT - F  # residual entropy (TVN) divided by R
-        Sr_TPN = Sr_TVN - np.log(Z)  # residual entropy (TPN) divided by R
+        Sr_TPN = Sr_TVN + np.log(Z)  # residual entropy (TPN) divided by R
         Sr_TPN *= R
         return Sr_TPN
 
@@ -1719,7 +1705,7 @@ class saftvrmie_mix():
         """
         CvR(x, rho, T, Xass0, T_step)
 
-        Method that computes the residual isochrotic heat capacity of the
+        Method that computes the residual isochoric heat capacity of the
         mixture at given density and temperature.
 
         Parameters

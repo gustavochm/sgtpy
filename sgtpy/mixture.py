@@ -29,7 +29,7 @@ class component(object):
         Association rc, input in [sigma], stored in [m]
     rdAB : float
         Association rd, input in [sigma], stored in [m]
-    sites = list
+    sites : list
         Association sites [Bipolar, Positive, Negative]
     mupol : float
         dipolar moment [Debye]
@@ -72,7 +72,7 @@ class component(object):
         self.Vc = Vc  # Critical volume in m3/mol
         self.w = w  # Acentric Factor
         self.cii = cii  # Influence factor SGT, list or array
-        self.Mw = Mw # molar weight in g/mol
+        self.Mw = Mw  # molar weight in g/mol
         self.nc = 1
 
         # Saft Parameters
@@ -141,7 +141,7 @@ class component(object):
         sigma : float,
             size parameter for Mie potential [m]
         eps : float
-            well depth for Mie potential [J]
+            well depth for Mie potential [K]
         lambda_r : float
             repulsive exponent for Mie potential [Adim]
 
@@ -154,7 +154,7 @@ class component(object):
         self.ms = ms
         self.sigma = sigma
         self.eps = eps
-        return sigma, eps, lambda_r
+        return sigma, eps/kb, lambda_r
 
 
 class mixture(object):
@@ -213,6 +213,7 @@ class mixture(object):
     add_component : adds a component to the mixture
     copy: returns a copy of the object
     kij_saft : add kij matrix for SAFT-VR-Mie
+    lij_saft : add lij matrix for SAFT-VR-Mie
     ci : computes cij matrix at T for SGT
     '''
 
@@ -285,7 +286,7 @@ class mixture(object):
         Method that adds kij correction for Mie potential well depth.
 
         .. math::
-        \epsilon_{ij} &= (1-k_{ij}) \frac{\sqrt{\sigma_i^3 \sigma_j^3}}{\sigma_{ij}^3} \sqrt{\epsilon_i \epsilon_j}
+            \epsilon_{ij} = (1-k_{ij}) \frac{\sqrt{\sigma_i^3 \sigma_j^3}}{\sigma_{ij}^3} \sqrt{\epsilon_i \epsilon_j}
 
         """
         nc = self.nc
@@ -307,7 +308,7 @@ class mixture(object):
         Method that adds lij correction for association energy.
 
         .. math::
-        \epsilon_{ij}^{AB} &= (1 - l_{ij})\sqrt{\epsilon_{ii}^{AB} \epsilon_{jj}^{AB}}
+            \epsilon_{ij}^{AB} = (1 - l_{ij})\sqrt{\epsilon_{ii}^{AB} \epsilon_{jj}^{AB}}
 
         """
 

@@ -1046,7 +1046,7 @@ class saftvrmie_pure():
         F = a
         dFdT = (a_2/12 - 2*a_1/3 + 2*a1/3 - a2/12)/h
         Sr_TVN = -T*dFdT - F  # residual entropy (TVN) divided by R
-        Sr_TPN = Sr_TVN - np.log(Z)  # residual entropy (TPN) divided by R
+        Sr_TPN = Sr_TVN + np.log(Z)  # residual entropy (TPN) divided by R
         Sr_TPN *= R
         return Sr_TPN
 
@@ -1115,7 +1115,7 @@ class saftvrmie_pure():
         """
         CvR(rho, T, Xass0, T_step)
 
-        Method that computes the residual isochrotic heat capacity at given
+        Method that computes the residual isochoric heat capacity at given
         density and temperature.
 
         Parameters

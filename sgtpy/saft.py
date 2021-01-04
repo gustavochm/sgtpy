@@ -11,6 +11,10 @@ def saftvrmie(mix_or_component):
     ----------
     mix_or_component : object
         :class:`SGTPy.mixture` or :class:`SGTPy.component` object
+    Returns
+    -------
+    eos : object
+        SAFT-VR-Mie EoS object
     '''
     nc = mix_or_component.nc
     if nc == 1:
