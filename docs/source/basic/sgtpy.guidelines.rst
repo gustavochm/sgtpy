@@ -70,7 +70,7 @@ Model attributes
 Attribute             Type         Description
 ==================   ===========   =============================================
 eos.nc                integrer     Number of components in the mixture
-eos.secondorder       bool         | whether derivatives of the chemical potential
+eos.secondordersgt    bool         | whether derivatives of the chemical potential
                                    | are available through the eos.dmuad method
 ==================   ===========   =============================================
 
