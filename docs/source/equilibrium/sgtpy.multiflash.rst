@@ -2,14 +2,14 @@ Multiphase Flash
 ================
 
 Meta-stable solutions of the isofugacity method is an important concern when dealing with more than two liquid phases. Stability verification during the equilibria computation must be performed. In SGTPy liquid-liquid equilibria and vapor-liquid-liquid equilibria are solved similarly with a modified Radford-Rice mass balance system of equations that allows verifying the stability and equilibria of the phases simultaneously.
-.. math::
 
-	\sum_{i=1}^c \frac{z_i (K_{ik} \exp{\theta_k}-1)}{1+ \sum\limits^{\pi}_{\substack{j=1 \\ j \neq r}}{\psi_j (K_{ij}} \exp{\theta_j} -1)} = 0 \qquad k = 1,..., \pi,  k \neq r
+.. math::
+	 \sum_{i=1}^c \frac{z_i (K_{ik} \exp{\theta_k}-1)}{1+ \sum\limits^{\pi}_{\substack{j=1 \\ j \neq r}}{\psi_j (K_{ij}} \exp{\theta_j} -1)} = 0 \qquad k = 1,..., \pi,  k \neq r
 
 This system of equations was proposed by Gupta et al, and it is a modified Radford-Rice mass balance that introduces stability variables :math:`\theta`. This allows to solve the mass balance for phase fraction and stability variables and then update composition similar to a regular two-phase flash. The stability variable gives information about the phase if it takes a positive value the phase is unstable, on the other hand, if it is zero then the phase is stable. The algorithm of successive substitution and Newton method can be slow in some cases, in that situation the function will attempt to minimize the Gibbs free energy of the system.
-.. math::
 
-	min \, {G} = \sum_{k=1}^\pi \sum_{i=1}^c F_{ik} \ln \hat{f}_{ik}
+.. math::
+	 min \, {G} = \sum_{k=1}^\pi \sum_{i=1}^c F_{ik} \ln \hat{f}_{ik}
 
 
 Liquid Liquid Equilibrium
