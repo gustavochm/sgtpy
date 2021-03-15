@@ -6,6 +6,7 @@ from .polarGV import aij, bij, cij
 from .ares import ares, dares_drho, d2ares_drho
 from .density_solver import density_topliss, density_newton
 from .psat_saft import psat
+from .critical_pure import get_critical
 
 from ..constants import kb, Na
 
@@ -427,6 +428,37 @@ class saftvrmie_pure():
         """
         P, vl, vv = psat(self, T, P0, v0, Xass0)
         return P, vl, vv
+
+    def get_critical(self, Tc0, rhoc0, method='hybr'):
+        """
+        get_critical(Tc0, rhoc0, method)
+
+        Method that solves the critical coordinate of the fluid.
+        This metho requires good initial guesses for the critical temperature
+        and density to converge.
+
+        Second derivative of pressure against volume is estimated numerically.
+
+        Parameters
+        ----------
+        Tc0 : float
+            initial guess for critical temperature [K]
+        rhoc : float
+            initial guess for critical density [mol/m^3]
+        method : string, optional
+            SciPy; root method to solve critical coordinate
+
+        Returns
+        -------
+        Tc: float
+            Critical temperature [K]
+        Pc: float
+            Critical pressure [Pa]
+        rhoc: float
+            Critical density [mol/m3]
+        """
+        Tc, Pc, rhoc = get_critical(self, Tc0, rhoc0, method)
+        return Tc, Pc, rhoc
 
     def afcn_aux(self, rho, temp_aux, Xass0=None):
         """
@@ -1238,7 +1270,7 @@ class saftvrmie_pure():
     def speed_sound(self, T, P, state, v0=None, Xass0=None, T_step=0.1,
                     CvId=3*R/2, CpId=5*R/2):
         """
-        speed_sound(T, P, state, v0, Xass0, T_step)
+        speed_sound(T, P, state, v0, Xass0, T_step, CvId, CpId)
 
         Method that computes the speed of sound at given temperature
         and pressure.
