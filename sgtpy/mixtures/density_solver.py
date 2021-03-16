@@ -21,7 +21,36 @@ def Psaft_obj(rho, x, temp_aux, saft, Pspec):
     return Psaft - Pspec
 
 
+def density_newton_lim(rho_a, rho_b, x, temp_aux, P, Xass0, saft):
+    rho = (rho_a + rho_b) / 2
+    Psaft, dPsaft, Xass = saft.dP_drho_aux(x, rho, temp_aux, Xass0)
+    for i in range(15):
+        rho_old = rho
+        FO = Psaft - P
+        dFO = dPsaft
+        drho = FO/dFO
+        rho_new = rho - drho
+
+        if FO > 0:
+            rho_b = rho
+        else:
+            rho_a = rho
+
+        if rho_a < rho_new < rho_b:
+            rho = rho_new
+        else:
+            rho = (rho_a + rho_b) / 2
+
+        if np.abs(rho - rho_old) < 1e-6:
+            break
+        Psaft, dPsaft, Xass = saft.dP_drho_aux(x, rho, temp_aux, Xass)
+    return rho, Xass
+
+
 def density_topliss(state, x, temp_aux, P, Xass0, saft):
+
+    if state != 'L' and state != 'V':
+        raise Warning("Not valid state. 'L' for liquid and 'V' for vapor.")
 
     beta = temp_aux[0]
     # lower boundary a zero density
@@ -38,7 +67,7 @@ def density_topliss(state, x, temp_aux, P, Xass0, saft):
     while not ub_sucess and it < 5:
         it += 1
         P_ub, dP_ub, Xass_ub = saft.dP_drho_aux(x, rho_ub, temp_aux, Xass_ub)
-        rho_ub += 0.1 * rho_lim
+        rho_ub += 0.15 * rho_lim
         ub_sucess = P_ub > P and dP_ub > 0
 
     # Derivative calculation at zero density
@@ -58,7 +87,8 @@ def density_topliss(state, x, temp_aux, P, Xass0, saft):
     if flag == 1:
         # Found inflexion point
         sol_inf = minimize_scalar(dPsaft_fun, args=(x, temp_aux, saft),
-                                  bounds=bracket, method='Bounded')
+                                  bounds=bracket, method='Bounded',
+                                  options={'xatol': 1e-1})
         rho_inf = sol_inf.x
         dP_inf = sol_inf.fun
         if dP_inf > 0:
@@ -73,7 +103,7 @@ def density_topliss(state, x, temp_aux, P, Xass0, saft):
         elif state == 'V':
             bracket[1] = rho_inf
         rho_ext = brentq(dPsaft_fun, bracket[0], bracket[1],
-                         args=(x, temp_aux, saft))
+                         args=(x, temp_aux, saft), xtol=1e-2)
         P_ext, dP_ext, Xass = saft.dP_drho_aux(x, rho_ext, temp_aux, Xass)
         if P_ext > P and state == 'V':
             bracket[1] = rho_ext
@@ -85,8 +115,10 @@ def density_topliss(state, x, temp_aux, P, Xass0, saft):
     if flag == -1:
         rho = np.nan
     else:
-        rho = brentq(Psaft_obj, bracket[0], bracket[1],
-                     args=(x, temp_aux, saft, P))
+        rho, Xass = density_newton_lim(bracket[0], bracket[1], x, temp_aux,
+                                       P, Xass, saft)
+        # rho = brentq(Psaft_obj, bracket[0], bracket[1],
+        #              args=(x, temp_aux, saft, P))
 
     return rho, Xass
 
@@ -100,7 +132,7 @@ def density_newton(rho0, x, temp_aux, P, Xass0, saft):
         dFO = dPsaft
         drho = FO/dFO
         rho -= drho
-        if np.abs(drho) < 1e-8:
+        if np.abs(drho) < 1e-6:
             break
         Psaft, dPsaft, Xass = saft.dP_drho_aux(x, rho, temp_aux, Xass)
     return rho, Xass
