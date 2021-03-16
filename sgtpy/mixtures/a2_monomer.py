@@ -68,7 +68,6 @@ def da2_dx(xs, dxs_dx, khs, dkhs, xhixm, dxhim_dx, a2ij, da2ijx, epsij, f1,
 
     aux1 = xs * a2ij * khs * (1 + xi) * ctes
     suma1 = 2*np.sum(dxs_dx.T@aux1, axis=1)
-    # dax = np.matmul(np.matmul(da2, xs), xs)
     dax = xs@da2@xs + suma1
 
     return a, dax
@@ -98,7 +97,7 @@ def da2_dxxhi(xs, dxs_dx, khs, dkhs, dkhsx, xhixm, dxhim_dxhi00, dxhim_dx,
 
     aux1 = xs * sum1 * khs * (1 + xi) * ctes
     suma1 = 2*np.sum(dxs_dx.T@aux1, axis=1)
-    # dax = np.matmul(np.matmul(da2, xs), xs)
+
     dax = xs@da2@xs + suma1
 
     return a, dax
