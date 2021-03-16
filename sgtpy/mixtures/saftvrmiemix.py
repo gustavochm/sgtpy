@@ -1,6 +1,9 @@
 import numpy as np
 from ..math import gauss
 
+from .a1sB_monomer import x0lambda_eval
+from .monomer_aux import J_lam, I_lam
+
 from .ares import ares, dares_drho, d2ares_drho, dares_dx, dares_dxrho
 
 from .ideal import aideal, daideal_drho, d2aideal_drho, daideal_dx
@@ -209,9 +212,11 @@ class saftvrmie_mix():
         self.Cij = self.lrij/dif_cij*(self.lrij/self.laij)**(self.laij/dif_cij)
         # Eq A24
         self.alphaij = self.Cij * (1./(self.laij - 3.) - 1./(self.lrij - 3.))
+        self.Cij2 = self.Cij**2
 
         self.diag_index = np.diag_indices(self.nc)
         self.C = self.Cij[self.diag_index]
+        self.C2 = self.Cij[self.diag_index]**2
         self.alpha = self.alphaij[self.diag_index]
 
         # For Second perturbation
@@ -438,6 +443,31 @@ class saftvrmie_mix():
         di03 = np.power.outer(dii, np.arange(4))
         dij3 = dij**3
 
+        # used in a1, a2, g1 and g2
+        x0_a1, x0_a2, x0_g1, x0_g2 = x0lambda_eval(x0, self.la, self.lr,
+                                                   self.lar, self.laij,
+                                                   self.lrij, self.larij,
+                                                   diag_index)
+
+        # I and J used B term
+        I_la = I_lam(x0, self.laij)
+        I_lr = I_lam(x0, self.lrij)
+        I_2la = I_lam(x0, 2*self.laij)
+        I_2lr = I_lam(x0, 2*self.lrij)
+        I_lar = I_lam(x0, self.larij)
+        I_lambdasij = (I_la, I_lr, I_2la, I_2lr, I_lar)
+        I_lambdasii = (I_la[diag_index], I_lr[diag_index], I_2la[diag_index],
+                       I_2lr[diag_index], I_lar[diag_index])
+
+        J_la = J_lam(x0, self.laij)
+        J_lr = J_lam(x0, self.lrij)
+        J_2la = J_lam(x0, 2*self.laij)
+        J_2lr = J_lam(x0, 2*self.lrij)
+        J_lar = J_lam(x0, self.larij)
+        J_lambdasij = (J_la, J_lr, J_2la, J_2lr, J_lar)
+        J_lambdasii = (J_la[diag_index], J_lr[diag_index], J_2la[diag_index],
+                       J_2lr[diag_index], J_lar[diag_index])
+
         # Monomer necessary terms
         a1vdw_cteij = -12 * self.epsij * dij3
 
@@ -458,14 +488,21 @@ class saftvrmie_mix():
         a1vdw_lar = a1vdw_larij[diag_index]
         a1vdw = (a1vdw_la, a1vdw_lr, a1vdw_2la, a1vdw_2lr, a1vdw_lar)
 
-        tetha = np.exp(beta * self.eps) - 1.
+        beps = beta * self.eps
+        beps2 = beps**2
+
+        # tetha = np.exp(beta * self.eps) - 1.
+        tetha = np.exp(beps) - 1.
         # For associating mixtures
         Fab = np.exp(beta * self.eABij) - 1.
         # For Polar mixtures
-        epsa = self.eps / kb / T
-        epsija = self.epsij / kb / T
+        epsa = beps
+        epsija = self.epsij * beta
+
         temp_aux = [beta, dii, dij, x0, x0i, di03, dij3, a1vdw_cteij, a1vdwij,
-                    tetha, a1vdw_cte, a1vdw, Fab, epsa, epsija]
+                    beps, beps2, a1vdw_cte, a1vdw, tetha, I_lambdasij,
+                    J_lambdasij, I_lambdasii, J_lambdasii, x0_a1, x0_a2, x0_g1,
+                    x0_g2, Fab, epsa, epsija]
         return temp_aux
 
     def ares(self, x, rho, T, Xass0=None):
