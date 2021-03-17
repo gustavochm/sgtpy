@@ -395,26 +395,34 @@ class saftvrmie_mix():
         Method that computes temperature dependent parameters.
         It returns the following list:
 
-        temp_aux = [beta, dii, dij, x0, x0i, di03, dij3, a1vdw_cteij, a1vdwij,
-                    tetha, a1vdw_cte, a1vdw, Fab, epsa, epsija]
+        temp_aux = [beta, beta2, beta3, dii, dij, x0, x0i, di03, dij3,
+                    I_lambdasij, J_lambdasij, a1vdw_cteij, a1vdwij,
+                    beps, beps2, a1vdw_cte, x0i_matrix, tetha,
+                    x0_a1, x0_a2, x0_g1, x0_g2, x0_a1ii, x0_a2ii,
+                    Fab, epsa, epsija]
 
         Journal of Chemical Physics, 139(15), 1–37 (2013)
 
         beta: Boltzmann's factor [1/J]
+        beta2: beta**2  [1/J^2]
+        beta3: beta**3  [1/J^3]
         dii: computed diameters [m] (Eq A9)
         dij: diameters matrix [m] (Eq A46)
-        tetha: exp(beta*eps)-1 [Adim] (Below Eq. A37)
         x0: sigmaij/dij [Adim] (Below Eq. A11)
         x0i: sigma/dii [Adim]
         di03: dii^3 [m^3]
         dij3: dij^3 [m^3]
-
+        I_lambdasij: (Eq A14)
+        J_lambdasij: (Eq A15)
         a1vdw_cteij: -12 * epsij * dij3
         a1vdwij: tuple using a1vdw_cteij with different lamda_ij exponents
-
-        a1vdw: -12 * eps * di03
-        a1vdw: tuple using a1vdw_cteij with different lamda exponents
-
+        beps: beta*eps [Adim]
+        beps2: betps**2 [Adim]
+        a1vdw_cte: -12 * eps * dii3
+        x0i_matrix: np.array([x0i**0, x0i**1, x0i**2, x0i**3]) used in (Eq A29)
+        tetha: exp(beta*eps)-1 [Adim] (Below Eq. A37)
+        x0_a1, x0_a2, x0_g1, x0_g2: used to compute a1ij, a2ij
+        x0_a1ii, x0_a2ii: diagonal of x0_a1, x0_a2
         Fab: association strength [Adim] (Eq. A41)
         epsa: eps / kb / T [Adim]
         epsija: epsij / kb / T [Adim]
@@ -433,6 +441,9 @@ class saftvrmie_mix():
         diag_index = self.diag_index
 
         beta = 1 / (kb * T)
+        beta2 = beta**2
+        beta3 = beta**3
+
         dii = self.diameter(beta)
         # Eq A46
         dij = np.add.outer(dii, dii) / 2
@@ -444,10 +455,11 @@ class saftvrmie_mix():
         dij3 = dij**3
 
         # used in a1, a2, g1 and g2
-        x0_a1, x0_a2, x0_g1, x0_g2 = x0lambda_eval(x0, self.la, self.lr,
-                                                   self.lar, self.laij,
-                                                   self.lrij, self.larij,
-                                                   diag_index)
+        out = x0lambda_eval(x0, self.la, self.lr, self.lar, self.laij,
+                            self.lrij, self.larij, diag_index)
+        x0_a1, x0_a2, x0_g1, x0_g2 = out
+        x0_a1ii = x0_a1[:, diag_index[0], diag_index[1]]
+        x0_a2ii = x0_a2[:, diag_index[0], diag_index[1]]
 
         # I and J used B term
         I_la = I_lam(x0, self.laij)
@@ -456,8 +468,6 @@ class saftvrmie_mix():
         I_2lr = I_lam(x0, 2*self.lrij)
         I_lar = I_lam(x0, self.larij)
         I_lambdasij = (I_la, I_lr, I_2la, I_2lr, I_lar)
-        I_lambdasii = (I_la[diag_index], I_lr[diag_index], I_2la[diag_index],
-                       I_2lr[diag_index], I_lar[diag_index])
 
         J_la = J_lam(x0, self.laij)
         J_lr = J_lam(x0, self.lrij)
@@ -465,8 +475,6 @@ class saftvrmie_mix():
         J_2lr = J_lam(x0, 2*self.lrij)
         J_lar = J_lam(x0, self.larij)
         J_lambdasij = (J_la, J_lr, J_2la, J_2lr, J_lar)
-        J_lambdasii = (J_la[diag_index], J_lr[diag_index], J_2la[diag_index],
-                       J_2lr[diag_index], J_lar[diag_index])
 
         # Monomer necessary terms
         a1vdw_cteij = -12 * self.epsij * dij3
@@ -481,12 +489,8 @@ class saftvrmie_mix():
 
         # Chain necessary terms
         a1vdw_cte = a1vdw_cteij[diag_index]
-        a1vdw_la = a1vdw_laij[diag_index]
-        a1vdw_lr = a1vdw_lrij[diag_index]
-        a1vdw_2la = a1vdw_2laij[diag_index]
-        a1vdw_2lr = a1vdw_2lrij[diag_index]
-        a1vdw_lar = a1vdw_larij[diag_index]
-        a1vdw = (a1vdw_la, a1vdw_lr, a1vdw_2la, a1vdw_2lr, a1vdw_lar)
+
+        x0i_matrix = np.array([x0i**0, x0i, x0i**2, x0i**3])
 
         beps = beta * self.eps
         beps2 = beps**2
@@ -499,10 +503,11 @@ class saftvrmie_mix():
         epsa = beps
         epsija = self.epsij * beta
 
-        temp_aux = [beta, dii, dij, x0, x0i, di03, dij3, a1vdw_cteij, a1vdwij,
-                    beps, beps2, a1vdw_cte, a1vdw, tetha, I_lambdasij,
-                    J_lambdasij, I_lambdasii, J_lambdasii, x0_a1, x0_a2, x0_g1,
-                    x0_g2, Fab, epsa, epsija]
+        temp_aux = [beta, beta2, beta3, dii, dij, x0, x0i, di03, dij3,
+                    I_lambdasij, J_lambdasij, a1vdw_cteij, a1vdwij,
+                    beps, beps2, a1vdw_cte, x0i_matrix, tetha,
+                    x0_a1, x0_a2, x0_g1, x0_g2, x0_a1ii, x0_a2ii,
+                    Fab, epsa, epsija]
         return temp_aux
 
     def ares(self, x, rho, T, Xass0=None):

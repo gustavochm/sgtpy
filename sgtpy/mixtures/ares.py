@@ -2,10 +2,10 @@ import numpy as np
 from .monomer_aux import dkHS_dxhi00, d2kHS_dxhi00, d3kHS_dxhi00
 from .monomer_aux import dkHS_dx_dxhi00, dkHS_dx_dxhi002
 
-from .a1sB_monomer import x0lambda_eval
 from .a1sB_monomer import da1sB_dxhi00_eval, d2a1sB_dxhi00_eval
 from .a1sB_monomer import d3a1sB_dxhi00_eval
-from .a1sB_monomer import da1sB_dx_eval, da1sB_dx_dxhi00_eval
+from .a1sB_monomer import da1sB_dx_dxhi00_dxxhi_eval
+from .a1sB_monomer import da1sB_dx_d2xhi00_dxxhi_eval
 
 from .a1_monomer import a1, da1_dxhi00, d2a1_dxhi00,  da1_dx, da1_dxxhi
 from .a2_monomer import a2, da2_dxhi00, d2a2_dxhi00,  da2_dx, da2_dxxhi
@@ -62,7 +62,8 @@ def dxhix_dx_eval(xhi00, xs, dxs_dx, xm, ms, dij3):
     aux3 = aux2.sum()
     dxhix_dxhi00 = xm * aux3
     xhix = xhi00 * dxhix_dxhi00
-    suma1 = 2*np.sum(dxs_dx.T@aux1, axis=1)
+    # suma1 = 2*np.sum(dxs_dx.T@aux1, axis=1)
+    suma1 = 2*np.sum(dxs_dx@aux1, axis=1)
     dxhix_dx_dxhi00 = (ms * aux3 + xm * suma1)
     dxhix_dx = xhi00 * dxhix_dx_dxhi00
     return xhix, dxhix_dxhi00, dxhix_dx, dxhix_dx_dxhi00
@@ -70,8 +71,10 @@ def dxhix_dx_eval(xhi00, xs, dxs_dx, xm, ms, dij3):
 
 def ares(self, x, rho, temp_aux, Xass0=None):
 
-    beta, dii, dij, x0, x0i, di03, dij3 = temp_aux[0:7]
-    a1vdw_cteij, a1vdwij, tetha = temp_aux[7:10]
+    beta, beta2, beta3, dii, dij, x0, x0i, di03, dij3 = temp_aux[:9]
+    I_lambdasij, J_lambdasij, a1vdw_cteij, a1vdwij = temp_aux[9:13]
+    beps, beps2, a1vdw_cte, x0i_matrix, tetha = temp_aux[13:18]
+    x0_a1, x0_a2, x0_g1, x0_g2, x0_a1ii, x0_a2ii = temp_aux[18:24]
 
     dxhi00_drho = self.dxhi00_drho
     diag_index = self.diag_index
@@ -91,19 +94,20 @@ def ares(self, x, rho, temp_aux, Xass0=None):
     # xhi m Eq A23
     xhixm, dxhixm_dxhi00 = xhix_eval(xhi00, xs, xm, self.sigmaij3)
 
-    x0_a1, x0_a2, x0_g1, x0_g2 = x0lambda_eval(x0, self.la, self.lr,
-                                               self.lar, self.laij,
-                                               self.lrij, self.larij,
-                                               diag_index)
-
-    da1, da2 = da1sB_dxhi00_eval(xhi00, xhix, x0, xm, self.lambdasij,
-                                 self.cctesij, a1vdwij, a1vdw_cteij,
-                                 dxhix_dxhi00)
-
-    suma1_monomer = self.Cij * np.sum(da1 * x0_a1, axis=1)
-    suma2_monomer = self.Cij**2 * np.sum(da2 * x0_a2, axis=1)
+    xhix2 = xhix**2
+    xhix3 = xhix2*xhix
+    xhix4 = xhix3*xhix
+    xhix_vec = np.array([[xhix, xhix2, xhix3, xhix4],
+                         [1., 2 * xhix, 3*xhix2, 4*xhix3]])
 
     khs, dkhs = dkHS_dxhi00(xhix, dxhix_dxhi00)
+
+    da1, da2 = da1sB_dxhi00_eval(xhi00, xhix, xhix_vec, xm, I_lambdasij,
+                                 J_lambdasij, self.cctesij, a1vdwij,
+                                 a1vdw_cteij, dxhix_dxhi00)
+
+    suma1_monomer = self.Cij * np.sum(da1 * x0_a1, axis=1)
+    suma2_monomer = self.Cij2 * np.sum(da2 * x0_a2, axis=1)
 
     # Monomer evaluation
     a1ij = suma1_monomer[0]
@@ -112,35 +116,34 @@ def ares(self, x, rho, temp_aux, Xass0=None):
     a1m = a1(xs, a1ij)
     a2m = a2(xs, khs, xhixm, a2ij, self.epsij, self.f1, self.f2, self.f3)
     a3m = a3(xs, xhixm, self.epsij, self.f4, self.f5, self.f6)
-    am = aHS + beta * a1m + beta**2 * a2m + beta**3 * a3m
+    am = aHS + beta * a1m + beta2 * a2m + beta3 * a3m
     amono = xm * am
 
     # To be used in a1 and a2 for chain
-    suma1_chain = 1.*suma1_monomer[:, diag_index[0], diag_index[1]]
-    suma2_chain = 1.*suma2_monomer[:, diag_index[0], diag_index[1]]
+    suma1_chain = suma1_monomer[:, diag_index[0], diag_index[1]]
+    suma2_chain = suma2_monomer[:, diag_index[0], diag_index[1]]
 
     da1c = da1[:, :, diag_index[0], diag_index[1]]
     da2c = da2[:, :, diag_index[0], diag_index[1]]
 
-    # to be used in a1sb in chain summatory
-    suma1_chain2 = self.C * np.sum(da1c * x0_g1, axis=1)
-    suma2_chain2 = self.C**2 * np.sum(da2c * x0_g2, axis=1)
-
     # Chain evaluation
-    gHS = gdHS(x0i, xhix)
+    gHS = gdHS(x0i_matrix, xhix)
     gc = gammac(xhixm, self.alpha, tetha)
 
-    da1ii = suma1_chain[1]
-    a1sB = suma1_chain2[0]
-    g1s = g1sigma(xhi00, xm, da1ii, a1sB, self.eps, dii)
-    da2new = da2new_dxhi00(khs, dkhs, suma2_chain[:2], self.eps)
-    suma_a2 = suma2_chain2[0]
-    g2m = g2mca(xhi00, khs, xm, da2new, suma_a2, self.eps, dii)
+    # g1 sigma
+    da1_chain = suma1_chain[1]
+    suma_g1 = self.C * np.sum(da1c[0] * x0_g1, axis=0)
+    g1s = g1sigma(xhi00, xm, da1_chain, suma_g1, a1vdw_cte)
+
+    # g2 sigma
+    dsum_a2new = suma2_chain
+    da2new = da2new_dxhi00(khs, dkhs, dsum_a2new, self.eps)
+    suma_g2 = self.C2 * np.sum(da2c[0] * x0_g2, axis=0)
+    g2m = g2mca(xhi00, khs, xm, da2new, suma_g2, self.eps, a1vdw_cte)
     g2s = (1 + gc) * g2m
 
-    lng = lngmie(gHS, g1s, g2s, beta, self.eps)
-    # achain = - np.dot(x * (self.ms - 1), lng)
-    etai = xhi00 * xmi * di03[:, -1]
+    lng = lngmie(gHS, g1s, g2s, beps, beps2)
+    etai = xhi00 * xmi * di03[:, 3]
     achain = - np.dot(x * (self.ms - 1 + etai*self.ring), lng)
 
     ares = amono + achain
@@ -152,7 +155,7 @@ def ares(self, x, rho, temp_aux, Xass0=None):
             Xass = 1. * Xass0
         xj = x[self.compindex]
         iab = Iab(xhi, dii, dij, self.rcij, self.rdij, self.sigmaij3)
-        Fab = temp_aux[12]
+        Fab = temp_aux[24]
         Dab = self.sigmaij3 * Fab * iab
         Dabij = np.zeros([self.nsites, self.nsites])
         Dabij[self.indexabij] = Dab[self.indexab]
@@ -165,7 +168,7 @@ def ares(self, x, rho, temp_aux, Xass0=None):
 
     if self.polar_bool:
         eta = xhi[-1]
-        epsa, epsija = temp_aux[13:]
+        epsa, epsija = temp_aux[25:]
         apolar = Apolar(rho, x, self.anij, self.bnij, self.cnij, eta,
                         epsa, epsija, self.sigma3, self.sigmaij3,
                         self.sigmaijk3,  self.npol, self.mupolad2)
@@ -176,8 +179,10 @@ def ares(self, x, rho, temp_aux, Xass0=None):
 
 def dares_drho(self, x, rho, temp_aux, Xass0=None):
 
-    beta, dii, dij, x0, x0i, di03, dij3 = temp_aux[0:7]
-    a1vdw_cteij, a1vdwij, tetha = temp_aux[7:10]
+    beta, beta2, beta3, dii, dij, x0, x0i, di03, dij3 = temp_aux[:9]
+    I_lambdasij, J_lambdasij, a1vdw_cteij, a1vdwij = temp_aux[9:13]
+    beps, beps2, a1vdw_cte, x0i_matrix, tetha = temp_aux[13:18]
+    x0_a1, x0_a2, x0_g1, x0_g2, x0_a1ii, x0_a2ii = temp_aux[18:24]
 
     dxhi00_drho = self.dxhi00_drho
     diag_index = self.diag_index
@@ -197,21 +202,23 @@ def dares_drho(self, x, rho, temp_aux, Xass0=None):
     # xhi m Eq A23
     xhixm, dxhixm_dxhi00 = xhix_eval(xhi00, xs, xm, self.sigmaij3)
 
-    x0_a1, x0_a2, x0_g1, x0_g2 = x0lambda_eval(x0, self.la, self.lr,
-                                               self.lar, self.laij,
-                                               self.lrij, self.larij,
-                                               diag_index)
-
-    da1, da2 = d2a1sB_dxhi00_eval(xhi00, xhix, x0, xm, self.lambdasij,
-                                  self.cctesij, a1vdwij, a1vdw_cteij,
-                                  dxhix_dxhi00)
-
-    suma1_monomer = self.Cij * np.sum(da1 * x0_a1, axis=1)
-    suma2_monomer = self.Cij**2 * np.sum(da2 * x0_a2, axis=1)
+    xhix2 = xhix**2
+    xhix3 = xhix2*xhix
+    xhix4 = xhix3*xhix
+    xhix_vec = np.array([[xhix, xhix2, xhix3, xhix4],
+                         [1., 2 * xhix, 3*xhix2, 4*xhix3],
+                         [0., 2., 6*xhix, 12*xhix2]])
 
     khs, dkhs, d2khs = d2kHS_dxhi00(xhix, dxhix_dxhi00)
 
+    da1, da2 = d2a1sB_dxhi00_eval(xhi00, xhix, xhix_vec, xm, I_lambdasij,
+                                  J_lambdasij, self.cctesij, a1vdwij,
+                                  a1vdw_cteij, dxhix_dxhi00)
+
     # Monomer evaluation
+    suma1_monomer = self.Cij * np.sum(da1 * x0_a1, axis=1)
+    suma2_monomer = self.Cij2 * np.sum(da2 * x0_a2, axis=1)
+
     a1ij = suma1_monomer[:2]
     a2ij = suma2_monomer[:2]
     aHS = dahs_dxhi00(xhi, dxhi_dxhi00)
@@ -220,42 +227,42 @@ def dares_drho(self, x, rho, temp_aux, Xass0=None):
                      self.epsij, self.f1, self.f2, self.f3)
     a3m = da3_dxhi00(xs, xhixm, dxhixm_dxhi00, self.epsij, self.f4,
                      self.f5, self.f6)
-    am = aHS + beta * a1m + beta**2 * a2m + beta**3 * a3m
+    am = aHS + beta * a1m + beta2 * a2m + beta3 * a3m
     amono = xm * am
 
     # To be used in a1 and a2 of chain
-    suma1_chain = 1.*suma1_monomer[:, diag_index[0], diag_index[1]]
-    suma2_chain = 1.*suma2_monomer[:, diag_index[0], diag_index[1]]
+    suma1_chain = suma1_monomer[:, diag_index[0], diag_index[1]]
+    suma2_chain = suma2_monomer[:, diag_index[0], diag_index[1]]
 
-    da1c = da1[:, :, diag_index[0], diag_index[1]]
-    da2c = da2[:, :, diag_index[0], diag_index[1]]
-
-    # to be used in a1sb of chain
-    suma1_chain2 = self.C * np.sum(da1c * x0_g1, axis=1)
-    suma2_chain2 = self.C**2 * np.sum(da2c * x0_g2, axis=1)
+    da1c = da1[:2, :, diag_index[0], diag_index[1]]
+    da2c = da2[:2, :, diag_index[0], diag_index[1]]
 
     # chain evaluation
-    gHS = dgdHS_dxhi00(x0i, xhix, dxhix_dxhi00)
+    gHS = dgdHS_dxhi00(x0i_matrix, xhix, dxhix_dxhi00)
     gc = dgammac_dxhi00(xhixm, dxhixm_dxhi00, self.alpha, tetha)
 
-    da1ii = suma1_chain[1:3]
-    a1sB = suma1_chain2[:2]
-    g1s = dg1sigma_dxhi00(xhi00, xm, da1ii, a1sB, self.eps, dii)
+    # g1sigma
+    da1_chain = suma1_chain[1:]
+    dsuma_g1 = self.C * np.sum(da1c * x0_g1, axis=1)
+    g1s = dg1sigma_dxhi00(xhi00, xm, da1_chain, dsuma_g1, a1vdw_cte)
 
-    da2new, d2a2new = d2a2new_dxhi00(khs, dkhs, d2khs, suma2_chain[:3],
-                                     self.eps)
-    suma_a2 = suma2_chain2[[0, 1]]
-    g2m = dg2mca_dxhi00(xhi00, khs, dkhs, xm, da2new, d2a2new,
-                        suma_a2, self.eps, dii)
+    # g2sigma
+    d2sum_a2new = suma2_chain
+    d2a2new = d2a2new_dxhi00(khs, dkhs, d2khs, d2sum_a2new, self.eps)
+    dsuma_g2 = self.C2 * np.sum(da2c * x0_g2, axis=1)
+    g2m = dg2mca_dxhi00(xhi00, khs, dkhs, xm, d2a2new, dsuma_g2, self.eps,
+                        a1vdw_cte)
     g2s = g2m * (1 + gc[0])
     g2s[1] += g2m[0] * gc[1]
-    lng = dlngmie_dxhi00(gHS, g1s, g2s, beta, self.eps)
-    # achain = - lng@(x * (self.ms - 1)) #original
 
-    detai_dxhi00 = xmi * di03[:, -1]
+    lng = dlngmie_dxhi00(gHS, g1s, g2s, beps, beps2)
+    detai_dxhi00 = xmi * di03[:, 3]
     etai = xhi00 * detai_dxhi00
     achain = - lng@(x * (self.ms - 1. + etai*self.ring))
     achain[1] += - np.dot(x*self.ring*detai_dxhi00, lng[0])
+
+    # print('amono', amono)
+    # print('achain', achain)
 
     ares = amono + achain
     ares *= np.array([1, dxhi00_drho])
@@ -268,8 +275,8 @@ def dares_drho(self, x, rho, temp_aux, Xass0=None):
         xj = x[self.compindex]
         iab, diab = dIab_drho(xhi, dxhi_dxhi00, dxhi00_drho, dii, dij,
                               self.rcij, self.rdij, self.sigmaij3)
-        Fab = temp_aux[12]
-        Fab = np.exp(beta * self.eABij) - 1.
+        Fab = temp_aux[24]
+        # Fab = np.exp(beta * self.eABij) - 1.
         Dab = self.sigmaij3 * Fab * iab
         dDab_drho = self.sigmaij3 * Fab * diab
         Dabij = np.zeros([self.nsites, self.nsites])
@@ -289,7 +296,7 @@ def dares_drho(self, x, rho, temp_aux, Xass0=None):
         eta = xhi[-1]
         deta_dxhi00 = dxhi_dxhi00[-1]
         deta = deta_dxhi00 * self.dxhi00_drho
-        epsa, epsija = temp_aux[13:]
+        epsa, epsija = temp_aux[25:]
         dapolar = dApolar_drho(rho, x, self.anij, self.bnij, self.cnij,
                                eta, deta, epsa, epsija,
                                self.sigma3, self.sigmaij3, self.sigmaijk3,
@@ -301,8 +308,10 @@ def dares_drho(self, x, rho, temp_aux, Xass0=None):
 
 def d2ares_drho(self, x, rho, temp_aux, Xass0=None):
 
-    beta, dii, dij, x0, x0i, di03, dij3 = temp_aux[0:7]
-    a1vdw_cteij, a1vdwij, tetha = temp_aux[7:10]
+    beta, beta2, beta3, dii, dij, x0, x0i, di03, dij3 = temp_aux[:9]
+    I_lambdasij, J_lambdasij, a1vdw_cteij, a1vdwij = temp_aux[9:13]
+    beps, beps2, a1vdw_cte, x0i_matrix, tetha = temp_aux[13:18]
+    x0_a1, x0_a2, x0_g1, x0_g2, x0_a1ii, x0_a2ii = temp_aux[18:24]
 
     dxhi00_drho = self.dxhi00_drho
     diag_index = self.diag_index
@@ -322,21 +331,24 @@ def d2ares_drho(self, x, rho, temp_aux, Xass0=None):
     # xhi m Eq A23
     xhixm, dxhixm_dxhi00 = xhix_eval(xhi00, xs, xm, self.sigmaij3)
 
-    x0_a1, x0_a2, x0_g1, x0_g2 = x0lambda_eval(x0, self.la, self.lr,
-                                               self.lar, self.laij,
-                                               self.lrij, self.larij,
-                                               diag_index)
-
-    da1, da2 = d3a1sB_dxhi00_eval(xhi00, xhix, x0, xm, self.lambdasij,
-                                  self.cctesij, a1vdwij, a1vdw_cteij,
-                                  dxhix_dxhi00)
-
-    suma1_monomer = self.Cij * np.sum(da1 * x0_a1, axis=1)
-    suma2_monomer = self.Cij**2 * np.sum(da2 * x0_a2, axis=1)
+    xhix2 = xhix**2
+    xhix3 = xhix2*xhix
+    xhix4 = xhix3*xhix
+    xhix_vec = np.array([[xhix, xhix2, xhix3, xhix4],
+                         [1., 2 * xhix, 3.*xhix2, 4.*xhix3],
+                         [0., 2., 6*xhix, 12.*xhix2],
+                         [0., 0., 6., 24.*xhix]])
 
     khs, dkhs, d2khs, d3khs = d3kHS_dxhi00(xhix, dxhix_dxhi00)
 
+    da1, da2 = d3a1sB_dxhi00_eval(xhi00, xhix, xhix_vec, xm, I_lambdasij,
+                                  J_lambdasij, self.cctesij, a1vdwij,
+                                  a1vdw_cteij, dxhix_dxhi00)
+
     # Monomer evaluation
+    suma1_monomer = self.Cij * np.sum(da1 * x0_a1, axis=1)
+    suma2_monomer = self.Cij2 * np.sum(da2 * x0_a2, axis=1)
+
     suma_a1 = suma1_monomer[:3]
     suma_a2 = suma2_monomer[:3]
 
@@ -346,46 +358,45 @@ def d2ares_drho(self, x, rho, temp_aux, Xass0=None):
                       self.epsij, self.f1, self.f2, self.f3)
     a3m = d2a3_dxhi00(xs, xhixm, dxhixm_dxhi00, self.epsij, self.f4,
                       self.f5, self.f6)
-    am = aHS + beta * a1m + beta**2 * a2m + beta**3 * a3m
+    am = aHS + beta * a1m + beta2 * a2m + beta3 * a3m
     amono = xm * am
 
     # To be used in a1 and a2 of chain
     suma1_chain = suma1_monomer[:, diag_index[0], diag_index[1]]
     suma2_chain = suma2_monomer[:, diag_index[0], diag_index[1]]
 
-    da1c = da1[:, :, diag_index[0], diag_index[1]]
-    da2c = da2[:, :, diag_index[0], diag_index[1]]
-
-    # To be used in the sumatory a1sb of chain
-    sumg1_chain = self.C * np.sum(da1c * x0_g1, axis=1)
-    sumg2_chain = self.C**2 * np.sum(da2c * x0_g2, axis=1)
+    da1c = da1[:3, :, diag_index[0], diag_index[1]]
+    da2c = da2[:3, :, diag_index[0], diag_index[1]]
 
     # Chain contribution
-    gHS = d2gdHS_dxhi00(x0i, xhix, dxhix_dxhi00)
+    gHS = d2gdHS_dxhi00(x0i_matrix, xhix, dxhix_dxhi00)
     gc = d2gammac_dxhi00(xhixm, dxhixm_dxhi00, self.alpha, tetha)
 
-    da1ii = suma1_chain[1:4]
-    suma_g1 = sumg1_chain[:3]
-    g1s = d2g1sigma_dxhi00(xhi00, xm, da1ii, suma_g1, self.eps, dii)
+    # g1 sigma
+    da1_chain = suma1_chain[1:]
+    d2suma_g1 = self.C * np.sum(da1c * x0_g1, axis=1)
+    g1s = d2g1sigma_dxhi00(xhi00, xm, da1_chain, d2suma_g1, a1vdw_cte)
 
-    da2new, d2a2new, d3a2new = d3a2new_dxhi00(khs, dkhs, d2khs, d3khs,
-                                              suma2_chain, self.eps)
-    suma_g2 = sumg2_chain[[0, 1, 2]]
-    g2m = d2g2mca_dxhi00(xhi00, khs, dkhs, d2khs, xm, da2new, d2a2new,
-                         d3a2new, suma_g2, self.eps, dii)
+    # g2 sigma
+    d3a2new = d3a2new_dxhi00(khs, dkhs, d2khs, d3khs, suma2_chain, self.eps)
+    d2suma_g2 = self.C2 * np.sum(da2c * x0_g2, axis=1)
+    g2m = d2g2mca_dxhi00(xhi00, khs, dkhs, d2khs, xm, d3a2new, d2suma_g2,
+                         self.eps, a1vdw_cte)
     g2s = g2m * (1. + gc[0])
     g2s[1] += g2m[0] * gc[1]
     g2s[2] += 2. * g2m[1] * gc[1] + g2m[0] * gc[2]
 
-    lng = d2lngmie_dxhi00(gHS, g1s, g2s, beta, self.eps)
-    # achain = - lng@(x * (self.ms - 1)) # original
+    lng = d2lngmie_dxhi00(gHS, g1s, g2s, beps, beps2)
 
-    detai_dxhi00 = xmi * di03[:, -1]
+    detai_dxhi00 = xmi * di03[:, 3]
     etai = xhi00 * detai_dxhi00
     achain = - lng@(x * (self.ms - 1. + etai*self.ring))
-    achain[1] += - np.dot(x*self.ring*detai_dxhi00, lng[0])
-    achain[2] += - 2*np.dot(x*self.ring*detai_dxhi00, lng[1])
+    aux_ring = x*self.ring*detai_dxhi00
+    achain[1] += - np.dot(aux_ring, lng[0])
+    achain[2] += - 2*np.dot(aux_ring, lng[1])
 
+    # print('amono', amono)
+    # print('achain', achain)
     ares = amono + achain
 
     ares *= np.array([1., dxhi00_drho, dxhi00_drho**2])
@@ -399,7 +410,7 @@ def d2ares_drho(self, x, rho, temp_aux, Xass0=None):
         iab, diab, d2iab = d2Iab_drho(xhi, dxhi_dxhi00, dxhi00_drho, dii,
                                       dij, self.rcij, self.rdij,
                                       self.sigmaij3)
-        Fab = temp_aux[12]
+        Fab = temp_aux[24]
         Dab = self.sigmaij3 * Fab * iab
         dDab_drho = self.sigmaij3 * Fab * diab
         d2Dab_drho = self.sigmaij3 * Fab * d2iab
@@ -433,7 +444,7 @@ def d2ares_drho(self, x, rho, temp_aux, Xass0=None):
         eta = xhi[-1]
         deta_dxhi00 = dxhi_dxhi00[-1]
         deta = deta_dxhi00 * self.dxhi00_drho
-        epsa, epsija = temp_aux[13:]
+        epsa, epsija = temp_aux[25:]
         dapolar = d2Apolar_drho(rho, x, self.anij, self.bnij, self.cnij,
                                 eta, deta, epsa, epsija,
                                 self.sigma3, self.sigmaij3, self.sigmaijk3,
@@ -445,8 +456,10 @@ def d2ares_drho(self, x, rho, temp_aux, Xass0=None):
 
 def dares_dx(self, x, rho, temp_aux, Xass0=None):
 
-    beta, dii, dij, x0, x0i, di03, dij3 = temp_aux[0:7]
-    a1vdw_cteij, a1vdwij, tetha, a1vdw_cte, a1vdw = temp_aux[7:12]
+    beta, beta2, beta3, dii, dij, x0, x0i, di03, dij3 = temp_aux[:9]
+    I_lambdasij, J_lambdasij, a1vdw_cteij, a1vdwij = temp_aux[9:13]
+    beps, beps2, a1vdw_cte, x0i_matrix, tetha = temp_aux[13:18]
+    x0_a1, x0_a2, x0_g1, x0_g2, x0_a1ii, x0_a2ii = temp_aux[18:24]
 
     dxhi00_drho = self.dxhi00_drho
     diag_index = self.diag_index
@@ -455,7 +468,7 @@ def dares_dx(self, x, rho, temp_aux, Xass0=None):
     xm = np.sum(xmi)
     # Equation A8
     xs = xmi / xm
-    dxs_dx = - np.multiply.outer(self.ms * x, self.ms) / xm**2
+    dxs_dx = - np.multiply.outer(self.ms, self.ms * x) / xm**2
     dxs_dx[diag_index] += self.ms / xm
 
     # Defining xhi0 wihtout x dependence
@@ -471,120 +484,117 @@ def dares_dx(self, x, rho, temp_aux, Xass0=None):
     out = dxhix_dx_eval(xhi00, xs, dxs_dx, xm, self.ms, self.sigmaij3)
     xhixm, dxhixm_dxhi00, dxhixm_dx, dxhixm_dx_dxhi00 = out
 
-    x0_a1, x0_a2, x0_g1, x0_g2 = x0lambda_eval(x0, self.la, self.lr,
-                                               self.lar, self.laij,
-                                               self.lrij, self.larij,
-                                               diag_index)
-
-    da1, da2 = da1sB_dxhi00_eval(xhi00, xhix, x0, xm, self.lambdasij,
-                                 self.cctesij, a1vdwij, a1vdw_cteij,
-                                 dxhix_dxhi00)
-
-    da1x, da2x = da1sB_dx_eval(xhi00, xhix, x0, xm, self.ms,
-                               self.lambdasij, self.cctesij, a1vdwij,
-                               a1vdw_cteij, dxhix_dx)
-
-    da1xxhi, da2xxhi = da1sB_dx_dxhi00_eval(xhi00, xhix, x0i, xm,
-                                            self.ms, self.lambdas,
-                                            self.cctes, a1vdw, a1vdw_cte,
-                                            dxhix_dxhi00, dxhix_dx,
-                                            dxhix_dx_dxhi00)
-
-    suma1_monomer = self.Cij * np.sum(da1 * x0_a1, axis=1)
-    suma2_monomer = self.Cij**2 * np.sum(da2 * x0_a2, axis=1)
-
-    suma1_monomerx = self.Cij * (da1x[0] * x0_a1[0] + da1x[1] * x0_a1[1])
-    suma2_monomerx = self.Cij**2 * (da2x[0] * x0_a2[0] + da2x[1] * x0_a2[1]
-                                    + da2x[2] * x0_a2[2])
-
-    da1ijx = suma1_monomerx
-    da2ijx = suma2_monomerx
-
-    da1x_a = da1x[0]
-    da1x_r = da1x[1]
-
-    da2x_2a = da2x[0]
-    da2x_2r = da2x[2]
-    da2x_ar = da2x[1]
+    xhix2 = xhix**2
+    xhix3 = xhix2*xhix
+    xhix4 = xhix3*xhix
+    xhix_vec = np.array([[xhix, xhix2, xhix3, xhix4],
+                         [1., 2 * xhix, 3*xhix2, 4*xhix3],
+                         [0., 2, 6*xhix, 12*xhix2]])
 
     khs, dkhs, dkhsx, dkhsxxhi = dkHS_dx_dxhi00(xhix, dxhix_dxhi00,
                                                 dxhix_dx, dxhix_dx_dxhi00)
 
-    aHS, daHS = dahs_dx(xhi, dxhi_dx)
-    a1m, da1m = da1_dx(xs, dxs_dx, suma1_monomer[0], suma1_monomerx)
-    a2m, da2m = da2_dx(xs, dxs_dx, khs, dkhsx, xhixm, dxhixm_dx,
-                       suma2_monomer[0], suma2_monomerx, self.epsij,
-                       self.f1, self.f2, self.f3)
-    a3m, da3m = da3_dx(xs, dxs_dx, xhixm, dxhixm_dx, self.epsij,
-                       self.f4, self.f5, self.f6)
+    out = da1sB_dx_dxhi00_dxxhi_eval(xhi00, xhix, xhix_vec, xm, self.ms,
+                                     I_lambdasij, J_lambdasij, self.cctesij,
+                                     a1vdwij, a1vdw_cteij, dxhix_dxhi00,
+                                     dxhix_dx, dxhix_dx_dxhi00)
 
-    am = aHS + beta * a1m + beta**2 * a2m + beta**3 * a3m
-    dam = daHS + beta * da1m + beta**2 * da2m + beta**3 * da3m
+    da1, da2, da1x, da2x, da1_xxhi00, da2_xxhi00 = out
+    da1xxhi = da1_xxhi00[:, :, diag_index[0], diag_index[0]]
+    da2xxhi = da2_xxhi00[:, :, diag_index[0], diag_index[0]]
+
+    # monomer calculation
+    suma1_monomer = self.Cij * np.sum(da1 * x0_a1, axis=1)
+    suma2_monomer = self.Cij2 * np.sum(da2 * x0_a2, axis=1)
+
+    suma1_monomerx = self.Cij * (da1x[0] * x0_a1[0] + da1x[1] * x0_a1[1])
+
+    suma2_monomerx = da2x[0]*x0_a2[0] + da2x[1]*x0_a2[1]
+    suma2_monomerx += da2x[2]*x0_a2[2]
+    suma2_monomerx *= self.Cij2
+
+    aHS, daHSx = dahs_dx(xhi, dxhi_dx)
+    a1m, da1mx = da1_dx(xs, dxs_dx, suma1_monomer[0], suma1_monomerx)
+    a2m, da2mx = da2_dx(xs, dxs_dx, khs, dkhsx, xhixm, dxhixm_dx,
+                        suma2_monomer[0], suma2_monomerx, self.epsij,
+                        self.f1, self.f2, self.f3)
+    a3m, da3mx = da3_dx(xs, dxs_dx, xhixm, dxhixm_dx, self.epsij,
+                        self.f4, self.f5, self.f6)
+
+    am = aHS + beta * a1m + beta2 * a2m + beta3 * a3m
+    damx = daHSx + beta * da1mx + beta2 * da2mx + beta3 * da3mx
     amono = xm * am
-    damonox = self.ms * am + xm * dam
+    damonox = self.ms * am + xm * damx
 
-    # To be used in a1 and a2 of chain
-    suma1_chain = 1.*suma1_monomer[:, diag_index[0], diag_index[1]]
-    suma2_chain = 1.*suma2_monomer[:, diag_index[0], diag_index[1]]
+    # Chain contribution
+    gHS, dgHSx = dgdHS_dx(x0i_matrix, xhix, dxhix_dx)
+    gc, dgcx = dgammac_dx(xhixm, dxhixm_dx, self.alpha, tetha)
+
+    suma1_chain = suma1_monomer[:, diag_index[0], diag_index[1]]
+    suma2_chain = suma2_monomer[:, diag_index[0], diag_index[1]]
 
     da1c = da1[:, :, diag_index[0], diag_index[1]]
     da2c = da2[:, :, diag_index[0], diag_index[1]]
 
-    # To be used in a1sb of chain
-    suma1_chain2 = self.C * np.sum(da1c * x0_g1, axis=1)
-    suma2_chain2 = self.C**2 * np.sum(da2c * x0_g2, axis=1)
+    # g1 sigma
+    da1_chain = suma1_chain[1]
+    da1x_chain = da1xxhi[0]*x0_a1ii[0]
+    da1x_chain += da1xxhi[1]*x0_a1ii[1]
+    da1x_chain *= self.C
 
-    # Chain contribution
-    gHS, dgHS = dgdHS_dx(x0i, xhix, dxhix_dx)
-    gc, dgc = dgammac_dx(xhixm, dxhixm_dx, self.alpha, tetha)
+    suma_g1 = self.C * np.sum(da1c[0] * x0_g1, axis=0)
 
+    da1x_a = da1x[0]
+    da1x_r = da1x[1]
     dg1x_a = da1x_a[:, diag_index[0], diag_index[1]]
     dg1x_r = da1x_r[:, diag_index[0], diag_index[1]]
-
-    da1 = 1.*suma1_chain[1]
-    da1x = da1xxhi[0]*x0_a1[0, diag_index[0], diag_index[1]]
-    da1x += da1xxhi[1]*x0_a1[1, diag_index[0], diag_index[1]]
-    da1x *= self.C
-
-    suma_g1 = 1.*suma1_chain2[0]
-    suma_g1x = dg1x_a * x0_g1[0] + dg1x_r * x0_g1[1]
+    suma_g1x = dg1x_a*x0_g1[0] + dg1x_r*x0_g1[1]
     suma_g1x *= self.C
-    g1s, dg1s = dg1sigma_dx(xhi00, xm, self.ms, da1, da1x, suma_g1,
-                            suma_g1x, self.eps, dii)
 
-    suma_a2x = da2ijx[:, diag_index[0], diag_index[1]]
+    g1s, dg1sx = dg1sigma_dx(xhi00, xm, self.ms, da1_chain, da1x_chain,
+                             suma_g1, suma_g1x, a1vdw_cte)
+
+    # g2 sigma
+    suma_a2new = suma2_chain
+
+    suma_a2x = suma2_monomerx[:, diag_index[0], diag_index[1]]
+
+    suma_a2xxhi = da2xxhi[0] * x0_a2ii[0]
+    suma_a2xxhi += da2xxhi[1] * x0_a2ii[1]
+    suma_a2xxhi += da2xxhi[2] * x0_a2ii[2]
+    suma_a2xxhi *= self.C2
+
+    da2new, da2newx = da2new_dx_dxhi00(khs, dkhs, dkhsx, dkhsxxhi, suma_a2new,
+                                       suma_a2x, suma_a2xxhi, self.eps)
+
+    suma_g2 = self.C2 * np.sum(da2c[0] * x0_g2, axis=0)
+
+    da2x_2a = da2x[0]
+    da2x_2r = da2x[2]
+    da2x_ar = da2x[1]
     dxa = da2x_2a[:, diag_index[0], diag_index[1]]
     dxar = da2x_ar[:, diag_index[0], diag_index[1]]
     dxr = da2x_2r[:, diag_index[0], diag_index[1]]
     suma_g2x = dxa * x0_g2[0]
     suma_g2x += dxar * x0_g2[1]
     suma_g2x += dxr * x0_g2[2]
-    suma_g2x *= self.C**2
+    suma_g2x *= self.C2
 
-    suma_a2xxhi = da2xxhi[0] * x0_a2[0, diag_index[0], diag_index[1]]
-    suma_a2xxhi += da2xxhi[1] * x0_a2[1, diag_index[0], diag_index[1]]
-    suma_a2xxhi += da2xxhi[2] * x0_a2[2, diag_index[0], diag_index[1]]
-    suma_a2xxhi *= self.C**2
+    g2m, dg2mx = dg2mca_dx(xhi00, khs, dkhsx, xm, self.ms, da2new, da2newx,
+                           suma_g2, suma_g2x, self.eps, a1vdw_cte)
 
-    da2new, da2newx = da2new_dx_dxhi00(khs, dkhs, dkhsx, dkhsxxhi,
-                                       suma2_chain[:2], suma_a2x,
-                                       suma_a2xxhi, self.eps)
-
-    suma_g2 = suma2_chain2[0]
-    g2m, dg2m = dg2mca_dx(xhi00, khs, dkhsx, xm, self.ms, da2new, da2newx,
-                          suma_g2, suma_g2x, self.eps, dii)
     g2s = g2m * (1 + gc)
-    dg2s = dgc * g2m + (1+gc)*dg2m
+    dg2sx = dgcx * g2m + (1+gc)*dg2mx
 
-    lng, dlngx = dlngmie_dx(gHS, g1s, g2s, dgHS, dg1s, dg2s, beta, self.eps)
-    # achain = - lng@(x * (self.ms - 1)) # original
-    # dachainx = - ((self.ms - 1) * lng + dlngx@(x*(self.ms - 1)))
+    lng, dlngx = dlngmie_dx(gHS, g1s, g2s, dgHSx, dg1sx, dg2sx, beps, beps2)
 
-    detai_dx = xhi00 * self.ms * di03[:, -1]
-    etai = xhi00 * xmi * di03[:, -1]
-    achain = - lng@(x * (self.ms - 1 + etai*self.ring))
-    dachainx = -  dlngx@(x*(self.ms - 1 + etai*self.ring))
-    dachainx += - lng * (self.ms - 1. + etai*self.ring + self.ring*detai_dx*x)
+    detai_dx = xhi00 * self.ms * di03[:, 3]
+    etai = xhi00 * xmi * di03[:, 3]
+    aux_ring = etai*self.ring
+    aux_chain = x * (self.ms - 1 + aux_ring)
+    achain = - lng@aux_chain
+    dachainx = -  dlngx@aux_chain
+    dachainx += - lng * (self.ms - 1. + aux_ring + self.ring*detai_dx*x)
 
     ares = amono + achain
     daresx = damonox + dachainx
@@ -597,7 +607,7 @@ def dares_dx(self, x, rho, temp_aux, Xass0=None):
         xj = x[self.compindex]
         iab, diab = dIab_dx(xhi, dxhi_dx, dii, dij, self.rcij, self.rdij,
                             self.sigmaij3)
-        Fab = temp_aux[12]
+        Fab = temp_aux[24]
         Dab = self.sigmaij3 * Fab * iab
         dDab_dx = self.sigmaij3 * Fab * diab
         Dabij = np.zeros([self.nsites, self.nsites])
@@ -625,7 +635,7 @@ def dares_dx(self, x, rho, temp_aux, Xass0=None):
     if self.polar_bool:
         eta = xhi[-1]
         deta_dx = dxhi_dx[-1]
-        epsa, epsija = temp_aux[13:]
+        epsa, epsija = temp_aux[25:]
         a, dax = dApolar_dx(rho, x, self.anij, self.bnij, self.cnij,
                             eta, deta_dx, epsa, epsija, self.sigma3,
                             self.sigmaij3, self.sigmaijk3,  self.npol,
@@ -638,8 +648,10 @@ def dares_dx(self, x, rho, temp_aux, Xass0=None):
 
 def dares_dxrho(self, x, rho, temp_aux, Xass0=None):
 
-    beta, dii, dij, x0, x0i, di03, dij3 = temp_aux[0:7]
-    a1vdw_cteij, a1vdwij, tetha, a1vdw_cte, a1vdw = temp_aux[7:12]
+    beta, beta2, beta3, dii, dij, x0, x0i, di03, dij3 = temp_aux[:9]
+    I_lambdasij, J_lambdasij, a1vdw_cteij, a1vdwij = temp_aux[9:13]
+    beps, beps2, a1vdw_cte, x0i_matrix, tetha = temp_aux[13:18]
+    x0_a1, x0_a2, x0_g1, x0_g2, x0_a1ii, x0_a2ii = temp_aux[18:24]
 
     dxhi00_drho = self.dxhi00_drho
     diag_index = self.diag_index
@@ -648,7 +660,7 @@ def dares_dxrho(self, x, rho, temp_aux, Xass0=None):
     xm = np.sum(xmi)
     # Equation A8
     xs = xmi / xm
-    dxs_dx = - np.multiply.outer(self.ms * x, self.ms) / xm**2
+    dxs_dx = - np.multiply.outer(self.ms, self.ms * x) / xm**2
     dxs_dx[diag_index] += self.ms / xm
 
     # defining xhi0 without x dependence
@@ -666,133 +678,128 @@ def dares_dxrho(self, x, rho, temp_aux, Xass0=None):
     out = dxhix_dx_eval(xhi00, xs, dxs_dx, xm, self.ms, self.sigmaij3)
     xhixm, dxhixm_dxhi00, dxhixm_dx, dxhixm_dx_dxhi00 = out
 
-    x0_a1, x0_a2, x0_g1, x0_g2 = x0lambda_eval(x0, self.la, self.lr,
-                                               self.lar, self.laij,
-                                               self.lrij, self.larij,
-                                               diag_index)
+    xhix2 = xhix**2
+    xhix3 = xhix2*xhix
+    xhix4 = xhix3*xhix
+    xhix_vec = np.array([[xhix, xhix2, xhix3, xhix4],
+                         [1., 2 * xhix, 3*xhix2, 4*xhix3],
+                         [0., 2, 6*xhix, 12*xhix2]])
 
-    da1, da2 = d2a1sB_dxhi00_eval(xhi00, xhix, x0, xm, self.lambdasij,
-                                  self.cctesij, a1vdwij, a1vdw_cteij,
-                                  dxhix_dxhi00)
+    out = dkHS_dx_dxhi002(xhix, dxhix_dxhi00, dxhix_dx, dxhix_dx_dxhi00)
+    khs, dkhs, d2khs, dkhsx, dkhsxxhi = out
 
-    da1x, da2x = da1sB_dx_eval(xhi00, xhix, x0, xm, self.ms,
-                               self.lambdasij, self.cctesij, a1vdwij,
-                               a1vdw_cteij, dxhix_dx)
+    out = da1sB_dx_d2xhi00_dxxhi_eval(xhi00, xhix, xhix_vec, xm, self.ms,
+                                      I_lambdasij, J_lambdasij, self.cctesij,
+                                      a1vdwij, a1vdw_cteij, dxhix_dxhi00,
+                                      dxhix_dx, dxhix_dx_dxhi00)
 
-    da1xxhi, da2xxhi = da1sB_dx_dxhi00_eval(xhi00, xhix, x0i, xm, self.ms,
-                                            self.lambdas, self.cctes,
-                                            a1vdw, a1vdw_cte, dxhix_dxhi00,
-                                            dxhix_dx, dxhix_dx_dxhi00)
+    da1, da2, da1x, da2x, da1_xxhi00, da2_xxhi00 = out
+    da1xxhi = da1_xxhi00[:, :, diag_index[0], diag_index[0]]
+    da2xxhi = da2_xxhi00[:, :, diag_index[0], diag_index[0]]
 
+    # monomer calculation
     suma1_monomer = self.Cij * np.sum(da1 * x0_a1, axis=1)
-    suma2_monomer = self.Cij**2 * np.sum(da2 * x0_a2, axis=1)
+    suma2_monomer = self.Cij2 * np.sum(da2 * x0_a2, axis=1)
 
     suma1_monomerx = self.Cij * (da1x[0] * x0_a1[0] + da1x[1] * x0_a1[1])
-    suma2_monomerx = (da2x[0]*x0_a2[0]+da2x[1]*x0_a2[1]+da2x[2]*x0_a2[2])
-    suma2_monomerx *= self.Cij**2
+    suma2_monomerx = da2x[0]*x0_a2[0] + da2x[1]*x0_a2[1]
+    suma2_monomerx += da2x[2]*x0_a2[2]
+    suma2_monomerx *= self.Cij2
 
-    da1ijx = suma1_monomerx
-    da2ijx = suma2_monomerx
+    aHS, daHSx = dahs_dxxhi(xhi, dxhi_dxhi00, dxhi_dx)
+    a1m, da1mx = da1_dxxhi(xs, dxs_dx, suma1_monomer[:2], suma1_monomerx)
+    a2m, da2mx = da2_dxxhi(xs, dxs_dx, khs, dkhs, dkhsx, xhixm,
+                           dxhixm_dxhi00, dxhixm_dx, suma2_monomer[:2],
+                           suma2_monomerx, self.epsij,  self.f1, self.f2,
+                           self.f3)
+    a3m, da3mx = da3_dxxhi(xs, dxs_dx, xhixm, dxhixm_dxhi00, dxhixm_dx,
+                           self.epsij, self.f4, self.f5, self.f6)
+
+    am = aHS + beta * a1m + beta2 * a2m + beta3 * a3m
+    damx = daHSx + beta * da1mx + beta2 * da2mx + beta3 * da3mx
+    amono = xm * am
+    damonox = self.ms * am[0] + xm * damx
+
+    # Chain contribution
+    gHS, dgHSx = dgdHS_dxxhi(x0i_matrix, xhix, dxhix_dxhi00, dxhix_dx)
+    gc, dgcx = dgammac_dxxhi(xhixm, dxhixm_dxhi00, dxhixm_dx, self.alpha,
+                             tetha)
+
+    suma1_chain = suma1_monomer[:, diag_index[0], diag_index[1]]
+    suma2_chain = suma2_monomer[:, diag_index[0], diag_index[1]]
+
+    da1c = da1[:2, :, diag_index[0], diag_index[1]]
+    da2c = da2[:2, :, diag_index[0], diag_index[1]]
+
+    # g1 sigma
+    da1_chain = suma1_chain[1:]
+    da1x_chain = da1xxhi[0]*x0_a1ii[0]
+    da1x_chain += da1xxhi[1]*x0_a1ii[1]
+    da1x_chain *= self.C
+
+    dsuma_g1 = self.C * np.sum(da1c * x0_g1, axis=1)
 
     da1x_a = da1x[0]
     da1x_r = da1x[1]
+    dg1x_a = da1x_a[:, diag_index[0], diag_index[1]]
+    dg1x_r = da1x_r[:, diag_index[0], diag_index[1]]
+    suma_g1x = dg1x_a*x0_g1[0] + dg1x_r*x0_g1[1]
+    suma_g1x *= self.C
+
+    g1s, dg1sx = dg1sigma_dxxhi(xhi00, xm, self.ms, da1_chain, da1x_chain,
+                                dsuma_g1, suma_g1x, a1vdw_cte)
+
+    # g2 sigma
+    suma_a2new = suma2_chain
+
+    suma_a2x = suma2_monomerx[:, diag_index[0], diag_index[1]]
+
+    suma_a2xxhi = da2xxhi[0] * x0_a2ii[0]
+    suma_a2xxhi += da2xxhi[1] * x0_a2ii[1]
+    suma_a2xxhi += da2xxhi[2] * x0_a2ii[2]
+    suma_a2xxhi *= self.C2
+
+    *d2a2new, da2newx = da2new_dxxhi_dxhi00(khs, dkhs, d2khs, dkhsx, dkhsxxhi,
+                                            suma_a2new, suma_a2x, suma_a2xxhi,
+                                            self.eps)
+
+    dsuma_g2 = self.C2 * np.sum(da2c * x0_g2, axis=1)
 
     da2x_2a = da2x[0]
     da2x_2r = da2x[2]
     da2x_ar = da2x[1]
-
-    khs, dkhs, d2khs, dkhsx, dkhsxxhi = dkHS_dx_dxhi002(xhix, dxhix_dxhi00,
-                                                        dxhix_dx,
-                                                        dxhix_dx_dxhi00)
-
-    aHS, daHS = dahs_dxxhi(xhi, dxhi_dxhi00, dxhi_dx)
-    a1m, da1m = da1_dxxhi(xs, dxs_dx, suma1_monomer[:2], suma1_monomerx)
-    a2m, da2m = da2_dxxhi(xs, dxs_dx, khs, dkhs, dkhsx, xhixm,
-                          dxhixm_dxhi00, dxhixm_dx, suma2_monomer[:2],
-                          suma2_monomerx, self.epsij,
-                          self.f1, self.f2, self.f3)
-    a3m, da3m = da3_dxxhi(xs, dxs_dx, xhixm, dxhixm_dxhi00, dxhixm_dx,
-                          self.epsij, self.f4, self.f5, self.f6)
-
-    am = aHS + beta * a1m + beta**2 * a2m + beta**3 * a3m
-    dam = daHS + beta * da1m + beta**2 * da2m + beta**3 * da3m
-    amono = xm * am
-    damonox = self.ms * am[0] + xm * dam
-
-    # To be used in a1 and a2 of chain
-    suma1_chain = 1.*suma1_monomer[:, diag_index[0], diag_index[1]]
-    suma2_chain = 1.*suma2_monomer[:, diag_index[0], diag_index[1]]
-
-    da1c = da1[:, :, diag_index[0], diag_index[1]]
-    da2c = da2[:, :, diag_index[0], diag_index[1]]
-
-    # To be used in a1sb of chain
-    suma1_chain2 = self.C * np.sum(da1c * x0_g1, axis=1)
-    suma2_chain2 = self.C**2 * np.sum(da2c * x0_g2, axis=1)
-
-    # Chain contribution
-    gHS, dgHS = dgdHS_dxxhi(x0i, xhix, dxhix_dxhi00, dxhix_dx)
-    gc, dgc = dgammac_dxxhi(xhixm, dxhixm_dxhi00, dxhixm_dx, self.alpha,
-                            tetha)
-
-    dg1x_a = da1x_a[:, diag_index[0], diag_index[1]]
-    dg1x_r = da1x_r[:, diag_index[0], diag_index[1]]
-
-    da1 = 1.*suma1_chain[1:3]
-    da1x = da1xxhi[0]*x0_a1[0, diag_index[0], diag_index[1]]
-    da1x += da1xxhi[1]*x0_a1[1, diag_index[0], diag_index[1]]
-    da1x *= self.C
-
-    suma_g1 = 1.*suma1_chain2[:2]
-    suma_g1x = dg1x_a * x0_g1[0] + dg1x_r * x0_g1[1]
-    suma_g1x *= self.C
-    g1s, dg1s = dg1sigma_dxxhi(xhi00, xm, self.ms, da1, da1x, suma_g1,
-                               suma_g1x, self.eps, dii)
-
-    suma_a2x = da2ijx[:, diag_index[0], diag_index[1]]
-
     dxa = da2x_2a[:, diag_index[0], diag_index[1]]
     dxar = da2x_ar[:, diag_index[0], diag_index[1]]
     dxr = da2x_2r[:, diag_index[0], diag_index[1]]
     suma_g2x = dxa * x0_g2[0]
     suma_g2x += dxar * x0_g2[1]
     suma_g2x += dxr * x0_g2[2]
-    suma_g2x *= self.C**2
+    suma_g2x *= self.C2
 
-    suma_a2xxhi = da2xxhi[0] * x0_a2[0, diag_index[0], diag_index[1]]
-    suma_a2xxhi += da2xxhi[1] * x0_a2[1, diag_index[0], diag_index[1]]
-    suma_a2xxhi += da2xxhi[2] * x0_a2[2, diag_index[0], diag_index[1]]
-    suma_a2xxhi *= self.C**2
-
-    da2new, d2anew, da2newx = da2new_dxxhi_dxhi00(khs, dkhs, d2khs, dkhsx,
-                                                  dkhsxxhi,
-                                                  suma2_chain[:3],
-                                                  suma_a2x, suma_a2xxhi,
-                                                  self.eps)
-
-    suma_g2 = suma2_chain2[[0, 1]]
-    g2m, dg2m = dg2mca_dxxhi(xhi00, khs, dkhs, dkhsx, xm, self.ms, da2new,
-                             d2anew, da2newx, suma_g2, suma_g2x,
-                             self.eps, dii)
+    g2m, dg2mx = dg2mca_dxxhi(xhi00, khs, dkhs, dkhsx, xm, self.ms, d2a2new,
+                              da2newx, dsuma_g2, suma_g2x, self.eps, a1vdw_cte)
 
     g2s = g2m * (1 + gc[0])
     g2s[1] += g2m[0] * gc[1]
-    dg2s = dgc*g2m[0] + (1+gc[0])*dg2m
-    lng, dlngx = dlngmie_dxxhi(gHS, g1s, g2s, dgHS, dg1s, dg2s, beta, self.eps)
+    dg2sx = dgcx*g2m[0] + (1+gc[0])*dg2mx
 
-    # achain = - lng@(x * (self.ms - 1)) # original
-    # dachainx = - ((self.ms - 1) * lng[0] + dlngx@(x*(self.ms - 1)))
-    detai_dxhi00 = xmi * di03[:, -1]
+    lng, dlngx = dlngmie_dxxhi(gHS, g1s, g2s, dgHSx, dg1sx, dg2sx, beps, beps2)
+
+    detai_dxhi00 = xmi * di03[:, 3]
     etai = xhi00 * detai_dxhi00
-    achain = - lng@(x * (self.ms - 1. + etai*self.ring))
+    aux_ring = etai*self.ring
+    aux_chain = x * (self.ms - 1 + aux_ring)
+
+    achain = - lng@aux_chain
     achain[1] += - np.dot(x*self.ring*detai_dxhi00, lng[0])
 
-    detai_dx = xhi00 * self.ms * di03[:, -1]
-    dachainx = -  dlngx@(x*(self.ms - 1 + etai*self.ring))
-    dachainx -= lng[0] * (self.ms - 1. + etai*self.ring + self.ring*detai_dx*x)
+    detai_dx = xhi00 * self.ms * di03[:, 3]
+    dachainx = -  dlngx@aux_chain
+    dachainx += - lng[0] * (self.ms - 1. + aux_ring + self.ring*detai_dx*x)
 
     ares = amono + achain
     daresx = damonox + dachainx
+
     ares *= np.array([1, dxhi00_drho])
 
     if self.assoc_bool:
@@ -804,7 +811,7 @@ def dares_dxrho(self, x, rho, temp_aux, Xass0=None):
         iab, diab, diabx = dIab_dxrho(xhi, dxhi_dxhi00, dxhi00_drho,
                                       dxhi_dx, dii, dij, self.rcij,
                                       self.rdij, self.sigmaij3)
-        Fab = temp_aux[12]
+        Fab = temp_aux[24]
         Dab = self.sigmaij3 * Fab * iab
         dDab_drho = self.sigmaij3 * Fab * diab
         dDab_dx = self.sigmaij3 * Fab * diabx
@@ -843,7 +850,7 @@ def dares_dxrho(self, x, rho, temp_aux, Xass0=None):
         deta_dxhi00 = dxhi_dxhi00[-1]
         deta = deta_dxhi00 * self.dxhi00_drho
         deta_dx = dxhi_dx[-1]
-        epsa, epsija = temp_aux[13:]
+        epsa, epsija = temp_aux[25:]
         a, dax = dApolar_dxrho(rho, x, self.anij, self.bnij, self.cnij,
                                eta, deta, deta_dx, epsa, epsija,
                                self.sigma3, self.sigmaij3, self.sigmaijk3,

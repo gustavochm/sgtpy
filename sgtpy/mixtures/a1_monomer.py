@@ -26,7 +26,7 @@ def da1_dx(xs, dxs_dx, a1ij, da1ij_dx):
     a = np.matmul(np.matmul(a1ij, xs), xs)
 
     aux1 = xs * a1ij
-    suma1 = 2*np.sum(dxs_dx.T@aux1, axis=1)
+    suma1 = 2*np.sum(dxs_dx@aux1, axis=1)
 
     da1x = np.matmul(np.matmul(da1ij_dx, xs), xs)
     da1x += suma1
@@ -39,7 +39,7 @@ def da1_dxxhi(xs, dxs_dx, a1ij, da1ij_dx):
     a = np.matmul(np.matmul(a1ij, xs), xs)
 
     aux1 = xs * a1ij[0]
-    suma1 = 2*np.sum(dxs_dx.T@aux1, axis=1)
+    suma1 = 2*np.sum(dxs_dx@aux1, axis=1)
 
     da1x = np.matmul(np.matmul(da1ij_dx, xs), xs)
     da1x += suma1

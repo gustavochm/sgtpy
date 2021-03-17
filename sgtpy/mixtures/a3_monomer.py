@@ -52,7 +52,7 @@ def da3_dx(xs, dxs_dx, xhim, dxhim_dx, epsij, f4, f5, f6):
 
     aux4 = xs * a3ij
     a3m = np.sum(aux4.T*xs)
-    suma1 = 2*np.sum(dxs_dx.T@aux4, axis=1)
+    suma1 = 2*np.sum(dxs_dx@aux4, axis=1)
 
     dax = xs@da3ijx@xs + suma1
     return a3m, dax
@@ -72,7 +72,7 @@ def da3_dxxhi(xs, dxs_dx, xhim, dxhim_dxhi00, dxhim_dx, epsij, f4, f5, f6):
     da3ijx = np.multiply.outer(dxhim_dx, aux3)
 
     aux1 = xs * a3ij
-    suma1 = 2*np.sum(dxs_dx.T@aux1, axis=1)
+    suma1 = 2*np.sum(dxs_dx@aux1, axis=1)
 
     dax = xs@da3ijx@xs + suma1
 
