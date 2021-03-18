@@ -6,6 +6,7 @@ from .polarGV import aij, bij, cij
 from .ares import ares, dares_drho, d2ares_drho
 from .density_solver import density_topliss, density_newton
 from .psat_saft import psat
+from .tsat_saft import tsat
 from .critical_pure import get_critical
 
 from ..constants import kb, Na
@@ -403,7 +404,8 @@ class saftvrmie_pure():
         rho, Xass = self.density_aux(temp_aux, P, state, rho0, Xass0)
         return rho
 
-    def psat(self, T, P0=None, v0=[None, None], Xass0=[None, None]):
+    def psat(self, T, P0=None, v0=[None, None], Xass0=[None, None],
+             full_output=False):
         """
         psat(T, P0)
 
@@ -420,14 +422,53 @@ class saftvrmie_pure():
             initial guess for liquid and vapor phase, respectively [m^3/mol]
         Xass0: array, optional
             Initial guess for the calculation of fraction of non-bonded sites
+        full_output: bool, optional
+            wether to outputs or not all the calculation info.
 
         Returns
         -------
         psat : float
-            saturation pressure
+            saturation pressure [Pa]
+        vl : float
+            liquid saturation volume [m3/mol]
+        vv : float
+            vapor saturation volume [m3/mol]
         """
-        P, vl, vv = psat(self, T, P0, v0, Xass0)
-        return P, vl, vv
+        out = psat(self, T, P0, v0, Xass0, full_output)
+        return out
+
+    def tsat(self, P, Tbounds, v0=[None, None], Xass0=[None, None],
+             full_output=False):
+        """
+        tsat(P, Tbounds)
+
+        Method that computes saturation temperature at given pressure.
+
+        Parameters
+        ----------
+
+        P : float
+            absolute pressure [Pa]
+        Tbounds : tuple
+                (Tmin, Tmax) Temperature interval to start iterations [K]
+        v0: list, optional
+            initial guess for liquid and vapor phase, respectively [m^3/mol]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+        full_output: bool, optional
+            wether to outputs or not all the calculation info.
+
+        Returns
+        -------
+        tsat : float
+            saturation temperature [K]
+        vl : float
+            liquid saturation volume [m^3/mol]
+        vv : float
+            vapor saturation volume [m^3/mol]
+        """
+        out = tsat(self, P, Tbounds, v0, Xass0, full_output)
+        return out
 
     def get_critical(self, Tc0, rhoc0, method='hybr'):
         """

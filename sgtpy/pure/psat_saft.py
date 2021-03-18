@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import root
 from ..constants import kb, Na
+from .EquilibriumResult import EquilibriumResult
 
 
 R = Na * kb
@@ -18,7 +19,7 @@ def mu_obj(rho, temp_aux, saft):
     mul = afcnl + rhol*dafcnl
     dmul = Na * (rhol*d2afcnl + 2*dafcnl)
 
-    dav, Xaasv = saft.d2afcn_aux(rhov, temp_aux)
+    dav, Xassv = saft.d2afcn_aux(rhov, temp_aux)
     afcnv, dafcnv, d2afcnv = dav
     Pv = rhov**2 * dafcnv / Na
     dPv = (2 * rhov * dafcnv + rhov**2 * d2afcnv)
@@ -32,7 +33,8 @@ def mu_obj(rho, temp_aux, saft):
     return FO, dFO
 
 
-def psat(saft, T, P0=None, v0=[None, None], Xass0=[None, None]):
+def psat(saft, T, P0=None, v0=[None, None], Xass0=[None, None],
+         full_output=True):
 
     P0input = P0 is None
     v0input = v0 == [None, None]
@@ -55,7 +57,7 @@ def psat(saft, T, P0=None, v0=[None, None], Xass0=[None, None]):
     vl, vv = v0
     if not good_initial:
         lnphiv, vv, Xassv = saft.logfug_aux(temp_aux, P, 'V', vv, Xassv)
-        lnphil, vl, Xassv = saft.logfug_aux(temp_aux, P, 'L', vl, Xassl)
+        lnphil, vl, Xassl = saft.logfug_aux(temp_aux, P, 'L', vl, Xassl)
         FO = lnphiv - lnphil
         dFO = (vv - vl)/RT
         dP = FO/dFO
@@ -64,7 +66,7 @@ def psat(saft, T, P0=None, v0=[None, None], Xass0=[None, None]):
         P -= dP
         for i in range(10):
             lnphiv, vv, Xassv = saft.logfug_aux(temp_aux, P, 'V', vv, Xassv)
-            lnphil, vl, Xassv = saft.logfug_aux(temp_aux, P, 'L', vl, Xassl)
+            lnphil, vl, Xassl = saft.logfug_aux(temp_aux, P, 'L', vl, Xassl)
             FO = lnphiv - lnphil
             dFO = (vv - vl)/RT
             P -= FO/dFO
@@ -74,6 +76,8 @@ def psat(saft, T, P0=None, v0=[None, None], Xass0=[None, None]):
         if not sucess:
             rho0 = 1. / np.array([vl, vv])
             sol = root(mu_obj, rho0, args=(temp_aux, saft), jac=True)
+            sucess = sol.success
+            i += sol.nfev
             rhol, rhov = sol.x
             vl, vv = 1./sol.x
             rhomolecular = rhol * Na
@@ -83,6 +87,8 @@ def psat(saft, T, P0=None, v0=[None, None], Xass0=[None, None]):
     else:
         rho0 = 1. / np.asarray([v0])
         sol = root(mu_obj, rho0, args=(temp_aux, saft), jac=True)
+        sucess = sol.success
+        i = sol.nfev
         if sol.success:
             rhol, rhov = sol.x
             vl, vv = 1./sol.x
@@ -92,4 +98,12 @@ def psat(saft, T, P0=None, v0=[None, None], Xass0=[None, None]):
             P = rhomolecular**2 * dafcn/Na
         else:
             P = None
-    return P, vl, vv
+
+    if full_output:
+        dict = {'T': T, 'P': P, 'vl': vl, 'vv': vv, 'Xassl': Xassl,
+                'Xassv': Xassv, 'sucess': sucess, 'iterations': i}
+        out = EquilibriumResult(dict)
+
+    else:
+        out = P, vl, vv
+    return out
