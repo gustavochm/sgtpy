@@ -42,14 +42,14 @@ def Xass_solver(nsites, KIJ, diagasso, Xass0=None):
         dXass = (1 - omega) * (fo - Xass)
         Xass += dXass
 
-    for i in range(10):
+    for i in range(15):
         KIJXass = KIJ@Xass
         dQ = (1./Xass - 1.) - KIJXass
         HIJ = - 1. * KIJ
         HIJ[diagasso] -= (1. + KIJXass)/Xass
         dXass = np.linalg.solve(HIJ, -dQ)
         Xass += dXass
-        sucess = np.linalg.norm(dXass) < 1e-8
+        sucess = np.linalg.norm(dXass) < 1e-9
         if sucess:
             break
 

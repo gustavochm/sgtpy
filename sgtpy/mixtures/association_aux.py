@@ -258,23 +258,11 @@ def Xass_solver(nsites, xj, rho, DIJ, Dabij, diagasso, Xass0):
             Xass = Xnew
             KIJXass = KIJ@Xass
             dQ = xj * (1/Xass - 1) - KIJXass
-            sucess = np.linalg.norm(dQ) < 1e-8
+            sucess = np.linalg.norm(dQ) < 1e-9
             if sucess:
                 break
             HIJ = -1 * KIJ
             HIJ[diagasso] -= (xj + KIJXass)/Xass
-        '''
-        for i in range(15):
-            KIJXass = KIJ@Xass
-            dQ = xj * (1/Xass - 1) - KIJXass
-            HIJ = -1 * KIJ
-            HIJ[diagasso] -= (xj + KIJXass)/Xass
-            dXass = np.linalg.solve(HIJ, -dQ)
-            Xass += dXass
-            sucess = np.linalg.norm(dXass) < 1e-8
-            if sucess:
-                break
-         '''
     else:
         Xass = fsolve(fobj_xass, x0=Xass, args=(xj, aux_asso, diagasso),
                       fprime=fobj_xass_jac)
