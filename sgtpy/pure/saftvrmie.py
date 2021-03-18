@@ -3,6 +3,8 @@ from ..math import gauss
 from .ideal import aideal, daideal_drho, d2aideal_drho
 from .association_aux import association_config
 from .polarGV import aij, bij, cij
+from .monomer_aux import I_lam, J_lam
+from .a1sB_monomer import x0lambda_eval
 from .ares import ares, dares_drho, d2ares_drho
 from .density_solver import density_topliss, density_newton
 from .psat_saft import psat
@@ -132,8 +134,11 @@ class saftvrmie_pure():
         dif_c = self.lambda_r - self.lambda_a
         expc = self.lambda_a/dif_c
         self.c = self.lambda_r/dif_c*(self.lambda_r/self.lambda_a)**expc
+        self.c2 = self.c**2
         alpha = self.c*(1/(self.lambda_a - 3) - 1/(self.lambda_r - 3))
         self.alpha = alpha
+
+        self.lambdas = self.lambda_a, self.lambda_r, self.lambda_ar
 
         self.sigma3 = pure.sigma**3
 
@@ -273,9 +278,9 @@ class saftvrmie_pure():
         eta : float
             packing fraction [Adim]
         """
-        return self.ms * rho * np.pi * self.sigma**3 / 6
+        return self.ms * rho * np.pi * self.sigma3 / 6
 
-    def eta_bh(self, rho, d):
+    def eta_bh(self, rho, dia3):
         """
         eta_sigma(rho, d)
 
@@ -296,7 +301,7 @@ class saftvrmie_pure():
         deta : float
             derivative of packing fraction respect to density [m^3]
         """
-        deta_drho = self.ms * np.pi * d**3 / 6
+        deta_drho = self.ms * np.pi * dia3 / 6
         eta = deta_drho * rho
         return eta, deta_drho
 
@@ -332,16 +337,46 @@ class saftvrmie_pure():
         """
 
         beta = 1 / (kb*T)
+        beta2 = beta**2
+        beta3 = beta2*beta
         dia = self.diameter(beta)
-        tetha = np.exp(beta*self.eps)-1
+        dia3 = dia**3
+
         x0 = self.sigma/dia
         x03 = x0**3
+
+        # Parameters needed for evaluating the helmothlz contributions
+        la, lr, lar = self.lambda_a, self.lambda_r, self.lambda_ar
+        out = x0lambda_eval(x0, la, lr, lar)
+        x0_a1, x0_a2, x0_a12, x0_a22 = out
+
+        I_la = I_lam(x0, la)
+        I_lr = I_lam(x0, lr)
+        I_2la = I_lam(x0, 2*la)
+        I_2lr = I_lam(x0, 2*lr)
+        I_lar = I_lam(x0, lar)
+        I_lambdas = (I_la, I_lr, I_2la, I_2lr, I_lar)
+
+        J_la = J_lam(x0, la)
+        J_lr = J_lam(x0, lr)
+        J_2la = J_lam(x0, 2*la)
+        J_2lr = J_lam(x0, 2*lr)
+        J_lar = J_lam(x0, lar)
+        J_lambdas = (J_la, J_lr, J_2la, J_2lr, J_lar)
+
+        # for chain contribution
+        beps = beta*self.eps
+        beps2 = beps**2
+        tetha = np.exp(beps)-1
+        x0_vector = np.array([1, x0, x0**2, x0**3])
         # For Association
         Fab = np.exp(beta * self.eABij) - 1
         # For polar
         epsa = self.eps / T / kb
 
-        temp_aux = [beta, dia, tetha, x0, x03, Fab, epsa]
+        temp_aux = [beta, beta2, beta3, dia, dia3, x0, x03, x0_a1, x0_a2,
+                    x0_a12, x0_a22, I_lambdas, J_lambdas, beps, beps2, tetha,
+                    x0_vector, Fab, epsa]
         return temp_aux
 
     def density_aux(self, temp_aux, P, state, rho0=None, Xass0=None):
@@ -500,6 +535,77 @@ class saftvrmie_pure():
         """
         Tc, Pc, rhoc = get_critical(self, Tc0, rhoc0, method)
         return Tc, Pc, rhoc
+
+    def ares(self, rho, T, Xass0=None):
+        """
+        ares(x, rho, T, Xass0)
+        Method that computes the residual Helmholtz free energy of the fluid.
+
+        Parameters
+        ----------
+        rho: float
+            molecular density [molecules/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: float
+           residual dimentionless Helmholtz free energy [Adim]
+        """
+        temp_aux = self.temperature_aux(T)
+        a, Xass = ares(self, rho, temp_aux, Xass0)
+        return a, Xass
+
+    def dares_drho(self, rho, T, Xass0=None):
+        """
+        dares_drho(rho, T, Xass0)
+        Method that computes the residual Helmholtz free energy of the fluid
+        and its first density derivative.
+
+        Parameters
+        ----------
+        rho: float
+            molecular density [molecules/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: array_like
+           residual dimentionless Helmholtz free energy [Adim, m^3]
+        """
+        temp_aux = self.temperature_aux(T)
+        a, Xass = dares_drho(self, rho, temp_aux, Xass0)
+        return a, Xass
+
+    def d2ares_drho(self, rho, T, Xass0=None):
+        """
+        d2ares_drho(rho, T, Xass0)
+        Method that computes the residual Helmholtz free energy of the fluid
+        and its first and second density derivatives.
+
+        Parameters
+        ----------
+        rho: float
+            molecular density [molecules/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        a: array_like
+           residual dimentionless Helmholtz free energy [Adim, m^3, m^6]
+        """
+        temp_aux = self.temperature_aux(T)
+        a, Xass = d2ares_drho(self, rho, temp_aux, Xass0)
+        return a, Xass
 
     def afcn_aux(self, rho, temp_aux, Xass0=None):
         """
