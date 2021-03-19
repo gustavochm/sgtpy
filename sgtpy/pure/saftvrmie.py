@@ -142,6 +142,9 @@ class saftvrmie_pure():
 
         self.sigma3 = pure.sigma**3
 
+        self.cte_a2m = 0.5*self.eps*self.c2
+        self.eps3 = self.eps**3
+
         self.f1 = fi(alpha, 1)
         self.f2 = fi(alpha, 2)
         self.f3 = fi(alpha, 3)
@@ -369,6 +372,9 @@ class saftvrmie_pure():
         beps2 = beps**2
         tetha = np.exp(beps)-1
         x0_vector = np.array([1, x0, x0**2, x0**3])
+
+        cte_g1s = 1/(2*np.pi*self.eps*self.ms*dia3)
+        cte_g2s = cte_g1s / self.eps
         # For Association
         Fab = np.exp(beta * self.eABij) - 1
         # For polar
@@ -376,7 +382,7 @@ class saftvrmie_pure():
 
         temp_aux = [beta, beta2, beta3, dia, dia3, x0, x03, x0_a1, x0_a2,
                     x0_a12, x0_a22, I_lambdas, J_lambdas, beps, beps2, tetha,
-                    x0_vector, Fab, epsa]
+                    x0_vector, cte_g1s, cte_g2s, Fab, epsa]
         return temp_aux
 
     def density_aux(self, temp_aux, P, state, rho0=None, Xass0=None):
@@ -458,7 +464,7 @@ class saftvrmie_pure():
         Xass0: array, optional
             Initial guess for the calculation of fraction of non-bonded sites
         full_output: bool, optional
-            wether to outputs or not all the calculation info.
+            whether to outputs or not all the calculation info.
 
         Returns
         -------
@@ -472,8 +478,8 @@ class saftvrmie_pure():
         out = psat(self, T, P0, v0, Xass0, full_output)
         return out
 
-    def tsat(self, P, Tbounds, v0=[None, None], Xass0=[None, None],
-             full_output=False):
+    def tsat(self, P,  T0=None, Tbounds=None, v0=[None, None],
+             Xass0=[None, None], full_output=False):
         """
         tsat(P, Tbounds)
 
@@ -484,14 +490,16 @@ class saftvrmie_pure():
 
         P : float
             absolute pressure [Pa]
-        Tbounds : tuple
+        T0 : float, optional
+             Temperature to start iterations [K]
+        Tbounds : tuple, optional
                 (Tmin, Tmax) Temperature interval to start iterations [K]
         v0: list, optional
             initial guess for liquid and vapor phase, respectively [m^3/mol]
         Xass0: array, optional
             Initial guess for the calculation of fraction of non-bonded sites
         full_output: bool, optional
-            wether to outputs or not all the calculation info.
+            whether to outputs or not all the calculation info.
 
         Returns
         -------
@@ -502,10 +510,10 @@ class saftvrmie_pure():
         vv : float
             vapor saturation volume [m^3/mol]
         """
-        out = tsat(self, P, Tbounds, v0, Xass0, full_output)
+        out = tsat(self, P, T0, Tbounds, v0, Xass0, full_output)
         return out
 
-    def get_critical(self, Tc0, rhoc0, method='hybr'):
+    def get_critical(self, Tc0, rhoc0, method='hybr', full_output=False):
         """
         get_critical(Tc0, rhoc0, method)
 
@@ -523,6 +531,8 @@ class saftvrmie_pure():
             initial guess for critical density [mol/m^3]
         method : string, optional
             SciPy; root method to solve critical coordinate
+        full_output: bool, optional
+            whether to outputs or not all the calculation info.
 
         Returns
         -------
@@ -533,8 +543,8 @@ class saftvrmie_pure():
         rhoc: float
             Critical density [mol/m3]
         """
-        Tc, Pc, rhoc = get_critical(self, Tc0, rhoc0, method)
-        return Tc, Pc, rhoc
+        out = get_critical(self, Tc0, rhoc0, method, full_output)
+        return out
 
     def ares(self, rho, T, Xass0=None):
         """
