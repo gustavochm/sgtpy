@@ -1,6 +1,7 @@
 from __future__ import division, print_function, absolute_import
 import numpy as np
 from scipy.optimize import minimize
+from copy import copy
 
 
 def tpd(X, state, Z, T, P, model, v0=[None, None]):
@@ -41,12 +42,13 @@ def tpd(X, state, Z, T, P, model, v0=[None, None]):
     return np.sum(np.nan_to_num(tpdi))
 
 
-def tpd_obj(a, temp_aux, P, di, model, state, vg):
+def tpd_obj(a, temp_aux, P, di, model, state):
 
     W = a**2/4.  # change from alpha to mole numbers
     w = W/W.sum()  # change to mole fraction
-    # global vg
-    logfugW, vg, _ = model.logfugef_aux(w, temp_aux, P, state, vg)
+    global vgw, Xassgw
+    out = model.logfugef_aux(w, temp_aux, P, state, vgw, Xassgw)
+    logfugW, vgw, Xassgw = out
 
     dtpd = np.log(W) + logfugW - di
     tpdi = np.nan_to_num(W*(dtpd-1.))
@@ -55,7 +57,8 @@ def tpd_obj(a, temp_aux, P, di, model, state, vg):
     return tpd, dtpd
 
 
-def tpd_min(W, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
+def tpd_min(W, Z, T, P, model, stateW, stateZ, vw=None, vz=None, Xassw=None,
+            Xassz=None):
     """
 
     Found a minimiun of Michelsen's Adimentional tangent plane function
@@ -79,6 +82,8 @@ def tpd_min(W, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
         'L' for liquid phase, 'V' for vapor phase
     vw, vz: float, optional
         initial volume value to compute fugacities of phases
+    Xassw, Xassz : float, optional
+        if supplied used to computed association nonboned sites fraction
 
     Returns
     -------
@@ -100,10 +105,11 @@ def tpd_min(W, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
 
     alpha0 = 2*W**0.5
     alpha0[alpha0 < 1e-8] = 1e-8  # To avoid negative compositions
-    # global vg
-    # vg = vw
+    global vgw, Xassgw
+    vgw = copy(vw)
+    Xassgw = copy(Xassw)
     alpha = minimize(tpd_obj, alpha0, jac=True, method='BFGS',
-                     args=(temp_aux, P, di, model, stateW, vw))
+                     args=(temp_aux, P, di, model, stateW))
 
     W = alpha.x**2/2
     w = W/W.sum()
@@ -111,7 +117,8 @@ def tpd_min(W, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
     return w, tpd
 
 
-def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
+def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None,
+                Xassw=None, Xassz=None):
     """
 
     Found nmin minimuns of Michelsen's Adimentional tangent plane function
@@ -136,6 +143,8 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
         'L' for liquid phase, 'V' for vapour phase
     vw, vz : float, optional
         if supplied volume used as initial value to compute fugacities
+    Xassw, Xassz : float, optional
+        if supplied used to computed association nonboned sites fraction
 
     Returns
     -------
@@ -152,7 +161,7 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
     temp_aux = model.temperature_aux(T)
 
     Z[Z < 1e-8] = 1e-8
-    logfugZ, vz, Xassz = model.logfugef_aux(Z, temp_aux, P, stateZ, vz)
+    logfugZ, vz, Xassz = model.logfugef_aux(Z, temp_aux, P, stateZ, vz, Xassz)
     di = np.log(Z) + logfugZ
 
     nc = model.nc
@@ -163,24 +172,25 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
     Id = np.eye(nc)
     alpha0 = 2*Id[0]**0.5
     alpha0[alpha0 < 1e-1] = 1e-1  # no negative or zero compositions
-    # global vg
-    vg = vw
-    # Xassg = None
+
+    global vgw, Xassgw
+    vgw = copy(vw)
+    Xassgw = copy(Xassw)
+
     alpha = minimize(tpd_obj, alpha0, jac=True, method='BFGS',
-                     args=(temp_aux, P, di, model, stateW, vg))
+                     args=(temp_aux, P, di, model, stateW))
     W = alpha.x**2/4
     w = W/W.sum()  # normalized composition
     tpd = alpha.fun
     all_minima.append(w)
     f_minima.append(tpd)
-
     for i in range(1, nc):
         alpha0 = 2*Id[i]**0.5
         alpha0[alpha0 < 1e-1] = 1e-1
-        vg = vw
-        # Xassg = None
+        vgw = copy(vw)
+        Xassgw = copy(Xassw)
         alpha = minimize(tpd_obj, alpha0, jac=True, method='BFGS',
-                         args=(temp_aux, P, di, model, stateW, vg))
+                         args=(temp_aux, P, di, model, stateW))
         W = alpha.x**2/4
         w = W/W.sum()  # normalized composition
         tpd = alpha.fun
@@ -200,9 +210,10 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
         Al = Al/np.sum(Al)
         alpha0 = 2*Al**0.5
         alpha0[alpha0 < 1e-1] = 1e-1
-        vg = vw
+        vgw = copy(vw)
+        Xassgw = copy(Xassw)
         alpha = minimize(tpd_obj, alpha0, jac=True, method='BFGS',
-                         args=(temp_aux, P, di, model, stateW, vg))
+                         args=(temp_aux, P, di, model, stateW))
         W = alpha.x**2/4
         w = W/W.sum()  # normalized composition
         tpd = alpha.fun
@@ -221,7 +232,7 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None):
     return tuple(all_minima), np.array(f_minima)
 
 
-def lle_init(Z, T, P, model, v0=None):
+def lle_init(Z, T, P, model, vw=None, vz=None):
     """
     Minimize tpd function to initiate ELL at fixed T and P.
 
@@ -235,7 +246,7 @@ def lle_init(Z, T, P, model, v0=None):
         absolute pressure [Pa]
     model : object
         created from eos and mixture
-    v0 : float, optional
+    vw, vz : float, optional
         if supplied volume used as initial value to compute fugacities
 
     Returns
@@ -243,7 +254,7 @@ def lle_init(Z, T, P, model, v0=None):
     x0s: tuple
         Contains two mol fractions arrays
     """
-    x0s, tpd0 = tpd_minimas(2, Z, T, P, model, 'L', 'L', v0, v0)
+    x0s, tpd0 = tpd_minimas(2, Z, T, P, model, 'L', 'L', vw, vz)
     return x0s
 
 

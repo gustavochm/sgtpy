@@ -1,58 +1,52 @@
 from __future__ import division, print_function, absolute_import
 import numpy as np
-from scipy.optimize import fsolve
+from scipy.optimize import fsolve, root
 from .multiflash import multiflash
 from .equilibriumresult import EquilibriumResult
+from warnings import warn
 
 
-def haz_objb(inc, T_P, tipo, modelo, index, equilibrio, v0):
+def haz_objb(inc, T_P, tipo, model, index, equilibrio):
 
     X0 = inc[:-1].reshape(3, 2)
     P_T = inc[-1]
 
     if tipo == 'T':
         P = P_T
-        T = T_P
+        temp_aux = T_P
     elif tipo == 'P':
         T = P_T
+        temp_aux = model.temperature_aux(T)
         P = T_P
 
-    nc = modelo.nc
+    nc = model.nc
     X = np.zeros((3, nc))
     X[:, index] = X0
     lnphi = np.zeros_like(X)
 
-    global vg
-    vg = v0.copy()
-    for i, estado in enumerate(equilibrio):
-        lnphi[i], vg[i] = modelo.logfugef(X[i], T, P, estado, v0[i])
+    global vg, Xassg
+
+    for i, state in enumerate(equilibrio):
+        out = model.logfugef_aux(X[i], temp_aux, P, state, vg[i], Xassg[i])
+        lnphi[i], vg[i], Xassg[i] = out
 
     lnK = lnphi[0] - lnphi[1:]
     K = np.exp(lnK)
     return np.hstack([(K[:, index]*X0[0]-X0[1:]).flatten(), X0.sum(axis=1)-1.])
 
 
-def haz_pb(X0, P_T, T_P, tipo, modelo, index, equilibrio,
-           v0=[None, None, None]):
-    sol = fsolve(haz_objb, np.hstack([X0.flatten(), P_T]),
-                 args=(T_P, tipo, modelo, index, equilibrio, v0))
-
-    var = sol[-1]
-    X = sol[:-1].reshape(3, 2)
-
-    return X, var
-
-
-def haz_objt(inc, T, P, model, v0=[None, None, None]):
+def haz_objt(inc, temp_aux, P, model):
 
     X, W, Y = np.split(inc, 3)
 
-    global vx, vw, vy
-    vx, vw, vy = v0
+    global vg, Xassg
 
-    fugX, vx = model.logfugef(X, T, P, 'L', vx)
-    fugW, vw = model.logfugef(W, T, P, 'L', vw)
-    fugY, vy = model.logfugef(Y, T, P, 'V', vy)
+    fugX, vg[0], Xassg[0] = model.logfugef_aux(X, temp_aux, P, 'L', vg[0],
+                                               Xassg[0])
+    fugW, vg[1], Xassg[1] = model.logfugef_aux(W, temp_aux, P, 'L', vg[1],
+                                               Xassg[1])
+    fugY, vg[2], Xassg[2] = model.logfugef_aux(Y, temp_aux, P, 'V', vg[2],
+                                               Xassg[2])
 
     K1 = np.exp(fugX-fugY)
     K2 = np.exp(fugX-fugW)
@@ -114,17 +108,23 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
     x0 = np.vstack([X0, W0, Y0])
     b0 = np.array([0.33, 0.33, 0.33, 0., 0.])
 
+    global vg, Xassg
+    vg = v0.copy()
+    Xassg = Xass0.copy()
     # check for binary mixture
     if nonzero == 2:
+        warn('Global mixture is a binary mixture, updating temperature')
         index = np.nonzero(Z0)[0]
         sol = np.zeros_like(x0)
-        global vg
-        sol[:, index], T = haz_pb(x0[:, index], T, P, 'P', model,
-                                  index, 'LLV', v0)
+        inc0 = np.hstack([x0[:, index].flatten(), T])
+        sol1 = root(haz_objb, inc0, args=(P, 'P', model, index, 'LLV'))
+        T = sol1.x[-1]
+        Xs = sol1.x[:-1].reshape(3, 2)
+        sol[:, index] = Xs
         X, W, Y = sol
         if full_output:
-            info = {'T': T, 'P': P, 'X': sol, 'v': vg,
-                    'states': ['L', 'L', 'V']}
+            info = {'T': T, 'P': P, 'X': sol, 'v': vg, 'Xass': Xassg,
+                    'states': ['L', 'L', 'V'], 'success': sol1.success}
             out = EquilibriumResult(info)
             return out
         return X, W, Y, T
@@ -133,16 +133,17 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
         out = multiflash(x0, b0, ['L', 'L', 'V'], Z0, T, P, model, v0, Xass0,
                          K_tol, True)
     else:
-        global vx, vw, vy
-        sol = fsolve(haz_objt, x0.flatten(), args=(T, P, model, v0))
+        temp_aux = model.temperature_aux(T)
+        sol = fsolve(haz_objt, x0.flatten(), args=(temp_aux, P, model))
         x0 = sol.reshape([model.nc, 3])
         Z0 = x0.mean(axis=0)
         out = multiflash(x0, b0, ['L', 'L', 'V'], Z0, T, P, model,
-                         [vx, vw, vy], Xass0, K_tol, True)
+                         vg, Xassg, K_tol, True)
 
     Xm, beta, tetha, equilibrio = out.X, out.beta, out.tetha, out.states
     error_inner = out.error_inner
     v = out.v
+    Xass = out.Xass
 
     if error_inner > 1e-6:
         order = [2, 0, 1]  # Y, X, W
@@ -150,6 +151,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
         betatetha = np.hstack([beta[order], tetha])
         equilibrio = np.asarray(equilibrio)[order]
         v0 = np.asarray(v)[order]
+        Xass0 = np.asarray(out.Xass)[order]
         out = multiflash(Xm, betatetha, equilibrio, Z0, T, P, model, v0, Xass0,
                          K_tol, full_output=True)
         order = [1, 2, 0]
@@ -161,6 +163,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
             betatetha = np.hstack([beta[order], tetha])
             equilibrio = np.asarray(equilibrio)[order]
             v0 = np.asarray(out.v)[order]
+            Xass0 = np.asarray(out.Xass)[order]
             out = multiflash(Xm, betatetha, equilibrio, Z0, T, P, model, v0,
                              Xass0, K_tol, full_output=True)
             order = [1, 0, 2]
@@ -172,6 +175,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
         tetha = np.hstack([0., tetha])
         tetha = tetha[order]
         v = (out.v)[order]
+        Xass = np.asarray(out.Xass)[order]
     else:
         tetha = np.hstack([0., tetha])
 
@@ -179,7 +183,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
         info = {'T': T, 'P': P, 'error_outer': out.error_outer,
                 'error_inner': error_inner, 'iter': out.iter,
                 'beta': beta, 'tetha': tetha, 'X': Xm, 'v': v,
-                'states': ['L', 'L', 'V']}
+                'Xass': Xass, 'states': ['L', 'L', 'V']}
         out = EquilibriumResult(info)
         return out
 
@@ -193,7 +197,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
 def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
          Xass0=[None, None, None], K_tol=1e-10, full_output=False):
     """
-    Liquid liquid vapor Multiflash (Z, T,P) -> (x, w, y)
+    Liquid liquid vapor Multiflash (Z, T, P) -> (x, w, y)
 
     Computes liquid liquid vapor equilibrium of multicomponent mixtures at
     given temperature. This functions uses a simultaneous method to check
@@ -245,19 +249,24 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
 
     # check for binary mixture
     if nonzero == 2:
+        warn('Global mixture is a binary mixture, updating temperature')
         index = np.nonzero(Z)[0]
         sol = np.zeros_like(x0)
-        global vg
-        sol[:, index], T = haz_pb(x0[:, index], T, P, 'P', model, index,
-                                  'LLV', v0)
+        global vg, Xassg
+        vg = v0.copy()
+        Xassg = Xass0.copy()
+        inc0 = np.hstack([x0[:, index].flatten(), T])
+        sol1 = root(haz_objb, inc0, args=(P, 'P', model, index, 'LLV'))
+        T = sol1.x[-1]
+        Xs = sol1.x[:-1].reshape(3, 2)
+        sol[:, index] = Xs
         X, W, Y = sol
         if full_output:
-            info = {'T': T, 'P': P, 'X': sol, 'v': vg,
-                    'states': ['L', 'L', 'V']}
+            info = {'T': T, 'P': P, 'X': sol, 'v': vg, 'Xass': Xassg,
+                    'states': ['L', 'L', 'V'], 'success': sol1.success}
             out = EquilibriumResult(info)
             return out
         return X, W, Y, T
-
     out = multiflash(x0, b0, ['L', 'L', 'V'], Z, T, P, model, v0, Xass0,
                      K_tol, True)
 
@@ -272,7 +281,7 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
         betatetha = np.hstack([beta[order], tetha])
         equilibrio = np.asarray(equilibrio)[order]
         v0 = np.asarray(v)[order]
-        np.asarray(out.Xass)[order]
+        Xass0 = np.asarray(out.Xass)[order]
         out = multiflash(Xm, betatetha, equilibrio, Z, T, P, model, v0,
                          Xass, K_tol, full_output=True)
         order = [1, 2, 0]

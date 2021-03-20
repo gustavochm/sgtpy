@@ -4,23 +4,24 @@ from scipy.optimize import root
 from .equilibriumresult import EquilibriumResult
 
 
-def haz_objb(inc, T_P, tipo, model, v0):
+def haz_objb(inc, T_P, tipo, model):
 
     X, W, Y, P_T = np.array_split(inc, 4)
-
+    P_T = P_T[0]
     if tipo == 'T':
         P = P_T
-        T = T_P
+        temp_aux = T_P
     elif tipo == 'P':
         T = P_T
+        temp_aux = model.temperature_aux(T)
         P = T_P
 
     global vx, vw, vy
-    vx, vw, vy = v0
+    global Xassx, Xassw, Xassy
 
-    fugX, vx = model.logfugef(X, T, P, 'L', vx)
-    fugW, vw = model.logfugef(W, T, P, 'L', vw)
-    fugY, vy = model.logfugef(Y, T, P, 'V', vy)
+    fugX, vx, Xassx = model.logfugef_aux(X, temp_aux, P, 'L', vx, Xassx)
+    fugW, vw, Xassw = model.logfugef_aux(W, temp_aux, P, 'L', vw, Xassw)
+    fugY, vy, Xassy = model.logfugef_aux(Y, temp_aux, P, 'V', vy, Xassy)
 
     K1 = np.exp(fugX-fugY)
     K2 = np.exp(fugX-fugW)
@@ -28,7 +29,7 @@ def haz_objb(inc, T_P, tipo, model, v0):
 
 
 def vlleb(X0, W0, Y0, P_T, T_P, spec, model, v0=[None, None, None],
-          full_output=False):
+          Xass0=[None, None, None], full_output=False):
     '''
     Solves liquid liquid vapour equilibrium for binary mixtures.
     (T,P) -> (x,w,y)
@@ -52,6 +53,8 @@ def vlleb(X0, W0, Y0, P_T, T_P, spec, model, v0=[None, None, None],
         created from mixture and saftvrmie function
     v0 : list, optional
         if supplied volume used as initial value to compute fugacities
+    Xass0, list, optional
+        if supplied used to solve the associtaion nonbonded sites fraction
     full_output: bool, optional
         wheter to outputs all calculation info
 
@@ -72,22 +75,34 @@ def vlleb(X0, W0, Y0, P_T, T_P, spec, model, v0=[None, None, None],
     nc = model.nc
 
     if nc != 2:
-        raise Exception('3 phase equilibra for binary mixtures')
+        raise Exception('3 phase equilibria for binary mixtures')
 
     if len(X0) != nc or len(W0) != nc or len(Y0) != nc:
         raise Exception('Composition vector lenght must be equal to nc')
 
     global vx, vw, vy
+    vx, vw, vy = v0
 
-    sol1 = root(haz_objb, np.hstack([X0, W0, Y0, P_T]),
-                args=(T_P, spec, model, v0))
+    global Xassx, Xassw, Xassy
+    Xassx, Xassw, Xassy = Xass0
+
+    if spec == 'T':
+        temp_aux = model.temperature_aux(T_P)
+        sol1 = root(haz_objb, np.hstack([X0, W0, Y0, P_T]),
+                    args=(temp_aux, spec, model))
+    elif spec == 'P':
+        sol1 = root(haz_objb, np.hstack([X0, W0, Y0, P_T]),
+                    args=(T_P, spec, model))
+    else:
+        raise Exception('Specification not known')
+
     error = np.linalg.norm(sol1.fun)
     nfev = sol1.nfev
     sol = sol1.x
     if np.any(sol < 0):
         raise Exception('negative Composition or T/P  founded')
     X, W, Y, var = np.array_split(sol, 4)
-
+    var = var[0]
     if full_output:
         if spec == 'T':
             P = var
@@ -96,9 +111,9 @@ def vlleb(X0, W0, Y0, P_T, T_P, spec, model, v0=[None, None, None],
             T = var
             P = T_P
         inc = {'T': T, 'P': P, 'error': error, 'nfev': nfev,
-               'X': X, 'vx': vx, 'statex': 'Liquid',
-               'W': W, 'vw': vw, 'statew': 'Liquid',
-               'Y': Y, 'vy': vy, 'statey': 'Vapor'}
+               'X': X, 'vx': vx, 'Xassx': Xassx, 'statex': 'Liquid',
+               'W': W, 'vw': vw, 'Xassw': Xassw, 'statew': 'Liquid',
+               'Y': Y, 'vy': vy, 'Xassy': Xassy, 'statey': 'Vapor'}
         out = EquilibriumResult(inc)
         return out
 
