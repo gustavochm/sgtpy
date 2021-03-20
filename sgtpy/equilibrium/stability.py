@@ -46,8 +46,8 @@ def tpd_obj(a, temp_aux, P, di, model, state):
 
     W = a**2/4.  # change from alpha to mole numbers
     w = W/W.sum()  # change to mole fraction
-    global vgw, Xassgw
-    out = model.logfugef_aux(w, temp_aux, P, state, vgw, Xassgw)
+    global vgw # , Xassgw
+    out = model.logfugef_aux(w, temp_aux, P, state, vgw) #, Xassgw)
     logfugW, vgw, Xassgw = out
 
     dtpd = np.log(W) + logfugW - di
@@ -105,9 +105,9 @@ def tpd_min(W, Z, T, P, model, stateW, stateZ, vw=None, vz=None, Xassw=None,
 
     alpha0 = 2*W**0.5
     alpha0[alpha0 < 1e-8] = 1e-8  # To avoid negative compositions
-    global vgw, Xassgw
+    global vgw  # , Xassgw
     vgw = copy(vw)
-    Xassgw = copy(Xassw)
+    # Xassgw = copy(Xassw)
     alpha = minimize(tpd_obj, alpha0, jac=True, method='BFGS',
                      args=(temp_aux, P, di, model, stateW))
 
@@ -173,9 +173,9 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None,
     alpha0 = 2*Id[0]**0.5
     alpha0[alpha0 < 1e-1] = 1e-1  # no negative or zero compositions
 
-    global vgw, Xassgw
+    global vgw  # , Xassgw
     vgw = copy(vw)
-    Xassgw = copy(Xassw)
+    # Xassgw = copy(Xassw)
 
     alpha = minimize(tpd_obj, alpha0, jac=True, method='BFGS',
                      args=(temp_aux, P, di, model, stateW))
@@ -188,7 +188,7 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None,
         alpha0 = 2*Id[i]**0.5
         alpha0[alpha0 < 1e-1] = 1e-1
         vgw = copy(vw)
-        Xassgw = copy(Xassw)
+        # Xassgw = copy(Xassw)
         alpha = minimize(tpd_obj, alpha0, jac=True, method='BFGS',
                          args=(temp_aux, P, di, model, stateW))
         W = alpha.x**2/4
@@ -211,7 +211,7 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None,
         alpha0 = 2*Al**0.5
         alpha0[alpha0 < 1e-1] = 1e-1
         vgw = copy(vw)
-        Xassgw = copy(Xassw)
+        # Xassgw = copy(Xassw)
         alpha = minimize(tpd_obj, alpha0, jac=True, method='BFGS',
                          args=(temp_aux, P, di, model, stateW))
         W = alpha.x**2/4
