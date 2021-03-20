@@ -63,8 +63,7 @@ def da1sB_dx_d2xhi00_dxxhi(xhi00, xhix, xhix_vec, xm, ms, I_ij,
 
 
 def a1sB_eval(xhi00, xhix, xhix_vec, xm, I_lambdasij, J_lambdasij, cctesij,
-              a1vdwij, a1vdw_cteij, I_lambdasii, J_lambdasii, cctesii,
-              a1vdwii, a1vdw_cteii):
+              a1vdwij, a1vdw_cteij):
 
     # laij, lrij, larij = lambdas
     cctes_laij, cctes_lrij, cctes_2laij, cctes_2lrij, cctes_larij = cctesij
