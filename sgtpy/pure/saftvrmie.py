@@ -84,9 +84,11 @@ class saftvrmie_pure():
     -------
     cii_correlation : correlates the influence parameter of the fluid
     diameter : computes the diameter at given temperature
-    temperature_aux : computes temperature depedent parameters of the fluid
+    temperature_aux : computes temperature dependent parameters of the fluid
     density : computes the density of the fluid
     psat : computes saturation pressure
+    tsat : computes saturation temperature
+    get_critical : attemps to compute the critical point of the fluid
     afcn: computes total Helmholtz energy
     dafcn_drho : computes total Helmholtz energy and its density derivative
     d2afcn_drho : computes total Helmholtz energy and it density derivatives

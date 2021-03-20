@@ -36,6 +36,15 @@ To get the git version, run:
 
     $ git clone https://github.com/gustavochm/SGTPy
 
+
+Documentation
+-------------
+
+SGTPy's documentation is available on the web (under development):
+
+    https://sgtpy.readthedocs.io/en/latest/
+
+
 Getting Started
 ---------------
 
@@ -118,8 +127,8 @@ License information
 This package is part of the article *SGTPy: A Python open-source code for
 calculating the interfacial properties of fluids based on the Square Gradient
 Theory using the SAFT-VR Mie equation of state* by Andrés Mejía,
-Erich A. Müller and Gustavo Chaparro. Currently under revision
-in J. Chem. Inf. Model.
+Erich A. Müller and Gustavo Chaparro. J. Chem. Inf. Model., 2021,
+`https://doi.org/10.1021/acs.jcim.0c01324>`_.
 
 See ``LICENSE.txt`` for information on the terms & conditions for usage
 of this software, and a DISCLAIMER OF ALL WARRANTIES.
