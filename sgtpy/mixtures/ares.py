@@ -146,6 +146,9 @@ def ares(self, x, rho, temp_aux, Xass0=None):
     etai = xhi00 * xmi * di03[:, 3]
     achain = - np.dot(x * (self.ms - 1 + etai*self.ring), lng)
 
+    # print('amono', amono)
+    # print('achain', achain)
+
     ares = amono + achain
 
     if self.assoc_bool:
@@ -154,8 +157,11 @@ def ares(self, x, rho, temp_aux, Xass0=None):
         else:
             Xass = 1. * Xass0
         xj = x[self.compindex]
-        iab = Iab(xhi, dii, dij, self.rcij, self.rdij, self.sigmaij3)
         Fab = temp_aux[24]
+        aux_dii = temp_aux[25]
+        aux_dii2 = temp_aux[26]
+        Kab = temp_aux[27]
+        iab = Iab(xhi, aux_dii, aux_dii2, Kab)
         Dab = self.sigmaij3 * Fab * iab
         Dabij = np.zeros([self.nsites, self.nsites])
         Dabij[self.indexabij] = Dab[self.indexab]
@@ -163,12 +169,15 @@ def ares(self, x, rho, temp_aux, Xass0=None):
         Xass = Xass_solver(self.nsites, xj, rho, self.DIJ, Dabij,
                            self.diagasso, Xass)
         ares += np.dot(self.S * xj, (np.log(Xass) - Xass/2 + 1/2))
+        # print('iab', iab)
+        # print('Xass', Xass)
+        # print('asso', np.dot(self.S * xj, (np.log(Xass) - Xass/2 + 1/2)))
     else:
         Xass = None
 
     if self.polar_bool:
         eta = xhi[-1]
-        epsa, epsija = temp_aux[25:]
+        epsa, epsija = temp_aux[28:]
         apolar = Apolar(rho, x, self.anij, self.bnij, self.cnij, eta,
                         epsa, epsija, self.sigma3, self.sigmaij3,
                         self.sigmaijk3,  self.npol, self.mupolad2)
@@ -261,9 +270,6 @@ def dares_drho(self, x, rho, temp_aux, Xass0=None):
     achain = - lng@(x * (self.ms - 1. + etai*self.ring))
     achain[1] += - np.dot(x*self.ring*detai_dxhi00, lng[0])
 
-    # print('amono', amono)
-    # print('achain', achain)
-
     ares = amono + achain
     ares *= np.array([1, dxhi00_drho])
 
@@ -273,9 +279,12 @@ def dares_drho(self, x, rho, temp_aux, Xass0=None):
         else:
             Xass = 1. * Xass0
         xj = x[self.compindex]
-        iab, diab = dIab_drho(xhi, dxhi_dxhi00, dxhi00_drho, dii, dij,
-                              self.rcij, self.rdij, self.sigmaij3)
         Fab = temp_aux[24]
+        aux_dii = temp_aux[25]
+        aux_dii2 = temp_aux[26]
+        Kab = temp_aux[27]
+        iab, diab = dIab_drho(xhi, dxhi_dxhi00, dxhi00_drho, aux_dii,
+                              aux_dii2, Kab)
         # Fab = np.exp(beta * self.eABij) - 1.
         Dab = self.sigmaij3 * Fab * iab
         dDab_drho = self.sigmaij3 * Fab * diab
@@ -289,6 +298,7 @@ def dares_drho(self, x, rho, temp_aux, Xass0=None):
         dXass = dXass_drho(rho, xj, Xass, self.DIJ, Dabij, dDabij_drho, CIJ)
         ares[0] += np.dot(self.S * xj, (np.log(Xass) - Xass/2 + 1/2))
         ares[1] += np.dot(self.S*xj, (1/Xass - 1/2) * dXass)
+
     else:
         Xass = None
 
@@ -296,7 +306,7 @@ def dares_drho(self, x, rho, temp_aux, Xass0=None):
         eta = xhi[-1]
         deta_dxhi00 = dxhi_dxhi00[-1]
         deta = deta_dxhi00 * self.dxhi00_drho
-        epsa, epsija = temp_aux[25:]
+        epsa, epsija = temp_aux[28:]
         dapolar = dApolar_drho(rho, x, self.anij, self.bnij, self.cnij,
                                eta, deta, epsa, epsija,
                                self.sigma3, self.sigmaij3, self.sigmaijk3,
@@ -395,8 +405,6 @@ def d2ares_drho(self, x, rho, temp_aux, Xass0=None):
     achain[1] += - np.dot(aux_ring, lng[0])
     achain[2] += - 2*np.dot(aux_ring, lng[1])
 
-    # print('amono', amono)
-    # print('achain', achain)
     ares = amono + achain
 
     ares *= np.array([1., dxhi00_drho, dxhi00_drho**2])
@@ -407,10 +415,12 @@ def d2ares_drho(self, x, rho, temp_aux, Xass0=None):
         else:
             Xass = 1. * Xass0
         xj = x[self.compindex]
-        iab, diab, d2iab = d2Iab_drho(xhi, dxhi_dxhi00, dxhi00_drho, dii,
-                                      dij, self.rcij, self.rdij,
-                                      self.sigmaij3)
         Fab = temp_aux[24]
+        aux_dii = temp_aux[25]
+        aux_dii2 = temp_aux[26]
+        Kab = temp_aux[27]
+        iab, diab, d2iab = d2Iab_drho(xhi, dxhi_dxhi00, dxhi00_drho, aux_dii,
+                                      aux_dii2, Kab)
         Dab = self.sigmaij3 * Fab * iab
         dDab_drho = self.sigmaij3 * Fab * diab
         d2Dab_drho = self.sigmaij3 * Fab * d2iab
@@ -437,6 +447,7 @@ def d2ares_drho(self, x, rho, temp_aux, Xass0=None):
         ares[0] += np.dot(self.S*xj, aux1)
         ares[1] += np.dot(self.S*xj, aux2 * dXass)
         ares[2] += np.dot(self.S*xj, -(dXass/Xass)**2+d2Xass*aux2)
+
     else:
         Xass = None
 
@@ -444,7 +455,7 @@ def d2ares_drho(self, x, rho, temp_aux, Xass0=None):
         eta = xhi[-1]
         deta_dxhi00 = dxhi_dxhi00[-1]
         deta = deta_dxhi00 * self.dxhi00_drho
-        epsa, epsija = temp_aux[25:]
+        epsa, epsija = temp_aux[28:]
         dapolar = d2Apolar_drho(rho, x, self.anij, self.bnij, self.cnij,
                                 eta, deta, epsa, epsija,
                                 self.sigma3, self.sigmaij3, self.sigmaijk3,
@@ -605,9 +616,11 @@ def dares_dx(self, x, rho, temp_aux, Xass0=None):
         else:
             Xass = 1. * Xass0
         xj = x[self.compindex]
-        iab, diab = dIab_dx(xhi, dxhi_dx, dii, dij, self.rcij, self.rdij,
-                            self.sigmaij3)
         Fab = temp_aux[24]
+        aux_dii = temp_aux[25]
+        aux_dii2 = temp_aux[26]
+        Kab = temp_aux[27]
+        iab, diab = dIab_dx(xhi, dxhi_dx, aux_dii, aux_dii2, Kab)
         Dab = self.sigmaij3 * Fab * iab
         dDab_dx = self.sigmaij3 * Fab * diab
         Dabij = np.zeros([self.nsites, self.nsites])
@@ -630,12 +643,13 @@ def dares_dx(self, x, rho, temp_aux, Xass0=None):
         daassox = (self.dxjdx * aux1 + dXassx * xj * aux2)@self.S
         ares += aasso
         daresx += daassox
+
     else:
         Xass = None
     if self.polar_bool:
         eta = xhi[-1]
         deta_dx = dxhi_dx[-1]
-        epsa, epsija = temp_aux[25:]
+        epsa, epsija = temp_aux[28:]
         a, dax = dApolar_dx(rho, x, self.anij, self.bnij, self.cnij,
                             eta, deta_dx, epsa, epsija, self.sigma3,
                             self.sigmaij3, self.sigmaijk3,  self.npol,
@@ -808,10 +822,12 @@ def dares_dxrho(self, x, rho, temp_aux, Xass0=None):
         else:
             Xass = 1. * Xass0
         xj = x[self.compindex]
-        iab, diab, diabx = dIab_dxrho(xhi, dxhi_dxhi00, dxhi00_drho,
-                                      dxhi_dx, dii, dij, self.rcij,
-                                      self.rdij, self.sigmaij3)
         Fab = temp_aux[24]
+        aux_dii = temp_aux[25]
+        aux_dii2 = temp_aux[26]
+        Kab = temp_aux[27]
+        iab, diab, diabx = dIab_dxrho(xhi, dxhi_dxhi00, dxhi00_drho, dxhi_dx,
+                                      aux_dii, aux_dii2, Kab)
         Dab = self.sigmaij3 * Fab * iab
         dDab_drho = self.sigmaij3 * Fab * diab
         dDab_dx = self.sigmaij3 * Fab * diabx
@@ -850,7 +866,7 @@ def dares_dxrho(self, x, rho, temp_aux, Xass0=None):
         deta_dxhi00 = dxhi_dxhi00[-1]
         deta = deta_dxhi00 * self.dxhi00_drho
         deta_dx = dxhi_dx[-1]
-        epsa, epsija = temp_aux[25:]
+        epsa, epsija = temp_aux[28:]
         a, dax = dApolar_dxrho(rho, x, self.anij, self.bnij, self.cnij,
                                eta, deta, deta_dx, epsa, epsija,
                                self.sigma3, self.sigmaij3, self.sigmaijk3,

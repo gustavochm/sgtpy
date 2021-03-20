@@ -128,20 +128,26 @@ class saftvrmie_mix():
     diameter : computes the diameter at given temperature
     temperature_aux : computes temperature depedent parameters of the fluid
     ares: computes the residual dimentionless Helmholtz free energy
-    dares_drho: computes the residual dimentionless Helmholtz free energy and its density first density derivative
-    d2ares_drho: computes the residual dimentionless Helmholtz free energy and its density first and second density derivatives
-    dares_dx: computes the residual dimentionless Helmholtz free energy and its composition derivatives
-    dares_dxrho: computes the residual dimentionless Helmholtz free energy and its composition and density derivatives
+    dares_drho: computes the residual dimentionless Helmholtz free energy
+                and its density first density derivative
+    d2ares_drho: computes the residual dimentionless Helmholtz free energy
+                 and its density first and second density derivatives
+    dares_dx: computes the residual dimentionless Helmholtz free energy and
+              its composition derivatives
+    dares_dxrho: computes the residual dimentionless Helmholtz free energy
+                 and its composition and density derivatives
     afcn: computes total Helmholtz energy
     dafcn_drho: computes total Helmholtz energy and its density derivative
     d2afcn_drho: computes total Helmholtz energy and it density derivatives
     dafcn_dx: computes total Helmholtz energy and its composition derivative
-    dafcn_dxrho:computes total Helmholtz energy and its composition and density derivative
+    dafcn_dxrho:computes total Helmholtz energy and its composition and
+                density derivative
     density: computes the density of the fluid
     pressure: computes the pressure
     dP_drho: computes pressure and its density derivative
     logfugmix: computes the fugacity coefficient of the mixture
-    logfugef: computes the effective fugacity coefficients of the components in the mixture
+    logfugef: computes the effective fugacity coefficients of the components
+              in the mixture
     a0ad: computes adimentional Helmholtz density energy
     muad: computes adimentional chemical potential
     dmuad: computes the adimentional chemical potential and its derivatives
@@ -265,7 +271,7 @@ class saftvrmie_mix():
                       self.cctes_2lr, self.cctes_lar)
 
         # For diameter calculation
-        roots, weights = gauss(100)
+        roots, weights = gauss(30)
         self.roots = roots
         self.weights = weights
         self.umie = U_mie(1./roots, self.C, self.eps, self.lr, self.la)
@@ -281,6 +287,7 @@ class saftvrmie_mix():
         self.eABij *= (1.-lij)
         self.rcij = np.add.outer(mixture.rc, mixture.rc)/2
         self.rdij = np.add.outer(mixture.rd, mixture.rd)/2
+
         S, DIJ, compindex, indexabij, indexab, nsites, \
         dxjdx, diagasso = association_config(mixture.sitesmix, self)
         assoc_bool = nsites != 0
@@ -399,7 +406,7 @@ class saftvrmie_mix():
                     I_lambdasij, J_lambdasij, a1vdw_cteij, a1vdwij,
                     beps, beps2, a1vdw_cte, x0i_matrix, tetha,
                     x0_a1, x0_a2, x0_g1, x0_g2, x0_a1ii, x0_a2ii,
-                    Fab, epsa, epsija]
+                    Fab, aux_dii, aux_dii2, Kab, epsa, epsija]
 
         Journal of Chemical Physics, 139(15), 1–37 (2013)
 
@@ -424,6 +431,8 @@ class saftvrmie_mix():
         x0_a1, x0_a2, x0_g1, x0_g2: used to compute a1ij, a2ij
         x0_a1ii, x0_a2ii: diagonal of x0_a1, x0_a2
         Fab: association strength [Adim] (Eq. A41)
+        aux_dii, aux_dii2: auxiliar variables used in association contribution
+        Kab: association volume computed with  Eq. A43
         epsa: eps / kb / T [Adim]
         epsija: epsij / kb / T [Adim]
 
@@ -499,6 +508,25 @@ class saftvrmie_mix():
         tetha = np.exp(beps) - 1.
         # For associating mixtures
         Fab = np.exp(beta * self.eABij) - 1.
+        aux_dii = np.multiply.outer(dii, dii)/np.add.outer(dii, dii)
+        aux_dii2 = aux_dii**2
+        dij2 = dij**2
+
+        rcij = self.rcij
+        rcij2 = self.rcij**2
+        rcij3 = rcij2*rcij
+        rdij = self.rdij
+        rdij2 = self.rdij**2
+        rdij3 = rdij2*rdij
+
+        Kab = np.log((rcij + 2*rdij)/dij)
+        Kab *= 6*rcij3 + 18 * rcij2*rdij - 24 * rdij3
+        aux1 = (rcij + 2 * rdij - dij)
+        aux2 = (22*rdij2 - 5*rcij*rdij - 7*rdij*dij - 8*rcij2+rcij*dij+dij2)
+        Kab += aux1 * aux2
+        Kab /= (72*rdij2 * self.sigmaij3)
+        Kab *= 4 * np.pi * dij2
+
         # For Polar mixtures
         epsa = beps
         epsija = self.epsij * beta
@@ -507,7 +535,7 @@ class saftvrmie_mix():
                     I_lambdasij, J_lambdasij, a1vdw_cteij, a1vdwij,
                     beps, beps2, a1vdw_cte, x0i_matrix, tetha,
                     x0_a1, x0_a2, x0_g1, x0_g2, x0_a1ii, x0_a2ii,
-                    Fab, epsa, epsija]
+                    Fab, aux_dii, aux_dii2, Kab, epsa, epsija]
         return temp_aux
 
     def ares(self, x, rho, T, Xass0=None):

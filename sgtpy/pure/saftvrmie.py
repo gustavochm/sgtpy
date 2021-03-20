@@ -178,6 +178,11 @@ class saftvrmie_pure():
         self.eABij = pure.eAB
         self.rcij = pure.rcAB
         self.rdij = pure.rdAB
+        self.rcij2 = self.rcij**2
+        self.rcij3 = self.rcij**3
+        self.rdij2 = self.rdij**2
+        self.rdij3 = self.rdij**3
+
         self.sites = pure.sites
         S, DIJ, indexabij, nsites, diagasso = association_config(self)
         assoc_bool = nsites != 0
@@ -377,12 +382,24 @@ class saftvrmie_pure():
         cte_g2s = cte_g1s / self.eps
         # For Association
         Fab = np.exp(beta * self.eABij) - 1
+        rc, rc2, rc3 = self.rcij, self.rcij2, self.rcij3
+        rd, rd2, rd3 = self.rdij, self.rdij2, self.rdij3
+        dia2 = dia**2
+
+        Kab = np.log((rc + 2*rd)/dia)
+        Kab *= 6*rc3 + 18 * rc2*rd - 24 * rd3
+        aux1 = (rc + 2 * rd - dia)
+        aux2 = (22*rd2 - 5*rc*rd - 7*rd*dia - 8*rc2 + rc*dia + dia2)
+        Kab += aux1 * aux2
+        Kab /= (72*rd2 * self.sigma3)
+        Kab *= 4 * np.pi * dia2
+
         # For polar
         epsa = self.eps / T / kb
 
         temp_aux = [beta, beta2, beta3, dia, dia3, x0, x03, x0_a1, x0_a2,
                     x0_a12, x0_a22, I_lambdas, J_lambdas, beps, beps2, tetha,
-                    x0_vector, cte_g1s, cte_g2s, Fab, epsa]
+                    x0_vector, cte_g1s, cte_g2s, Fab, Kab, epsa]
         return temp_aux
 
     def density_aux(self, temp_aux, P, state, rho0=None, Xass0=None):

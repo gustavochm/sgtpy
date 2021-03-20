@@ -56,51 +56,37 @@ def Xass_solver(nsites, KIJ, diagasso, Xass0=None):
     return Xass
 
 
-def Iab(di, rc, rd, eta,  sigma3):
-    Kab = np.log((rc + 2*rd)/di)
-    Kab *= 6*rc**3 + 18 * rc**2*rd - 24 * rd**3
-    aux1 = (rc + 2 * rd - di)
-    aux2 = (22*rd**2 - 5*rc*rd - 7*rd*di - 8*rc**2 + rc*di + di**2)
-    Kab += aux1 * aux2
-    Kab /= (72*rd**2 * sigma3)
-    Kab *= 4 * np.pi * di**2
+def Iab(Kab, eta):
 
     gdhs = (1 - eta/2) / (1 - eta)**3
-
     Iab = Kab * gdhs
 
     return Iab
 
 
-def dIab_drho(di, rc, rd, eta, deta_drho, sigma3):
-    Kab = np.log((rc + 2*rd)/di)
-    Kab *= 6*rc**3 + 18 * rc**2*rd - 24 * rd**3
-    aux1 = (rc + 2 * rd - di)
-    aux2 = (22*rd**2 - 5*rc*rd - 7*rd*di - 8*rc**2 + rc*di + di**2)
-    Kab += aux1 * aux2
-    Kab /= (72*rd**2 * sigma3)
-    Kab *= 4 * np.pi * di**2
+def dIab_drho(Kab, eta, deta_drho):
 
-    gdhs = (1 - eta/2) / (1 - eta)**3
-    dgdhs = (2.5 - eta) * deta_drho / (1 - eta)**4
+    eta_1 = 1-eta
+    eta_13 = eta_1**3
+    eta_14 = eta_13*eta_1
+
+    gdhs = (1 - eta/2) / eta_13
+    dgdhs = (2.5 - eta) * deta_drho / eta_14
 
     Iab = Kab * gdhs
     dIab = Kab * dgdhs
     return Iab, dIab
 
 
-def d2Iab_drho(di, rc, rd, eta, deta_drho, sigma3):
-    Kab = np.log((rc + 2*rd)/di)
-    Kab *= 6*rc**3 + 18 * rc**2*rd - 24 * rd**3
-    aux1 = (rc + 2 * rd - di)
-    aux2 = (22*rd**2 - 5*rc*rd - 7*rd*di - 8*rc**2 + rc*di + di**2)
-    Kab += aux1 * aux2
-    Kab /= (72*rd**2 * sigma3)
-    Kab *= 4 * np.pi * di**2
+def d2Iab_drho(Kab, eta, deta_drho):
+    eta_1 = 1-eta
+    eta_13 = eta_1**3
+    eta_14 = eta_13*eta_1
+    eta_15 = eta_14*eta_1
 
-    gdhs = (1 - eta/2) / (1 - eta)**3
-    dgdhs = (2.5 - eta) * deta_drho / (1 - eta)**4
-    d2gdhs = 3 * (-3 + eta) * deta_drho**2 / (-1 + eta)**5
+    gdhs = (1 - eta/2) / eta_13
+    dgdhs = (2.5 - eta) * deta_drho / eta_14
+    d2gdhs = 3 * (3 - eta) * deta_drho**2 / eta_15
 
     Iab = Kab * gdhs
     dIab = Kab * dgdhs

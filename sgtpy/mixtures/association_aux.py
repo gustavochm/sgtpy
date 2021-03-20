@@ -45,94 +45,92 @@ def association_config(sitesmix, eos):
     return S, DIJ, compindex, indexabij, indexab, nsites, dxjdx, diagasso
 
 
-def Iab(xhi, dii, dij, rcij, rdij, sigmaij3):
+def Iab(xhi, aux_dii, aux_dii2, Kab):
 
     xhi0, xhi1, xhi2, xhi3 = xhi
-    aux = np.multiply.outer(dii, dii)/np.add.outer(dii, dii)
+    # aux = np.multiply.outer(dii, dii)/np.add.outer(dii, dii)
+    aux = aux_dii
+    aux_2 = aux_dii2
 
     xhi13 = 1 - xhi3
+    xhi13_2 = xhi13**2
+    xhi13_3 = xhi13_2*xhi13
 
     gdhs = 1 / xhi13
-    gdhs += 3 * aux * xhi2 / xhi13**2
-    gdhs += 2 * aux**2 * xhi2**2 / xhi13**3
-
-    Kab = np.log((rcij + 2*rdij)/dij)
-    Kab *= 6*rcij**3 + 18 * rcij**2*rdij - 24 * rdij**3
-    aux1 = (rcij + 2 * rdij - dij)
-    aux2 = (22*rdij**2 - 5*rcij*rdij - 7*rdij*dij - 8*rcij**2+rcij*dij+dij**2)
-    Kab += aux1 * aux2
-    Kab /= (72*rdij**2 * sigmaij3)
-    Kab *= 4 * np.pi * dij**2
+    gdhs += 3 * aux * xhi2 / xhi13_2
+    gdhs += 2 * aux_2 * xhi2**2 / xhi13_3
 
     iab = gdhs * Kab
     return iab
 
 
-def dIab_drho(xhi, dxhi_dxhi00, dxhi00_drho, dii, dij, rcij, rdij, sigmaij3):
+def dIab_drho(xhi, dxhi_dxhi00, dxhi00_drho, aux_dii, aux_dii2, Kab):
 
     xhi0, xhi1, xhi2, xhi3 = xhi
     dxhi0, dxhi1, dxhi2, dxhi3 = dxhi_dxhi00
-    aux = np.multiply.outer(dii, dii)/np.add.outer(dii, dii)
+    # aux = np.multiply.outer(dii, dii)/np.add.outer(dii, dii)
+    # aux_2 = aux**2
+    aux = aux_dii
+    aux_2 = aux_dii2
+
+    xhi2_2 = xhi2**2
 
     xhi13 = 1 - xhi3
+    xhi13_2 = xhi13**2
+    xhi13_3 = xhi13_2*xhi13
+    xhi13_4 = xhi13_3*xhi13
 
     gdhs = 1 / xhi13
-    gdhs += 3 * aux * xhi2 / xhi13**2
-    gdhs += 2 * aux**2 * xhi2**2 / xhi13**3
+    gdhs += 3 * aux * xhi2 / xhi13_2
+    gdhs += 2 * aux_2 * xhi2_2 / xhi13_3
 
-    dgdhs = 4. * aux**2 * xhi2 * dxhi2 / xhi13**3
-    dgdhs += 3. * aux * dxhi2 / xhi13**2
-    dgdhs += 6. * aux**2 * xhi2**2 * dxhi3 / xhi13**4
-    dgdhs += 6. * aux * xhi2 * dxhi3 / xhi13**3
-    dgdhs += dxhi3 / xhi13**2
+    dgdhs = 4. * aux_2 * xhi2 * dxhi2 / xhi13_3
+    dgdhs += 3. * aux * dxhi2 / xhi13_2
+    dgdhs += 6. * aux_2 * xhi2_2 * dxhi3 / xhi13_4
+    dgdhs += 6. * aux * xhi2 * dxhi3 / xhi13_3
+    dgdhs += dxhi3 / xhi13_2
     dgdhs *= dxhi00_drho
 
-    Kab = np.log((rcij + 2*rdij)/dij)
-    Kab *= 6*rcij**3 + 18 * rcij**2*rdij - 24 * rdij**3
-    aux1 = (rcij + 2 * rdij - dij)
-    aux2 = (22*rdij**2 - 5*rcij*rdij - 7*rdij*dij - 8*rcij**2+rcij*dij+dij**2)
-    Kab += aux1 * aux2
-    Kab /= (72*rdij**2 * sigmaij3)
-    Kab *= 4 * np.pi * dij**2
     iab = gdhs * Kab
     diab = dgdhs * Kab
     return iab, diab
 
 
-def d2Iab_drho(xhi, dxhi_dxhi00, dxhi00_drho, dii, dij, rcij, rdij, sigmaij3):
+def d2Iab_drho(xhi, dxhi_dxhi00, dxhi00_drho, aux_dii, aux_dii2, Kab):
 
     xhi0, xhi1, xhi2, xhi3 = xhi
     dxhi0, dxhi1, dxhi2, dxhi3 = dxhi_dxhi00
-    aux = np.multiply.outer(dii, dii)/np.add.outer(dii, dii)
+    # aux = np.multiply.outer(dii, dii)/np.add.outer(dii, dii)
+    # aux_2 = aux**2
+    aux = aux_dii
+    aux_2 = aux_dii2
 
+    xhi2_2 = xhi2**2
+    dxhi3_2 = dxhi3**2
     xhi13 = 1 - xhi3
+    xhi13_2 = xhi13**2
+    xhi13_3 = xhi13_2*xhi13
+    xhi13_4 = xhi13_3*xhi13
+    xhi13_5 = xhi13_4*xhi13
 
     gdhs = 1 / xhi13
-    gdhs += 3 * aux * xhi2 / xhi13**2
-    gdhs += 2 * aux**2 * xhi2**2 / xhi13**3
+    gdhs += 3 * aux * xhi2 / xhi13_2
+    gdhs += 2 * aux_2 * xhi2_2 / xhi13_3
 
-    dgdhs = 4. * aux**2 * xhi2 * dxhi2 / xhi13**3
-    dgdhs += 3. * aux * dxhi2 / xhi13**2
-    dgdhs += 6. * aux**2 * xhi2**2 * dxhi3 / xhi13**4
-    dgdhs += 6. * aux * xhi2 * dxhi3 / xhi13**3
-    dgdhs += dxhi3 / xhi13**2
+    dgdhs = 4. * aux_2 * xhi2 * dxhi2 / xhi13_3
+    dgdhs += 3. * aux * dxhi2 / xhi13_2
+    dgdhs += 6. * aux_2 * xhi2_2 * dxhi3 / xhi13_4
+    dgdhs += 6. * aux * xhi2 * dxhi3 / xhi13_3
+    dgdhs += dxhi3 / xhi13_2
     dgdhs *= dxhi00_drho
 
-    d2gdhs = 2 * dxhi3**2 / xhi13**3
-    d2gdhs += 2 * aux**2 * 2 * dxhi2**2 / xhi13**3
-    d2gdhs += 2 * aux**2 * 12 * xhi2 * dxhi2 * dxhi3 / xhi13**4
-    d2gdhs += 2 * aux**2 * 12 * xhi2**2 * dxhi3**2 / xhi13**5
-    d2gdhs += 3 * aux * 4 * dxhi2 * dxhi3 / xhi13**3
-    d2gdhs += 3 * aux * 6 * xhi2 * dxhi3**2 / xhi13**4
+    d2gdhs = 2 * dxhi3_2 / xhi13_3
+    d2gdhs += 2 * aux_2 * 2 * dxhi2**2 / xhi13_3
+    d2gdhs += 2 * aux_2 * 12 * xhi2 * dxhi2 * dxhi3 / xhi13_4
+    d2gdhs += 2 * aux_2 * 12 * xhi2_2 * dxhi3_2 / xhi13_5
+    d2gdhs += 3 * aux * 4 * dxhi2 * dxhi3 / xhi13_3
+    d2gdhs += 3 * aux * 6 * xhi2 * dxhi3_2 / xhi13_4
     d2gdhs *= dxhi00_drho**2
-
-    Kab = np.log((rcij + 2*rdij)/dij)
-    Kab *= 6*rcij**3 + 18 * rcij**2*rdij - 24 * rdij**3
-    aux1 = (rcij + 2 * rdij - dij)
-    aux2 = (22*rdij**2 - 5*rcij*rdij - 7*rdij*dij-8*rcij**2+rcij*dij+dij**2)
-    Kab += aux1 * aux2
-    Kab /= (72*rdij**2 * sigmaij3)
-    Kab *= 4 * np.pi * dij**2
 
     iab = gdhs * Kab
     diab = dgdhs * Kab
@@ -141,74 +139,71 @@ def d2Iab_drho(xhi, dxhi_dxhi00, dxhi00_drho, dii, dij, rcij, rdij, sigmaij3):
     return iab, diab, d2iab
 
 
-def dIab_dx(xhi, dxhi_dx, dii, dij, rcij, rdij, sigmaij3):
+def dIab_dx(xhi, dxhi_dx, aux_dii, aux_dii2, Kab):
 
     xhi0, xhi1, xhi2, xhi3 = xhi
     dxhi0x, dxhi1x, dxhi2x, dxhi3x = dxhi_dx
 
-    aux = np.multiply.outer(dii, dii)/np.add.outer(dii, dii)
+    # aux = np.multiply.outer(dii, dii)/np.add.outer(dii, dii)
+    # aux_2 = aux**2
+    aux = aux_dii
+    aux_2 = aux_dii2
+    xhi2_2 = xhi2**2
 
     xhi13 = 1 - xhi3
+    xhi13_2 = xhi13**2
+    xhi13_3 = xhi13_2*xhi13
+    xhi13_4 = xhi13_3*xhi13
 
     gdhs = 1 / xhi13
-    gdhs += 3 * aux * xhi2 / xhi13**2
-    gdhs += 2 * aux**2 * xhi2**2 / xhi13**3
+    gdhs += 3 * aux * xhi2 / xhi13_2
+    gdhs += 2 * aux_2 * xhi2_2 / xhi13_3
 
-    dgdhsx = 4 * np.multiply.outer(aux**2, dxhi2x) * xhi2 / (1-xhi3)**3
-    dgdhsx += 3 * np.multiply.outer(aux, dxhi2x) / (1-xhi3)**2
-    dgdhsx += 6 * np.multiply.outer(aux**2, dxhi3x) * xhi2**2 / (1-xhi3)**4
-    dgdhsx += 6 * np.multiply.outer(aux, dxhi3x) * xhi2 / (1-xhi3)**3
-    dgdhsx += dxhi3x / (1-xhi3)**2
+    dgdhsx = 4 * np.multiply.outer(aux_2, dxhi2x) * xhi2 / xhi13_3
+    dgdhsx += 3 * np.multiply.outer(aux, dxhi2x) / xhi13_2
+    dgdhsx += 6 * np.multiply.outer(aux_2, dxhi3x) * xhi2_2 / xhi13_4
+    dgdhsx += 6 * np.multiply.outer(aux, dxhi3x) * xhi2 / xhi13_3
+    dgdhsx += dxhi3x / xhi13_2
     dgdhsx = dgdhsx.T
-
-    Kab = np.log((rcij + 2*rdij)/dij)
-    Kab *= 6*rcij**3 + 18 * rcij**2*rdij - 24 * rdij**3
-    aux1 = (rcij + 2 * rdij - dij)
-    aux2 = (22*rdij**2 - 5*rcij*rdij - 7*rdij*dij - 8*rcij**2+rcij*dij+dij**2)
-    Kab += aux1 * aux2
-    Kab /= (72*rdij**2 * sigmaij3)
-    Kab *= 4 * np.pi * dij**2
 
     iab = gdhs * Kab
     diabx = dgdhsx * Kab
     return iab, diabx
 
 
-def dIab_dxrho(xhi, dxhi_dxhi00, dxhi00_drho, dxhi_dx, dii, dij, rcij, rdij,
-               sigmaij3):
+def dIab_dxrho(xhi, dxhi_dxhi00, dxhi00_drho, dxhi_dx, aux_dii, aux_dii2, Kab):
 
     xhi0, xhi1, xhi2, xhi3 = xhi
     dxhi0, dxhi1, dxhi2, dxhi3 = dxhi_dxhi00
     dxhi0x, dxhi1x, dxhi2x, dxhi3x = dxhi_dx
-    aux = np.multiply.outer(dii, dii)/np.add.outer(dii, dii)
+    # aux = np.multiply.outer(dii, dii)/np.add.outer(dii, dii)
+    # aux_2 = aux**2
+    aux = aux_dii
+    aux_2 = aux_dii2
+    xhi2_2 = xhi2**2
 
     xhi13 = 1 - xhi3
+    xhi13_2 = xhi13**2
+    xhi13_3 = xhi13_2*xhi13
+    xhi13_4 = xhi13_3*xhi13
 
     gdhs = 1 / xhi13
-    gdhs += 3 * aux * xhi2 / xhi13**2
-    gdhs += 2 * aux**2 * xhi2**2 / xhi13**3
+    gdhs += 3 * aux * xhi2 / xhi13_2
+    gdhs += 2 * aux_2 * xhi2_2 / xhi13_3
 
-    dgdhs = 4. * aux**2 * xhi2 * dxhi2 / xhi13**3
-    dgdhs += 3. * aux * dxhi2 / xhi13**2
-    dgdhs += 6. * aux**2 * xhi2**2 * dxhi3 / xhi13**4
-    dgdhs += 6. * aux * xhi2 * dxhi3 / xhi13**3
-    dgdhs += dxhi3 / xhi13**2
+    dgdhs = 4. * aux_2 * xhi2 * dxhi2 / xhi13_3
+    dgdhs += 3. * aux * dxhi2 / xhi13_2
+    dgdhs += 6. * aux_2 * xhi2_2 * dxhi3 / xhi13_4
+    dgdhs += 6. * aux * xhi2 * dxhi3 / xhi13_3
+    dgdhs += dxhi3 / xhi13_2
     dgdhs *= dxhi00_drho
 
-    dgdhsx = 4 * np.multiply.outer(aux**2, dxhi2x) * xhi2 / (1-xhi3)**3
-    dgdhsx += 3 * np.multiply.outer(aux, dxhi2x) / (1-xhi3)**2
-    dgdhsx += 6 * np.multiply.outer(aux**2, dxhi3x) * xhi2**2 / (1-xhi3)**4
-    dgdhsx += 6 * np.multiply.outer(aux, dxhi3x) * xhi2 / (1-xhi3)**3
-    dgdhsx += dxhi3x / (1-xhi3)**2
+    dgdhsx = 4 * np.multiply.outer(aux_2, dxhi2x) * xhi2 / xhi13_3
+    dgdhsx += 3 * np.multiply.outer(aux, dxhi2x) / xhi13_2
+    dgdhsx += 6 * np.multiply.outer(aux_2, dxhi3x) * xhi2_2 / xhi13_4
+    dgdhsx += 6 * np.multiply.outer(aux, dxhi3x) * xhi2 / xhi13_3
+    dgdhsx += dxhi3x / xhi13_2
     dgdhsx = dgdhsx.T
-
-    Kab = np.log((rcij + 2*rdij)/dij)
-    Kab *= 6*rcij**3 + 18 * rcij**2*rdij - 24 * rdij**3
-    aux1 = (rcij + 2 * rdij - dij)
-    aux2 = (22*rdij**2 - 5*rcij*rdij - 7*rdij*dij - 8*rcij**2+rcij*dij+dij**2)
-    Kab += aux1 * aux2
-    Kab /= (72*rdij**2 * sigmaij3)
-    Kab *= 4 * np.pi * dij**2
 
     iab = gdhs * Kab
     diab = dgdhs * Kab

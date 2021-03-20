@@ -74,9 +74,9 @@ def ares(self, rho, temp_aux, Xass0=None):
             Xass = 0.2 * np.ones(self.nsites)
         else:
             Xass = 1. * Xass0
-
-        iab = Iab(dia, self.rcij, self.rdij, eta,  self.sigma3)
         Fab = temp_aux[19]
+        Kab = temp_aux[20]
+        iab = Iab(Kab, eta)
         Dab = self.sigma3 * Fab * iab
         Dabij = np.zeros([self.nsites, self.nsites])
         Dabij[self.indexabij] = Dab
@@ -87,7 +87,7 @@ def ares(self, rho, temp_aux, Xass0=None):
         Xass = None
 
     if self.polar_bool:
-        epsa = temp_aux[20]
+        epsa = temp_aux[21]
         apolar = Apol(rho, eta, epsa, self.anij, self.bnij,
                       self.cnijk, self.mupolad2, self.npol, self.sigma3)
         a += apolar
@@ -162,10 +162,10 @@ def dares_drho(self, rho, temp_aux, Xass0=None):
             Xass = 0.2 * np.ones(self.nsites)
         else:
             Xass = 1. * Xass0
-        iab, diab = dIab_drho(dia, self.rcij, self.rdij, eta, deta,
-                              self.sigma3)
-        # Fab = np.exp(beta * self.eABij) - 1
         Fab = temp_aux[19]
+        Kab = temp_aux[20]
+        iab, diab = dIab_drho(Kab, eta, deta)
+        # Fab = np.exp(beta * self.eABij) - 1
         Dab = self.sigma3 * Fab * iab
         dDab = self.sigma3 * Fab * diab
         Dabij = np.zeros([self.nsites, self.nsites])
@@ -185,7 +185,7 @@ def dares_drho(self, rho, temp_aux, Xass0=None):
         Xass = None
 
     if self.polar_bool:
-        epsa = temp_aux[20]
+        epsa = temp_aux[21]
         dapolar = dApol_drho(rho, eta, deta, epsa, self.anij,
                              self.bnij, self.cnijk, self.mupolad2,
                              self.npol, self.sigma3)
@@ -264,11 +264,11 @@ def d2ares_drho(self, rho, temp_aux, Xass0=None):
             Xass = 0.2 * np.ones(self.nsites)
         else:
             Xass = 1. * Xass0
-        iab, diab, d2iab = d2Iab_drho(dia, self.rcij, self.rdij, eta, deta,
-                                      self.sigma3)
+        Fab = temp_aux[19]
+        Kab = temp_aux[20]
+        iab, diab, d2iab = d2Iab_drho(Kab, eta, deta)
 
         # Fab = np.exp(beta * self.eABij) - 1.
-        Fab = temp_aux[19]
         Dab = self.sigma3 * Fab * iab
         dDab = self.sigma3 * Fab * diab
         d2Dab = self.sigma3 * Fab * d2iab
@@ -295,7 +295,7 @@ def d2ares_drho(self, rho, temp_aux, Xass0=None):
         Xass = None
 
     if self.polar_bool:
-        epsa = temp_aux[20]
+        epsa = temp_aux[21]
         dapolar = d2Apol_drho(rho, eta, deta, epsa, self.anij,
                               self.bnij, self.cnijk, self.mupolad2,
                               self.npol, self.sigma3)
