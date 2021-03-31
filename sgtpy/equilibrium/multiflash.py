@@ -49,6 +49,7 @@ def multiflash_obj(inc, Z, K):
     return f, jac, Kexp, Xref
 
 
+'''
 def gibbs_obj(ind, phases, Z, temp_aux, P, model):
 
     nfase = len(phases)
@@ -65,7 +66,7 @@ def gibbs_obj(ind, phases, Z, temp_aux, P, model):
 
     lnphi = np.zeros_like(X)
     global vg, Xassg
-    # vg = v0.copy()
+
     for i, state in enumerate(phases):
         lnphi[i], vg[i], Xassg[i] = model.logfugef_aux(X[i], temp_aux, P,
                                                        state, vg[i], Xassg[i])
@@ -73,10 +74,39 @@ def gibbs_obj(ind, phases, Z, temp_aux, P, model):
     G = np.sum(n * fug)
     dG = (fug[1:] - fug[0]).flatten()
     return G, dG
+'''
+
+
+def gibbs_obj(ind, phases, Z, z_notzero, n_nonzero, temp_aux, P, model):
+
+    nfase = len(phases)
+
+    nc = model.nc
+    ind = 1.*ind.reshape(nfase-1, n_nonzero)
+    dep = Z[z_notzero] - ind.sum(axis=0)
+
+    X = np.zeros((nfase, nc))
+    X[1:, z_notzero] = ind
+    X[0, z_notzero] = dep
+
+    n = X.copy()
+    X = (X.T/X.sum(axis=1)).T
+
+    lnphi = np.zeros_like(X)
+    global vg, Xassg
+
+    for i, state in enumerate(phases):
+        lnphi[i], vg[i], Xassg[i] = model.logfugef_aux(X[i], temp_aux, P,
+                                                       state, vg[i], Xassg[i])
+
+    fug = np.nan_to_num(np.log(X[:, z_notzero[0]]) + lnphi[:, z_notzero[0]])
+    G = np.sum(n[:, z_notzero[0]] * fug)
+    dG = (fug[1:] - fug[0]).flatten()
+    return G, dG
 
 
 def multiflash(X0, betatetha, equilibrium, z, T, P, model, v0=[None],
-               Xass0=[None], K_tol=1e-10, full_output=False):
+               Xass0=[None], K_tol=1e-10, nacc=5, full_output=False):
     """
     multiflash (z,T,P) -> (x, w, y, ..., beta)
 
@@ -100,6 +130,8 @@ def multiflash(X0, betatetha, equilibrium, z, T, P, model, v0=[None],
         if supplied volume used as initial value to compute fugacities
     K_tol : float, optional
         Desired accuracy of K (= X/Xr) vector
+    nacc : int, optional
+        number of accelerated successive substitution cycles to perform
     full_output: bool, optional
         wheter to outputs all calculation info
 
@@ -125,7 +157,7 @@ def multiflash(X0, betatetha, equilibrium, z, T, P, model, v0=[None],
     itacc = 0
     ittotal = 0
     n = 5
-    nacc = 3
+    # nacc = 3
 
     temp_aux = model.temperature_aux(T)
 
@@ -179,6 +211,8 @@ def multiflash(X0, betatetha, equilibrium, z, T, P, model, v0=[None],
             lnphi[i], v[i], Xass[i] = model.logfugef_aux(X[i], temp_aux, P,
                                                          state, v[i], Xass[i])
         lnK = lnphi[0] - lnphi[1:]
+        # error = np.linalg.norm(lnK - lnK_old)
+        error = np.sum((lnK - lnK_old)**2)
 
         # Accelerate succesive sustitution
         if it == (n-3):
@@ -195,8 +229,7 @@ def multiflash(X0, betatetha, equilibrium, z, T, P, model, v0=[None],
             lnK += dacc
 
         K = np.exp(lnK)
-        error = np.linalg.norm(lnK - lnK_old)
-
+    '''
     if error > K_tol and itacc == nacc and ef < 1e-8 and np.all(tetha == 0):
         fobj = gibbs_obj
         jac = True
@@ -218,6 +251,38 @@ def multiflash(X0, betatetha, equilibrium, z, T, P, model, v0=[None],
         X[1:] = ind
         X[0] = dep
         X[X < 1e-8] = 1e-8
+        beta = X.sum(axis=1)
+        X = (X.T/beta).T
+    '''
+
+    if error > K_tol and itacc == nacc and ef < 1e-8 and np.all(tetha == 0):
+        fobj = gibbs_obj
+        jac = True
+        hess = None
+        method = 'BFGS'
+        global vg, Xassg
+        vg = v.copy()
+        Xassg = Xass.copy()
+        z_notzero = np.nonzero(z)
+        n_nonzero = len(z_notzero[0])
+
+        ind0 = (X.copy()[:, z_notzero[0]].T*beta).T[1:].flatten()
+
+        ind1 = minimize(fobj, ind0, args=(equilibrium, z, z_notzero, n_nonzero,
+                        temp_aux, P, model), jac=jac, method=method,
+                        hess=hess, tol=K_tol)
+        v = vg.copy()
+        Xass = Xassg.copy()
+        ittotal += ind1.nit
+        error = np.sum(ind1.jac**2)
+        nc = model.nc
+
+        ind = 1.*ind0.reshape(nfase-1, n_nonzero)
+        dep = z[z_notzero] - ind.sum(axis=0)
+
+        X = np.zeros((nfase, nc))
+        X[1:, z_notzero] = ind
+        X[0, z_notzero] = dep
         beta = X.sum(axis=1)
         X = (X.T/beta).T
 

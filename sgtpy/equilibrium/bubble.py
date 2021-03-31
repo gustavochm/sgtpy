@@ -60,7 +60,6 @@ def bubble_sus(P_T, X, T_P, tipo, y_guess, eos, vl0, vv0, Xassl0, Xassv0):
     return f0, Y, lnK, vl, vv, Xassl, Xassv
 
 
-# def bubble_newton(inc, X, T_P, tipo, eos, vl0, vv0, Xassl0, Xassv0):
 def bubble_newton(inc, X, T_P, tipo, eos):
     global vl, vv, Xassl, Xassv
     f = np.zeros_like(inc)

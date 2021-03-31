@@ -55,7 +55,7 @@ def haz_objt(inc, temp_aux, P, model):
 
 
 def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
-        Xass0=[None, None, None], K_tol=1e-10, full_output=False):
+        Xass0=[None, None, None], K_tol=1e-10, nacc=5, full_output=False):
     """
     Liquid liquid vapor (T,P) -> (x, w, y)
 
@@ -85,6 +85,8 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
          if supplied volume used as initial value to compute fugacities
     K_tol : float, optional
             Desired accuracy of K (= X/Xr) vector
+    nacc : int, optional
+        number of accelerated successive substitution cycles to perform
     full_output: bool, optional
         wheter to outputs all calculation info
 
@@ -131,7 +133,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
 
     if not good_initial:
         out = multiflash(x0, b0, ['L', 'L', 'V'], Z0, T, P, model, v0, Xass0,
-                         K_tol, True)
+                         K_tol, nacc, True)
     else:
         temp_aux = model.temperature_aux(T)
         sol = fsolve(haz_objt, x0.flatten(), args=(temp_aux, P, model))
@@ -153,7 +155,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
         v0 = np.asarray(v)[order]
         Xass0 = np.asarray(out.Xass)[order]
         out = multiflash(Xm, betatetha, equilibrio, Z0, T, P, model, v0, Xass0,
-                         K_tol, full_output=True)
+                         K_tol, nacc, full_output=True)
         order = [1, 2, 0]
         Xm, beta, tetha, equilibrio = out.X, out.beta, out.tetha, out.states
         error_inner = out.error_inner
@@ -165,7 +167,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
             v0 = np.asarray(out.v)[order]
             Xass0 = np.asarray(out.Xass)[order]
             out = multiflash(Xm, betatetha, equilibrio, Z0, T, P, model, v0,
-                             Xass0, K_tol, full_output=True)
+                             Xass0, K_tol, nacc, full_output=True)
             order = [1, 0, 2]
             Xm, beta, tetha = out.X, out.beta, out.tetha
             equilibrio = out.states
@@ -195,7 +197,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
 
 
 def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
-         Xass0=[None, None, None], K_tol=1e-10, full_output=False):
+         Xass0=[None, None, None], K_tol=1e-10, nacc=5, full_output=False):
     """
     Liquid liquid vapor Multiflash (Z, T, P) -> (x, w, y)
 
@@ -225,6 +227,8 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
          if supplied volume used as initial value to compute fugacities
     K_tol : float, optional
         Desired accuracy of K (= X/Xr) vector
+    nacc : int, optional
+        number of accelerated successive substitution cycles to perform
     full_output: bool, optional
         wheter to outputs all calculation info
 
@@ -268,7 +272,7 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
             return out
         return X, W, Y, T
     out = multiflash(x0, b0, ['L', 'L', 'V'], Z, T, P, model, v0, Xass0,
-                     K_tol, True)
+                     K_tol, nacc, True)
 
     Xm, beta, tetha, equilibrio = out.X, out.beta, out.tetha, out.states
     error_inner = out.error_inner
@@ -283,7 +287,7 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
         v0 = np.asarray(v)[order]
         Xass0 = np.asarray(out.Xass)[order]
         out = multiflash(Xm, betatetha, equilibrio, Z, T, P, model, v0,
-                         Xass, K_tol, full_output=True)
+                         Xass, K_tol, nacc, full_output=True)
         order = [1, 2, 0]
         Xm, beta, tetha, equilibrio = out.X, out.beta, out.tetha, out.states
         error_inner = out.error_inner
@@ -295,7 +299,7 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
             v0 = np.asarray(out.v)[order]
             Xass0 = np.asarray(out.Xass)[order]
             out = multiflash(Xm, betatetha, equilibrio, Z, T, P, model, v0,
-                             Xass0, K_tol, full_output=True)
+                             Xass0, K_tol, nacc, full_output=True)
             order = [1, 0, 2]
             Xm, beta, tetha = out.X, out.beta, out.tetha
             equilibrio = out.states

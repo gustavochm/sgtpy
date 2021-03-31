@@ -37,11 +37,9 @@ def rachfordrice(beta, K, Z):
 
     return beta, D, singlephase
 
-
+'''
 def Gibbs_obj(v, phases, Z, temp_aux, P, model):
-    '''
-    Objective function to minimize Gibbs energy in biphasic flash
-    '''
+
     l = Z-v
     v[v < 1e-8] = 1e-8
     l[l < 1e-8] = 1e-8
@@ -58,10 +56,36 @@ def Gibbs_obj(v, phases, Z, temp_aux, P, model):
     f = np.sum(fo)
     df = fugv - fugl
     return f, df
+'''
+
+
+def Gibbs_obj(v, phases, Z, z_notzero, temp_aux, P, model):
+    '''
+    Objective function to minimize Gibbs energy in biphasic flash
+    '''
+    nc = model.nc
+    X = np.zeros(nc)
+    Y = np.zeros(nc)
+
+    l = Z[z_notzero] - v
+    X[z_notzero] = l/np.sum(l)
+    Y[z_notzero] = v/np.sum(v)
+
+    global v1, v2, Xass1, Xass2
+    lnfugl, v1, Xass1 = model.logfugef_aux(X, temp_aux, P, phases[0], v1,
+                                           Xass1)
+    lnfugv, v2, Xass2 = model.logfugef_aux(Y, temp_aux, P, phases[1], v2,
+                                           Xass2)
+    fugl = np.log(X[z_notzero]) + lnfugl[z_notzero]
+    fugv = np.log(Y[z_notzero]) + lnfugv[z_notzero]
+    fo = v*fugv[z_notzero] + l*fugl[z_notzero]
+    f = np.sum(fo)
+    df = fugv - fugl
+    return f, df
 
 
 def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
-          Xass0=[None, None], K_tol=1e-8, full_output=False):
+          Xass0=[None, None], K_tol=1e-8, nacc=5, full_output=False):
     """
     Isothermic isobaric flash (z, T, P) -> (x,y,beta)
 
@@ -86,6 +110,8 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
         if supplied volume used as initial value to compute fugacities
     K_tol : float, optional
         Desired accuracy of K (= Y/X) vector
+    nacc : int, optional
+        number of accelerated successive substitution cycles to perform
     full_output: bool, optional
         wheter to outputs all calculation info
 
@@ -109,8 +135,8 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
     itacc = 0
     it = 0
     it2 = 0
-    n = 4
-    nacc = 3
+    n = 5
+    # nacc = 3
     X = x_guess
     Y = y_guess
     global v1, v2, Xass1, Xass2
@@ -154,7 +180,7 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
             lnK += dacc
         K = np.exp(lnK)
         e1 = ((lnK-lnK_old)**2).sum()
-
+    '''
     if e1 > K_tol and itacc == nacc and not singlephase:
         fobj = Gibbs_obj
         jac = True
@@ -174,6 +200,30 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
         Y = v / beta
         Y /= Y.sum()
         X = l/l.sum()
+    '''
+    if e1 > K_tol and itacc == nacc and not singlephase:
+        fobj = Gibbs_obj
+        jac = True
+        hess = None
+        method = 'BFGS'
+        z_notzero = np.nonzero(Z)
+        y0 = beta*Y[z_notzero]
+        vsol = minimize(fobj, y0, args=(equilibrium, Z, z_notzero, temp_aux,
+                        P, model), jac=jac, method=method, hess=hess,
+                        tol=K_tol)
+
+        it2 += vsol.nit
+        e1 = np.linalg.norm(vsol.jac)
+
+        nc = model.nc
+        X = np.zeros(nc)
+        Y = np.zeros(nc)
+
+        v = vsol.x
+        l = Z[z_notzero] - v
+        X[z_notzero] = l/np.sum(l)
+        beta = np.sum(v)
+        Y[z_notzero] = v/beta
 
     if beta == 1.0:
         X = Y.copy()
