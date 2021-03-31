@@ -69,7 +69,8 @@ def dfobj_z_newton(rointer, Binter, dro20, dro21, mu0, temp_aux, cij, n, ro_1,
 
 def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
              z=20., n=20, ds=100, itmax=20, rho_tol=2e-2,
-             full_output=False, root_method='lm', solver_opt=None):
+             full_output=False, root_method='lm', solver_opt=None,
+             check_eq=True):
     """
     SGT for mixtures and beta != 0 (rho1, rho2, T, P) -> interfacial tension
 
@@ -108,6 +109,8 @@ def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
         for more info
     solver_opt : dict, optional
         aditional solver options passed to SciPy solver
+    check_eq : bool, optional
+        whether to check if given density vectors are in phase equilibria
 
     Returns
     -------
@@ -137,8 +140,9 @@ def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
     # Chemical potential
     mu0, Xass01 = model.muad_aux(rho1a, temp_aux)
     mu02, Xass02 = model.muad_aux(rho2a, temp_aux)
-    if not np.allclose(mu0, mu02):
-        raise Exception('Not equilibria compositions, mu1 != mu2')
+    if check_eq:
+        if not np.allclose(mu0, mu02, rtol=1e-3):
+            raise Exception('Not equilibria compositions, mu1 != mu2')
 
     # Nodes and weights of integration
     roots, weights = gauss(n)

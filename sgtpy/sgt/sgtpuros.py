@@ -4,7 +4,8 @@ from ..math import gauss
 from .tensionresult import TensionResult
 
 
-def sgt_pure(rhov, rhol, Tsat, Psat, model, n=100, full_output=False):
+def sgt_pure(rhov, rhol, Tsat, Psat, model, n=100, full_output=False,
+             check_eq=True):
     """
     SGT for pure component (rhol, rhov, T, P) -> interfacial tension
 
@@ -24,6 +25,8 @@ def sgt_pure(rhov, rhol, Tsat, Psat, model, n=100, full_output=False):
         number of collocation points for IFT integration
     full_output : bool, optional
         wheter to outputs all calculation info
+    check_eq : bool, optional
+        whether to check if given density vectors are in phase equilibria
 
     Returns
     -------
@@ -45,8 +48,9 @@ def sgt_pure(rhov, rhol, Tsat, Psat, model, n=100, full_output=False):
     # Equilibrium chemical potential
     mu0, Xass0 = model.muad_aux(rova, temp_aux)
     mu02, Xass1 = model.muad_aux(rola, temp_aux)
-    if not np.allclose(mu0, mu02):
-        raise Exception('Not equilibria compositions, mul != muv')
+    if check_eq:
+        if not np.allclose(mu0, mu02, rtol=1e-3):
+            raise Exception('Not equilibria compositions, mu1 != mu2')
 
     roi = (rola-rova)*roots+rova
     wreal = np.abs((rola-rova)*w)

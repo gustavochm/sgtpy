@@ -21,7 +21,7 @@ def fobj_sk(inc, spath, temp_aux, mu0, ci, sqrtci, model):
 
 
 def ten_beta0_sk(rho1, rho2, Tsat, Psat, model, n=200, full_output=False,
-                 alpha0=None):
+                 alpha0=None, check_eq=True):
 
     nc = model.nc
 
@@ -40,8 +40,9 @@ def ten_beta0_sk(rho1, rho2, Tsat, Psat, model, n=200, full_output=False,
 
     mu0, Xass01 = model.muad_aux(ro1a, temp_aux)
     mu02, Xass02 = model.muad_aux(ro2a, temp_aux)
-    if not np.allclose(mu0, mu02):
-        raise Exception('Not equilibria compositions, mu1 != mu2')
+    if check_eq:
+        if not np.allclose(mu0, mu02, rtol=1e-3):
+            raise Exception('Not equilibria compositions, mu1 != mu2')
 
     # Path function
     s0 = sqrtci.dot(ro1a)

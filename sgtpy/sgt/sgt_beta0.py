@@ -5,7 +5,7 @@ from .reference_component import ten_beta0_reference
 
 
 def sgt_mix_beta0(rho1, rho2, Tsat, Psat, model, n=100, method='reference',
-                  full_output=False, s=0, alpha0=None):
+                  full_output=False, s=0, alpha0=None, check_eq=True):
     """
     SGT for mixtures and beta = 0 (rho1, rho2, T, P) -> interfacial tension
 
@@ -33,6 +33,8 @@ def sgt_mix_beta0(rho1, rho2, Tsat, Psat, model, n=100, method='reference',
         index of reference component used in refernce component method
     alpha0 : float
         initial guess for solving Liang path function
+    check_eq : bool, optional
+        whether to check if given density vectors are in phase equilibria
 
 
     Returns
@@ -51,10 +53,10 @@ def sgt_mix_beta0(rho1, rho2, Tsat, Psat, model, n=100, method='reference',
 
     if method == 'reference':
         sol = ten_beta0_reference(rho1, rho2, Tsat, Psat, model,
-                                  s, n, full_output)
+                                  s, n, full_output, check_eq)
     elif method == 'liang':
         sol = ten_beta0_sk(rho1, rho2, Tsat, Psat, model, n, full_output,
-                           alpha0)
+                           alpha0, check_eq)
     else:
         raise Warning("method not known")
 

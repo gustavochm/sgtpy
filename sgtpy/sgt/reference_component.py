@@ -10,7 +10,7 @@ def fobj_beta0(ro, ro_s, s, temp_aux, mu0, sqrtci, model):
     nc = model.nc
     ro = np.insert(ro, s, ro_s)
     global Xass
-    mu, Xass =  model.muad_aux(ro, temp_aux, Xass)
+    mu, Xass = model.muad_aux(ro, temp_aux, Xass)
     dmu = mu - mu0
 
     f1 = sqrtci[s]*dmu
@@ -20,7 +20,7 @@ def fobj_beta0(ro, ro_s, s, temp_aux, mu0, sqrtci, model):
 
 
 def ten_beta0_reference(rho1, rho2, Tsat, Psat, model, s=0,
-                        n=100, full_output=False):
+                        n=100, full_output=False, check_eq=True):
 
     nc = model.nc
 
@@ -40,8 +40,10 @@ def ten_beta0_reference(rho1, rho2, Tsat, Psat, model, s=0,
     mu0, Xass01 = model.muad_aux(ro1a, temp_aux)
 
     mu02, Xass02 = model.muad_aux(ro2a, temp_aux)
-    if not np.allclose(mu0, mu02):
-        raise Exception('Not equilibria compositions, mu1 != mu2')
+    if check_eq:
+        if not np.allclose(mu0, mu02, rtol=1e-3):
+            raise Exception('Not equilibria compositions, mu1 != mu2')
+
     # roots and weights for Lobatto quadrature
     roots, weights = lobatto(n)
 
