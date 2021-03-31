@@ -93,7 +93,8 @@ def sgt_linear(rho1, rho2, Tsat, Psat, model, n=100, full_output=False,
     return tension
 
 
-def sgt_spot(rho1, rho2, Tsat, Psat, model, n=50, full_output=False):
+def sgt_spot(rho1, rho2, Tsat, Psat, model, n=50, full_output=False,
+             check_eq=True):
     """
     SGT spot for mixtures (rho1, rho2, T, P) -> interfacial tension
 
@@ -113,6 +114,8 @@ def sgt_spot(rho1, rho2, Tsat, Psat, model, n=50, full_output=False):
         number points to solve density profiles
     full_output : bool, optional
         wheter to outputs all calculation info
+    check_eq : bool, optional
+        whether to check if given density vectors are in phase equilibria
 
     Returns
     -------
@@ -131,8 +134,9 @@ def sgt_spot(rho1, rho2, Tsat, Psat, model, n=50, full_output=False):
 
     mu0 = model.muad(ro1a, Tsat)
     mu02 = model.muad(ro2a, Tsat)
-    if not np.allclose(mu0, mu02):
-        raise Exception('Not equilibria compositions, mu1 != mu2')
+    if check_eq:
+        if not np.allclose(mu0, mu02, rtol=1e-3):
+            raise Exception('Not equilibria compositions, mu1 != mu2')
 
     roots, weights = lobatto(n)
     s = 0

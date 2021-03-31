@@ -250,7 +250,7 @@ def msgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
         ro = np.insert(rointer, 0, rho1a, axis=1)
         ro = np.insert(ro, n+1, rho2a, axis=1)
         ro /= rofactor
-        fun_error = np.linalg.norm(sol.fun) #/n/nc
+        fun_error = np.linalg.norm(sol.fun)
         dictresult = {'tension': ten, 'rho': ro, 'z': znodes,
                       'GPT': np.hstack([0, dom, 0]), 'rho_error': error,
                       'fun_error': fun_error, 'iter': i, 'time': s, 'ds': ds}

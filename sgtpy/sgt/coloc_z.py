@@ -229,7 +229,8 @@ def sgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
         k = 0
         dom[k], Xass = model.dOm_aux(rointer[:, k], temp_aux, mu0, Pad, Xass01)
         for k in range(1, n):
-            dom[k], Xass = model.dOm_aux(rointer[:, k], temp_aux, mu0, Pad, Xass)
+            dom[k], Xass = model.dOm_aux(rointer[:, k], temp_aux, mu0, Pad,
+                                         Xass)
         dom[dom < 0] = 0.
         intten = np.nan_to_num(np.sqrt(2*suma*dom))
         ten = np.dot(intten, weights)
@@ -262,7 +263,8 @@ def sgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
 
 # Function for solving sgt for a fixed interfacial lenght
 def sgt_zfixed(rho1, rho2, Tsat, Psat, model, rho0='linear',
-               z=10, n=20, full_output=False, solver_opt=None):
+               z=10, n=20, full_output=False, solver_opt=None,
+               check_eq=True):
     """
     SGT for mixtures and beta != 0 (rho1, rho2, T, P) -> interfacial tension
 
@@ -291,6 +293,8 @@ def sgt_zfixed(rho1, rho2, Tsat, Psat, model, rho0='linear',
         wheter to outputs all calculation info
     solver_opt : dict, optional
         aditional solver options passed to SciPy solver
+    check_eq : bool, optional
+        whether to check if given density vectors are in phase equilibria
 
     Returns
     -------
@@ -318,8 +322,9 @@ def sgt_zfixed(rho1, rho2, Tsat, Psat, model, rho0='linear',
     # Chemical potential
     mu0, Xass01 = model.muad_aux(rho1a, temp_aux)
     mu02, Xass02 = model.muad_aux(rho2a, temp_aux)
-    if not np.allclose(mu0, mu02):
-        raise Exception('Not equilibria compositions, mu1 != mu2')
+    if check_eq:
+        if not np.allclose(mu0, mu02, rtol=1e-3):
+            raise Exception('Not equilibria compositions, mu1 != mu2')
 
     # Nodes and weights of integration
     roots, weights = gauss(n)
