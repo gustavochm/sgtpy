@@ -248,6 +248,10 @@ def Xass_solver(nsites, xj, rho, DIJ, Dabij, diagasso, Xass0):
         for i in range(15):
             dXass = np.linalg.solve(HIJ, -dQ)
             Xnew = Xass + dXass
+
+            is_nan = np.isnan(Xnew)
+            Xnew[is_nan] = 0.2
+
             Xnew_neg = Xnew < 0
             Xnew[Xnew_neg] = 0.2*Xass[Xnew_neg]
             Xass = Xnew
