@@ -172,6 +172,13 @@ def bubblePy(y_guess, P_guess, X, T, model, good_initial=False,
         Y /= Y.sum()
         P = sol[-1]
 
+        rhol, Xassl = model.density_aux(X, temp_aux, P, 'L', rho0=1./vl,
+                                        Xass0=Xassl)
+        rhov, Xassv = model.density_aux(Y, temp_aux, P, 'V', rho0=1./vv,
+                                        Xass0=Xassv)
+        vl = 1./rhol
+        vv = 1./rhov
+
     if full_output:
         sol = {'T': T, 'P': P, 'error': error, 'iter': it,
                'X': X, 'v1': vl, 'Xassl': Xassl, 'state1': 'Liquid',
@@ -267,6 +274,14 @@ def bubbleTy(y_guess, T_guess, X, P, model, good_initial=False,
         Y = np.exp(lnK)*X
         Y /= Y.sum()
         T = sol[-1]
+
+        temp_aux = model.temperature_aux(T)
+        rhol, Xassl = model.density_aux(X, temp_aux, P, 'L', rho0=1./vl,
+                                        Xass0=Xassl)
+        rhov, Xassv = model.density_aux(Y, temp_aux, P, 'V', rho0=1./vv,
+                                        Xass0=Xassv)
+        vl = 1./rhol
+        vv = 1./rhov
 
     if full_output:
         sol = {'T': T, 'P': P, 'error': error, 'iter': it,

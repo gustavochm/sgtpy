@@ -37,29 +37,8 @@ def rachfordrice(beta, K, Z):
 
     return beta, D, singlephase
 
-'''
-def Gibbs_obj(v, phases, Z, temp_aux, P, model):
 
-    l = Z-v
-    v[v < 1e-8] = 1e-8
-    l[l < 1e-8] = 1e-8
-    X = l/l.sum()
-    Y = v/v.sum()
-    global v1, v2, Xass1, Xass2
-    lnfugl, v1, Xass1 = model.logfugef_aux(X, temp_aux, P, phases[0], v1,
-                                           Xass1)
-    lnfugv, v2, Xass2 = model.logfugef_aux(Y, temp_aux, P, phases[1], v2,
-                                           Xass2)
-    fugl = np.log(X) + lnfugl
-    fugv = np.log(Y) + lnfugv
-    fo = v*fugv + l*fugl
-    f = np.sum(fo)
-    df = fugv - fugl
-    return f, df
-'''
-
-
-def Gibbs_obj(v, phases, Z, z_notzero, temp_aux, P, model):
+def Gibbs_obj(vap, phases, Z, z_notzero, temp_aux, P, model):
     '''
     Objective function to minimize Gibbs energy in biphasic flash
     '''
@@ -67,18 +46,20 @@ def Gibbs_obj(v, phases, Z, z_notzero, temp_aux, P, model):
     X = np.zeros(nc)
     Y = np.zeros(nc)
 
-    l = Z[z_notzero] - v
-    X[z_notzero] = l/np.sum(l)
-    Y[z_notzero] = v/np.sum(v)
+    liq = Z[z_notzero] - vap
+    X[z_notzero] = liq/np.sum(liq)
+    Y[z_notzero] = vap/np.sum(vap)
 
     global v1, v2, Xass1, Xass2
     lnfugl, v1, Xass1 = model.logfugef_aux(X, temp_aux, P, phases[0], v1,
                                            Xass1)
     lnfugv, v2, Xass2 = model.logfugef_aux(Y, temp_aux, P, phases[1], v2,
                                            Xass2)
-    fugl = np.log(X[z_notzero]) + lnfugl[z_notzero]
-    fugv = np.log(Y[z_notzero]) + lnfugv[z_notzero]
-    fo = v*fugv[z_notzero] + l*fugl[z_notzero]
+    with np.errstate(invalid='ignore'):
+        fugl = np.log(X[z_notzero]) + lnfugl[z_notzero]
+        fugv = np.log(Y[z_notzero]) + lnfugv[z_notzero]
+
+    fo = vap*fugv[z_notzero] + liq*fugl[z_notzero]
     f = np.sum(fo)
     df = fugv - fugl
     return f, df
@@ -180,27 +161,7 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
             lnK += dacc
         K = np.exp(lnK)
         e1 = ((lnK-lnK_old)**2).sum()
-    '''
-    if e1 > K_tol and itacc == nacc and not singlephase:
-        fobj = Gibbs_obj
-        jac = True
-        hess = None
-        method = 'BFGS'
-        y0 = beta*Y
-        vsol = minimize(fobj, y0, args=(equilibrium, Z, temp_aux, P, model),
-                        jac=jac, method=method, hess=hess, tol=K_tol)
 
-        it2 += vsol.nit
-        e1 = np.linalg.norm(vsol.jac)
-        v = vsol.x
-        l = Z - v
-        beta = v.sum()
-        v[v <= 1e-8] = 0
-        l[l <= 1e-8] = 0
-        Y = v / beta
-        Y /= Y.sum()
-        X = l/l.sum()
-    '''
     if e1 > K_tol and itacc == nacc and not singlephase:
         fobj = Gibbs_obj
         jac = True
@@ -209,9 +170,7 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
         z_notzero = np.nonzero(Z)
         y0 = beta*Y[z_notzero]
         vsol = minimize(fobj, y0, args=(equilibrium, Z, z_notzero, temp_aux,
-                        P, model), jac=jac, method=method, hess=hess,
-                        tol=K_tol)
-
+                        P, model), jac=jac, method=method, hess=hess)
         it2 += vsol.nit
         e1 = np.linalg.norm(vsol.jac)
 
@@ -219,11 +178,19 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
         X = np.zeros(nc)
         Y = np.zeros(nc)
 
-        v = vsol.x
-        l = Z[z_notzero] - v
-        X[z_notzero] = l/np.sum(l)
-        beta = np.sum(v)
-        Y[z_notzero] = v/beta
+        vap = vsol.x
+        liq = Z[z_notzero] - vap
+        X[z_notzero] = liq/np.sum(liq)
+        beta = np.sum(vap)
+        Y[z_notzero] = vap/beta
+
+        # updating volume roots for founded equilibria compositions
+        rho1, Xass1 = model.density_aux(X, temp_aux, P, equilibrium[0],
+                                        rho0=1./v1, Xass0=Xass1)
+        rho2, Xass2 = model.density_aux(Y, temp_aux, P, equilibrium[1],
+                                        rho0=1./v2, Xass0=Xass2)
+        v1 = 1./rho1
+        v2 = 1./rho2
 
     if beta == 1.0:
         X = Y.copy()

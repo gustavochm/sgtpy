@@ -124,7 +124,14 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
         Xs = sol1.x[:-1].reshape(3, 2)
         sol[:, index] = Xs
         X, W, Y = sol
+
         if full_output:
+            temp_aux = model.temperature_aux(T)
+            for i, state in enumerate(['L', 'L', 'V']):
+                rho, Xassg[i] = model.density_aux(sol[i], temp_aux, P, state,
+                                                  rho0=1/vg[i], Xass0=Xassg[i])
+                vg[i] = 1./rho
+
             info = {'T': T, 'P': P, 'X': sol, 'v': vg, 'Xass': Xassg,
                     'states': ['L', 'L', 'V'], 'success': sol1.success}
             out = EquilibriumResult(info)
@@ -140,7 +147,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
         x0 = sol.reshape([model.nc, 3])
         Z0 = x0.mean(axis=0)
         out = multiflash(x0, b0, ['L', 'L', 'V'], Z0, T, P, model,
-                         vg, Xassg, K_tol, True)
+                         vg, Xassg, K_tol, nacc, True)
 
     Xm, beta, tetha, equilibrio = out.X, out.beta, out.tetha, out.states
     error_inner = out.error_inner
@@ -266,6 +273,13 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
         sol[:, index] = Xs
         X, W, Y = sol
         if full_output:
+
+            temp_aux = model.temperature_aux(T)
+            for i, state in enumerate(['L', 'L', 'V']):
+                rho, Xassg[i] = model.density_aux(sol[i], temp_aux, P, state,
+                                                  rho0=1/vg[i], Xass0=Xassg[i])
+                vg[i] = 1./rho
+
             info = {'T': T, 'P': P, 'X': sol, 'v': vg, 'Xass': Xassg,
                     'states': ['L', 'L', 'V'], 'success': sol1.success}
             out = EquilibriumResult(info)

@@ -109,7 +109,19 @@ def vlleb(X0, W0, Y0, P_T, T_P, spec, model, v0=[None, None, None],
             T = T_P
         elif spec == 'P':
             T = var
+            temp_aux = model.temperature_aux(T)
             P = T_P
+
+        rhox, Xassx = model.density_aux(X, temp_aux, P, 'L', rho0=1./vx,
+                                        Xass0=Xassx)
+        rhow, Xassw = model.density_aux(W, temp_aux, P, 'L', rho0=1./vw,
+                                        Xass0=Xassw)
+        rhoy, Xassy = model.density_aux(Y, temp_aux, P, 'V', rho0=1./vy,
+                                        Xass0=Xassy)
+        vx = 1./rhox
+        vw = 1./rhow
+        vy = 1./rhoy
+
         inc = {'T': T, 'P': P, 'error': error, 'nfev': nfev,
                'X': X, 'vx': vx, 'Xassx': Xassx, 'statex': 'Liquid',
                'W': W, 'vw': vw, 'Xassw': Xassw, 'statew': 'Liquid',

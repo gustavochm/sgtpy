@@ -178,6 +178,13 @@ def dewPx(x_guess, P_guess, y, T, model, good_initial=False,
         X = y / np.exp(lnK)
         P = sol[-1]
 
+        rhol, Xassl = model.density_aux(X, temp_aux, P, 'L', rho0=1./vl,
+                                        Xass0=Xassl)
+        rhov, Xassv = model.density_aux(y, temp_aux, P, 'V', rho0=1./vv,
+                                        Xass0=Xassv)
+        vl = 1./rhol
+        vv = 1./rhov
+
     if full_output:
         sol = {'T': T, 'P': P, 'error': error, 'iter': it,
                'X': X, 'v1': vl, 'Xassl': Xassl, 'state1': 'Liquid',
@@ -269,6 +276,14 @@ def dewTx(x_guess, T_guess, y, P, model, good_initial=False,
         lnK = sol[:-1]
         X = y / np.exp(lnK)
         T = sol[-1]
+
+        temp_aux = model.temperature_aux(T)
+        rhol, Xassl = model.density_aux(X, temp_aux, P, 'L', rho0=1./vl,
+                                        Xass0=Xassl)
+        rhov, Xassv = model.density_aux(y, temp_aux, P, 'V', rho0=1./vv,
+                                        Xass0=Xassv)
+        vl = 1./rhol
+        vv = 1./rhov
 
     if full_output:
         sol = {'T': T, 'P': P, 'error': error, 'iter': it,
