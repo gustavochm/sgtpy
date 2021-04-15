@@ -312,7 +312,7 @@ class saftvrmie_mix():
         self.polar_bool = polar_bool
         if polar_bool:
             ms = self.ms
-            self.mpol = ms * (ms < 2) + 2 * (ms > 2)
+            self.mpol = ms * (ms < 2) + 2 * (ms >= 2)
             msij = np.sqrt(np.outer(ms, ms))
             msijk = np.cbrt(np.multiply.outer(ms, np.outer(ms, ms)))
             msij[msij > 2.] = 2.

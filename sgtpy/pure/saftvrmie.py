@@ -202,7 +202,7 @@ class saftvrmie_pure():
         polar_bool = self.npol != 0
         self.polar_bool = polar_bool
         if polar_bool:
-            mpol = self.ms * (self.ms < 2) + 2 * (self.ms > 2)
+            mpol = self.ms * (self.ms < 2) + 2 * (self.ms >= 2)
             self.mpol = mpol
             aux1 = np.array([1, (mpol-1)/mpol, (mpol-1)/mpol*(mpol-2)/mpol])
             self.anij = aij@aux1
