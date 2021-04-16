@@ -6,15 +6,15 @@ from .equilibriumresult import EquilibriumResult
 from warnings import warn
 
 
-def haz_objb(inc, T_P, tipo, model, index, equilibrio):
+def haz_objb(inc, T_P, type, model, index, equilibrium):
 
     X0 = inc[:-1].reshape(3, 2)
     P_T = inc[-1]
 
-    if tipo == 'T':
+    if type == 'T':
         P = P_T
         temp_aux = T_P
-    elif tipo == 'P':
+    elif type == 'P':
         T = P_T
         temp_aux = model.temperature_aux(T)
         P = T_P
@@ -26,7 +26,7 @@ def haz_objb(inc, T_P, tipo, model, index, equilibrio):
 
     global vg, Xassg
 
-    for i, state in enumerate(equilibrio):
+    for i, state in enumerate(equilibrium):
         out = model.logfugef_aux(X[i], temp_aux, P, state, vg[i], Xassg[i])
         lnphi[i], vg[i], Xassg[i] = out
 
@@ -139,7 +139,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
         return X, W, Y, T
 
     if not good_initial:
-        out = multiflash(x0, b0, ['L', 'L', 'V'], Z0, T, P, model, v0, Xass0,
+        out = multiflash(x0, b0, ['L', 'L', 'V'], Z0, T, P, model, vg, Xassg,
                          K_tol, nacc, True)
     else:
         temp_aux = model.temperature_aux(T)
