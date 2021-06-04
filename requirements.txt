@@ -3,4 +3,5 @@ scipy
 cython
 matplotlib
 setuptools
+setuptools_scm
 sphinxemoji
