@@ -1,3 +1,4 @@
+from __future__ import division, print_function, absolute_import
 from scipy.optimize import brentq, newton
 from .EquilibriumResult import EquilibriumResult
 

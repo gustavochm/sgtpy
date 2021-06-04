@@ -1,3 +1,4 @@
+from __future__ import division, print_function, absolute_import
 import numpy as np
 from .monomer_aux import Xi, dXi, d2Xi
 from .monomer_aux import dkHS, d2kHS, d3kHS

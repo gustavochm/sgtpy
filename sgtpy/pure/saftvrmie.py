@@ -1,3 +1,4 @@
+from __future__ import division, print_function, absolute_import
 import numpy as np
 from ..math import gauss
 from .ideal import aideal, daideal_drho, d2aideal_drho
