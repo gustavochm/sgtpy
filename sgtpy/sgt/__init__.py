@@ -4,7 +4,7 @@ from .path_sk import ten_beta0_sk
 from .reference_component import ten_beta0_reference
 
 from .sgt_beta0 import sgt_mix_beta0
-from .sgtpuros import sgt_pure
+from .sgtpure import sgt_pure
 from .linear_spot import sgt_linear, sgt_spot
 
 from .coloc_z import sgt_mix, sgt_zfixed

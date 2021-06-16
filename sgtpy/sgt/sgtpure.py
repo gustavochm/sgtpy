@@ -66,9 +66,9 @@ def sgt_pure(rhov, rhol, Tsat, Psat, model, n=100, full_output=False,
     ten *= tenfactor
 
     if full_output:
-        zint = np.sqrt(1/(2*dOm))
+        zint = np.sqrt(model.cii/(2*dOm))
         z = np.cumsum(wreal*zint)
-        z *= zfactor
+        z /= zfactor
         roi /= rofactor
         dictresult = {'tension': ten, 'rho': roi, 'z': z,
                       'GPT': dOm}
