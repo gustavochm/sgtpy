@@ -1,11 +1,13 @@
 from __future__ import division, print_function, absolute_import
 import numpy as np
-from .fitmulticomponent import fobj_elv, fobj_ell, fobj_hazb
+from .fitmulticomponent import fobj_vle, fobj_lle, fobj_vlleb
 from scipy.optimize import minimize, minimize_scalar
 from ..saft import saftvrmie
 
 
-def fobj_kij(kij, mix, datavle=None, datalle=None, datavlle=None):
+def fobj_kij(kij, mix, datavle=None, datalle=None, datavlle=None,
+             weights_vle=[1., 1.], weights_lle=[1., 1.],
+             weights_vlle=[1., 1., 1., 1.]):
 
     Kij = np.array([[0, kij], [kij, 0]])
     mix.kij_saft(Kij)
@@ -13,16 +15,17 @@ def fobj_kij(kij, mix, datavle=None, datalle=None, datavlle=None):
 
     error = 0.
     if datavle is not None:
-        error += fobj_elv(eos, *datavle)
+        error += fobj_vle(eos, *datavle, weights_vle=weights_vle)
     if datalle is not None:
-        error += fobj_ell(eos, *datalle)
+        error += fobj_lle(eos, *datalle, weights_lle=weights_lle)
     if datavlle is not None:
-        error += fobj_hazb(eos, *datavlle)
+        error += fobj_vlleb(eos, *datavlle, weights_vlleb=weights_vlle)
     return error
 
 
 def fit_kij(kij_bounds, mix, datavle=None, datalle=None, datavlle=None,
-            minimize_options={}):
+            weights_vle=[1., 1.], weights_lle=[1., 1.],
+            weights_vlle=[1., 1., 1., 1.], minimize_options={}):
     """
     fit_kij attemps to fit kij to VLE, LLE, VLLE
 
@@ -38,6 +41,17 @@ def fit_kij(kij_bounds, mix, datavle=None, datalle=None, datavlle=None,
         (Xexp, Wexp, Texp, Pexp)
     datavlle: tuple, optional
         (Xexp, Wexp, Yexp, Texp, Pexp)
+    weights_vle: list or array_like, optional
+        weights_vle[0] = weight for Y composition error, default to 1.
+        weights_vle[1] = weight for bubble pressure error, default to 1.
+    weights_lle: list or array_like, optional
+        weights_lle[0] = weight for X (liquid 1) composition error, default to 1.
+        weights_lle[1] = weight for W (liquid 2) composition error, default to 1.
+    weights_vlle: list or array_like, optional
+        weights_vlle[0] = weight for X (liquid 1) composition error, default to 1.
+        weights_vlle[1] = weight for W (liquid 2) composition error, default to 1.
+        weights_vlle[2] = weight for Y (vapor) composition error, default to 1.
+        weights_vlle[3] = weight for equilibrium pressure error, default to 1.
      minimize_options: dict
         Dictionary of any additional spefication for scipy minimize_scalar
 
@@ -48,11 +62,14 @@ def fit_kij(kij_bounds, mix, datavle=None, datalle=None, datavlle=None,
 
     """
     fit = minimize_scalar(fobj_kij, kij_bounds, args=(mix, datavle, datalle,
-                          datavlle), **minimize_options)
+                          datavlle, weights_vle, weights_lle, weights_vlle),
+                          **minimize_options)
     return fit
 
 
-def fobj_asso(x, mix, datavle=None, datalle=None, datavlle=None):
+def fobj_asso(x, mix, datavle=None, datalle=None, datavlle=None,
+              weights_vle=[1., 1.], weights_lle=[1., 1.],
+              weights_vlle=[1., 1., 1., 1.]):
     kij, lij = x
     Kij = np.array([[0, kij], [kij, 0]])
     mix.kij_saft(Kij)
@@ -62,16 +79,17 @@ def fobj_asso(x, mix, datavle=None, datalle=None, datavlle=None):
 
     error = 0.
     if datavle is not None:
-        error += fobj_elv(eos, *datavle)
+        error += fobj_vle(eos, *datavle, weights_vle=weights_vle)
     if datalle is not None:
-        error += fobj_ell(eos, *datalle)
+        error += fobj_lle(eos, *datalle, weights_lle=weights_lle)
     if datavlle is not None:
-        error += fobj_hazb(eos, *datavlle)
+        error += fobj_vlleb(eos, *datavlle, weights_vlleb=weights_vlle)
     return error
 
 
 def fit_asso(x0, mix, datavle=None, datalle=None, datavlle=None,
-             minimize_options={}):
+             weights_vle=[1., 1.], weights_lle=[1., 1.],
+             weights_vlle=[1., 1., 1., 1.], minimize_options={}):
     """
     fit_asso attemps to fit kij and lij to VLE, LLE, VLLE
 
@@ -87,6 +105,17 @@ def fit_asso(x0, mix, datavle=None, datalle=None, datavlle=None,
         (Xexp, Wexp, Texp, Pexp)
     datavlle: tuple, optional
         (Xexp, Wexp, Yexp, Texp, Pexp)
+    weights_vle: list or array_like, optional
+        weights_vle[0] = weight for Y composition error, default to 1.
+        weights_vle[1] = weight for bubble pressure error, default to 1.
+    weights_lle: list or array_like, optional
+        weights_lle[0] = weight for X (liquid 1) composition error, default to 1.
+        weights_lle[1] = weight for W (liquid 2) composition error, default to 1.
+    weights_vlle: list or array_like, optional
+        weights_vlle[0] = weight for X (liquid 1) composition error, default to 1.
+        weights_vlle[1] = weight for W (liquid 2) composition error, default to 1.
+        weights_vlle[2] = weight for Y (vapor) composition error, default to 1.
+        weights_vlle[3] = weight for equilibrium pressure error, default to 1.
      minimize_options: dict
         Dictionary of any additional spefication for scipy minimize
 
@@ -96,12 +125,15 @@ def fit_asso(x0, mix, datavle=None, datalle=None, datavlle=None,
         Result of SciPy minimize
 
     """
-    fit = minimize(fobj_asso, x0, args=(mix, datavle, datalle, datavlle),
+    fit = minimize(fobj_asso, x0, args=(mix, datavle, datalle, datavlle,
+                   weights_vle, weights_lle, weights_vlle),
                    **minimize_options)
     return fit
 
 
-def fobj_cross(x, mix, assoc, datavle=None, datalle=None, datavlle=None):
+def fobj_cross(x, mix, assoc, datavle=None, datalle=None, datavlle=None,
+               weights_vle=[1., 1.], weights_lle=[1., 1.],
+               weights_vlle=[1., 1., 1., 1.]):
     kij, rc = x
     Kij = np.array([[0, kij], [kij, 0]])
     mix.kij_saft(Kij)
@@ -114,16 +146,17 @@ def fobj_cross(x, mix, assoc, datavle=None, datalle=None, datavlle=None):
 
     error = 0.
     if datavle is not None:
-        error += fobj_elv(eos, *datavle)
+        error += fobj_vle(eos, *datavle, weights_vle=weights_vle)
     if datalle is not None:
-        error += fobj_ell(eos, *datalle)
+        error += fobj_lle(eos, *datalle, weights_lle=weights_lle)
     if datavlle is not None:
-        error += fobj_hazb(eos, *datavlle)
+        error += fobj_vlleb(eos, *datavlle, weights_vlleb=weights_vlle)
     return error
 
 
 def fit_cross(x0, mix, assoc, datavle=None, datalle=None, datavlle=None,
-              minimize_options={}):
+              weights_vle=[1., 1.], weights_lle=[1., 1.],
+              weights_vlle=[1., 1., 1., 1.], minimize_options={}):
     """
     fit_cross attemps to fit kij and rcij to VLE, LLE, VLLE
 
@@ -141,6 +174,17 @@ def fit_cross(x0, mix, assoc, datavle=None, datalle=None, datavlle=None,
         (Xexp, Wexp, Texp, Pexp)
     datavlle: tuple, optional
         (Xexp, Wexp, Yexp, Texp, Pexp)
+    weights_vle: list or array_like, optional
+        weights_vle[0] = weight for Y composition error, default to 1.
+        weights_vle[1] = weight for bubble pressure error, default to 1.
+    weights_lle: list or array_like, optional
+        weights_lle[0] = weight for X (liquid 1) composition error, default to 1.
+        weights_lle[1] = weight for W (liquid 2) composition error, default to 1.
+    weights_vlle: list or array_like, optional
+        weights_vlle[0] = weight for X (liquid 1) composition error, default to 1.
+        weights_vlle[1] = weight for W (liquid 2) composition error, default to 1.
+        weights_vlle[2] = weight for Y (vapor) composition error, default to 1.
+        weights_vlle[3] = weight for equilibrium pressure error, default to 1.
     minimize_options: dict
         Dictionary of any additional spefication for scipy minimize
 
@@ -151,5 +195,6 @@ def fit_cross(x0, mix, assoc, datavle=None, datalle=None, datavlle=None,
 
     """
     fit = minimize(fobj_cross, x0, args=(mix, assoc, datavle, datalle,
-                   datavlle), **minimize_options)
+                   datavlle, weights_vle, weights_lle, weights_vlle),
+                   **minimize_options)
     return fit

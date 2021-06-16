@@ -1008,9 +1008,9 @@ class saftvrmie_pure():
             factor to obtain dimentionless distance  (Amstrong -> m)
         '''
 
-        Tfactor = 1
-        Pfactor = 1
-        rofactor = 1
+        Tfactor = 1.
+        Pfactor = 1.
+        rofactor = 1.
         tenfactor = np.sqrt(self.cii) * 1000  # To give tension in mN/m
         zfactor = 10**-10
 
