@@ -533,7 +533,8 @@ class saftvrmie_pure():
         out = tsat(self, P, T0, Tbounds, v0, Xass0, full_output)
         return out
 
-    def get_critical(self, Tc0, rhoc0, method='hybr', full_output=False):
+    def get_critical(self, Tc0=None, rhoc0=None, method='hybr',
+                     full_output=False):
         """
         get_critical(Tc0, rhoc0, method)
 
@@ -545,9 +546,9 @@ class saftvrmie_pure():
 
         Parameters
         ----------
-        Tc0 : float
+        Tc0 : float, optional
             initial guess for critical temperature [K]
-        rhoc : float
+        rhoc : float, optional
             initial guess for critical density [mol/m^3]
         method : string, optional
             SciPy; root method to solve critical coordinate
