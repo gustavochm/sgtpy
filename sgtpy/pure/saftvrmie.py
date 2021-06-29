@@ -218,6 +218,15 @@ class saftvrmie_pure():
         # For SGT Computations
         self.cii = np.array(pure.cii, ndmin=1)
 
+        # computing critical point
+        self.critical = False
+        out = get_critical(self, None, None, method='hybr', full_output=True)
+        if out.success:
+            self.critical = True
+            self.Tc = out.Tc
+            self.Pc = out.Pc
+            self.rhoc = out.rhoc
+
     def cii_correlation(self, overwrite=False):
         """
         cii_corelation()
@@ -534,7 +543,7 @@ class saftvrmie_pure():
         return out
 
     def get_critical(self, Tc0=None, rhoc0=None, method='hybr',
-                     full_output=False):
+                     full_output=False, overwrite=False):
         """
         get_critical(Tc0, rhoc0, method)
 
@@ -553,7 +562,9 @@ class saftvrmie_pure():
         method : string, optional
             SciPy; root method to solve critical coordinate
         full_output: bool, optional
-            whether to outputs or not all the calculation info.
+            whether to outputs or not all the calculation info
+        overwrite: bool, optional
+            wheter to overwrite already computed critical points
 
         Returns
         -------
@@ -565,6 +576,22 @@ class saftvrmie_pure():
             Critical density [mol/m3]
         """
         out = get_critical(self, Tc0, rhoc0, method, full_output)
+        if overwrite:
+            if full_output:
+                if out.success:
+                    self.critical = True
+                    self.Tc = out.Tc
+                    self.Pc = out.Pc
+                    self.rhoc = out.rhoc
+            else:
+                Tc0 = out[0]
+                rhoc0 = out[2]
+                out2 = get_critical(self, Tc0, rhoc0, method, full_output=True)
+                if out2.success:
+                    self.critical = True
+                    self.Tc = out2.Tc
+                    self.Pc = out2.Pc
+                    self.rhoc = out2.rhoc
         return out
 
     def ares(self, rho, T, Xass0=None):

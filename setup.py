@@ -37,7 +37,7 @@ cmdclass.update({'build_ext': build_ext})
 setup(
   name='SGTPy',
   license='MIT',
-  version='0.0.10',
+  version='0.0.11',
   description='SAFT-VR-MIE EOS and SGT',
   author='Gustavo Chaparro Maldonado, Andres Mejia Matallana, Erich A. Muller',
   author_email='gustavochaparro@udec.cl',

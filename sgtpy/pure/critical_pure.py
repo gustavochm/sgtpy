@@ -117,14 +117,14 @@ def initial_guess_criticalpure(eos, n=50):
     ro = np.linspace(ro0, rof, n)
     dro = ro[1] - ro[0]
     ro_int = []
-    l = 0
+    flag = 0
     for i in range(n):
         P, dP = eos.dP_drho(ro[i], Tsub)
         if dP < 0:
             ro_int.append(ro[i])
-            l = 1
+            flag = 1
         else:
-            if l == 1:
+            if flag == 1:
                 break
 
     # computing the initial guesses

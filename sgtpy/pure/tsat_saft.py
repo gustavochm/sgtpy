@@ -1,6 +1,7 @@
 from __future__ import division, print_function, absolute_import
 from scipy.optimize import brentq, newton
 from .EquilibriumResult import EquilibriumResult
+from warnings import warn
 
 
 def fobj_tsat(T, P, saft):
@@ -15,6 +16,13 @@ def fobj_tsat(T, P, saft):
 
 def tsat(saft, P, T0=None, Tbounds=None, v0=[None, None], Xass0=[None, None],
          full_output=False):
+
+    if saft.critical:
+        if P == saft.Pc:
+            return saft.Tc, 1./saft.rhoc, 1./saft.rhoc
+        elif P > saft.Pc:
+            warn('Pressure is greater than critical pressure, returning critical point')
+            return saft.Tc, 1./saft.rhoc, 1./saft.rhoc
 
     bool1 = T0 is None
     bool2 = Tbounds is None
