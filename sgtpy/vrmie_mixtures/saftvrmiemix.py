@@ -16,6 +16,7 @@ from .polarGV import aij, bij, cij
 from .density_solver import density_topliss, density_newton
 from ..constants import kb, Na
 
+from ..pure import saftvrmie
 
 R = Na * kb
 
@@ -2200,3 +2201,20 @@ class saftvrmie_mix():
         w = np.sqrt(w2)
 
         return w
+
+    def get_lngamma(self, xi, T, p):
+        if isinstance(xi, (float, int)):
+            xi = np.array([xi, 1.-xi])
+        elif not isinstance(xi, np.ndarray):
+            xi = np.array(xi)
+        
+        if self.mixture.nc > 2 and xi.shape[0] < 2:
+            raise ValueError('Please supply the whole molfrac vector for non-binary mixtures')
+
+        lnphi_mix, _ = self.logfugef(xi, T, p, 'L')
+        lnphi_pure = np.zeros_like(xi)
+        for i, component in enumerate(self.mixture.components):
+            eos = saftvrmie.saftvrmie_pure(component)
+            lnphi_pure[i], _ = eos.logfug(T, p, 'L')
+        lngamma = lnphi_mix - lnphi_pure
+        return lngamma
