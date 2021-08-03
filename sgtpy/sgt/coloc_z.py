@@ -16,7 +16,7 @@ def fobj_z_newton(rointer, Binter, dro20, dro21, mu0, temp_aux, cij, n, nc,
     dmu[i], Xass = model.muad_aux(rointer[:, i], temp_aux, Xass01)
 
     for i in range(1, n):
-        dmu[i], Xass = model.muad(rointer[:, i], temp_aux, Xass)
+        dmu[i], Xass = model.muad_aux(rointer[:, i], temp_aux, Xass)
     dmu -= mu0
     dmu = dmu.T
 
@@ -213,7 +213,7 @@ def sgt_mix(rho1, rho2, Tsat, Psat, model, rho0='linear',
         dro10 = np.outer(rho1a, A0)  # cte
         dro11 = np.outer(rho2a, A1)  # cte
 
-        sol = root(fobj, rointer.flatten(), method='lm', jac=jac,
+        sol = root(fobj, rointer.flatten(), method=root_method, jac=jac,
                    args=(Binter, dro20, dro21, mu0, temp_aux, cij, n, nc,
                    model, Xass01), options=solver_opt)
 
