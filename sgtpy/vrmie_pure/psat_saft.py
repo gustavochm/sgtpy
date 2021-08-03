@@ -47,11 +47,16 @@ def psat(saft, T, P0=None, v0=[None, None], Xass0=[None, None],
          full_output=True):
 
     if saft.critical:
-        if T == saft.Tc:
-            return saft.Pc, 1./saft.rhoc, 1./saft.rhoc
-        elif T > saft.Tc:
+        if T >= saft.Tc:
             warn('Temperature is greater than critical temperature, returning critical point')
-            return saft.Pc, 1./saft.rhoc, 1./saft.rhoc
+            if full_output:
+                dict = {'T': saft.Tc, 'P': saft.Pc, 'vl': 1./saft.rhoc,
+                        'vv': 1./saft.rhoc, 'Xassl': Xass0[0],
+                        'Xassv': Xass0[1], 'success': False, 'iterations': 0}
+                out = EquilibriumResult(dict)
+            else:
+                out = saft.Pc, 1./saft.rhoc, 1./saft.rhoc
+            return out
 
     temp_aux = saft.temperature_aux(T)
     beta = temp_aux[0]
@@ -119,13 +124,13 @@ def psat(saft, T, P0=None, v0=[None, None], Xass0=[None, None],
             FO = lnphiv - lnphil
             dFO = (vv - vl)/RT
             P -= FO/dFO
-            sucess = abs(FO) <= 1e-8
-            if sucess:
+            success = abs(FO) <= 1e-8
+            if success:
                 break
-        if not sucess:
+        if not success:
             rho0 = 1. / np.array([vl, vv])
             sol = root(mu_obj, rho0, args=(temp_aux, saft), jac=True)
-            sucess = sol.success
+            success = sol.success
             i += sol.nfev
             rhol, rhov = sol.x
             vl, vv = 1./sol.x
@@ -136,7 +141,7 @@ def psat(saft, T, P0=None, v0=[None, None], Xass0=[None, None],
     else:
         rho0 = 1. / np.asarray([v0])
         sol = root(mu_obj, rho0, args=(temp_aux, saft), jac=True)
-        sucess = sol.success
+        success = sol.success
         i = sol.nfev
         if sol.success:
             rhol, rhov = sol.x
@@ -150,7 +155,7 @@ def psat(saft, T, P0=None, v0=[None, None], Xass0=[None, None],
 
     if full_output:
         dict = {'T': T, 'P': P, 'vl': vl, 'vv': vv, 'Xassl': Xassl,
-                'Xassv': Xassv, 'sucess': sucess, 'iterations': i}
+                'Xassv': Xassv, 'success': success, 'iterations': i}
         out = EquilibriumResult(dict)
 
     else:

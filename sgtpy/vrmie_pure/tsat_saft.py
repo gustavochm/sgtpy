@@ -18,11 +18,16 @@ def tsat(saft, P, T0=None, Tbounds=None, v0=[None, None], Xass0=[None, None],
          full_output=False):
 
     if saft.critical:
-        if P == saft.Pc:
-            return saft.Tc, 1./saft.rhoc, 1./saft.rhoc
-        elif P > saft.Pc:
+        if P >= saft.Pc:
             warn('Pressure is greater than critical pressure, returning critical point')
-            return saft.Tc, 1./saft.rhoc, 1./saft.rhoc
+            if full_output:
+                dict = {'T': saft.Tc, 'P': saft.Pc, 'vl': 1./saft.rhoc,
+                        'vv': 1./saft.rhoc, 'Xassl': Xass0[0],
+                        'Xassv': Xass0[1], 'success': False, 'iterations': 0}
+                out = EquilibriumResult(dict)
+            else:
+                out = saft.Tc, 1./saft.rhoc, 1./saft.rhoc
+            return out
 
     bool1 = T0 is None
     bool2 = Tbounds is None
@@ -45,7 +50,7 @@ def tsat(saft, P, T0=None, Tbounds=None, v0=[None, None], Xass0=[None, None],
     Tsat = sol[0]
     if full_output:
         dict = {'T': Tsat, 'P': P, 'vl': vl, 'vv': vv, 'Xassl': Xassl,
-                'Xassv': Xassv, 'sucess': sol[1].converged,
+                'Xassv': Xassv, 'success': sol[1].converged,
                 'iterations': sol[1].iterations}
         out = EquilibriumResult(dict)
     else:
