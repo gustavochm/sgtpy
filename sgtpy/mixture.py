@@ -3,6 +3,11 @@ import numpy as np
 from copy import copy
 from .saft_forcefield import saft_forcefield
 from .constants import kb
+# used in saftgammamie
+from .config_asso import asso_aux
+from .secondorder import secondorder47_1, secondorder47_2, secondorder19_14
+from .secondorder import secondorder21, secondorder22, secondorder23
+from .database import database
 
 
 class component(object):
@@ -63,7 +68,7 @@ class component(object):
     def __init__(self, name='None', ms=1., sigma=0., eps=0., lambda_r=12.,
                  lambda_a=6., eAB=0., rcAB=1., rdAB=0.4, sites=[0, 0, 0],
                  mupol=0, npol=0., ring=0., Tc=0., Pc=0., Zc=0., Vc=0.,
-                 w=0., Mw=1., cii=0.):
+                 w=0., Mw=1., cii=0., GC=None):
 
         self.name = name
         self.Tc = Tc  # Critical Temperature in K
@@ -74,6 +79,7 @@ class component(object):
         self.cii = cii  # Influence factor SGT, list or array
         self.Mw = Mw  # molar weight in g/mol
         self.nc = 1
+        self.GC = GC  # Dict, Group contribution info
 
         # Saft Parameters
         self.ms = ms
@@ -96,6 +102,12 @@ class component(object):
         self.mupol = mupol  # Debye
         self.npol = npol
 
+    def __add__(self, component2):
+        '''
+        Methods to add two components and create a mixture with them.
+        '''
+        return mixture(self, component2)
+
     def ci(self, T):
         """
         Method that evaluates the polynomial for cii coeffient of SGT
@@ -115,7 +127,7 @@ class component(object):
 
         return np.polyval(self.cii, T)
 
-    def saftvrmie_forcefield(self, ms, rhol07):
+    def saftvrmie_forcefield(self, ms, rhol07, ring_type=None):
         """
         saftvrmie_forcefield(ms, rhol07)
 
@@ -135,6 +147,12 @@ class component(object):
             number of chain segments
         rhol07: float
             liquid density at reduced temperature = 0.7 [mol/m^3]
+        ring_type : None or string
+            ring type, 'None' for chain molecules, ring: 'a' for ms=3,
+            'b' for ms=4, 'c' or 'd' for ms=5 and 'e' or 'f' for ms=7.
+            See Table 1 of Langmuir 2017 33 (42), 11518-11529 or
+            Table S2, Supporting information 2 of J. Chem. Inf. Model.
+            2021, 61, 3, 1244–1250 for more information about ring geometries.
 
         Returns
         -------
@@ -144,17 +162,161 @@ class component(object):
             well depth for Mie potential [K]
         lambda_r : float
             repulsive exponent for Mie potential [Adim]
+        ring : float
+            geometric factor for ring molecules
 
         """
-        out = saft_forcefield(ms, self.Tc, self.w, rhol07)
-        lambda_r, lambda_a, ms, eps, sigma = out
+        out = saft_forcefield(ms, self.Tc, self.w, rhol07, ring_type)
+        lambda_r, lambda_a, ms, eps, sigma, ring = out
         self.lambda_a = np.asarray(lambda_a)
         self.lambda_r = np.asarray(lambda_r)
         self.lambda_ar = self.lambda_r + self.lambda_a
         self.ms = ms
         self.sigma = sigma
         self.eps = eps
-        return sigma, eps/kb, lambda_r
+        self.ring = ring
+        return sigma, eps/kb, lambda_r, ring
+
+    def saftgammamie(self, database=database):
+        """
+        saftgammamie method
+
+        Method that reads the SAFT-Gamma-Mie database and set the necessary
+        interactions parameters to use the equation of state.
+
+        Parameters
+        ----------
+        database: Object
+            database object
+        """
+        df_groups = database.df_groups
+        df_mie_kl = database.df_mie_kl
+        df_asso_kl = database.df_asso_kl
+        df_secondorder = database.df_secondorder
+
+        GC = self.GC
+        nc = self.nc
+
+        subgroups = np.asarray(list(GC.keys()))
+        ngroups = len(subgroups)
+        vki = np.asarray(list(GC.values()))
+        ngtotal = np.sum(ngroups)
+        groups_index = np.zeros(ngtotal, dtype=np.int64)
+        group_indexes = [[0, ngtotal]]
+
+        group_filter = df_groups.loc[subgroups]
+
+        vk = np.asarray(group_filter['vk*'])
+        Sk = np.asarray(group_filter['Sk'])
+
+        sigma_kk = np.asarray(group_filter['sigma_kk'])
+        eps_kk = np.array(group_filter['eps_kk'])
+        lr_kk = np.asarray(group_filter['lr_kk'])
+        la_kk = np.asarray(group_filter['la_kk'])
+
+        Nst_kk = np.asarray(group_filter['Nst_kk'])
+        sites_kk = np.array(group_filter[['nH_kk', 'ne1_kk', 'ne2_kk']])
+
+        charge_kk = np.array(group_filter['charge_kk'])
+        sigma_born_kk = np.array(group_filter['sigma_born_kk'])
+
+        mw_kk = np.array(group_filter['mw_kk'])
+
+        self.vki = vki
+        self.subgroups = subgroups
+        self.ngroups = ngroups
+        self.groups_index = groups_index
+        self.groups_indexes = group_indexes
+
+        self.vk = vk
+        self.Sk = Sk
+        self.sigma_kk = sigma_kk
+        self.eps_kk = eps_kk
+        self.lr_kk = lr_kk
+        self.la_kk = la_kk
+
+        self.Nst_kk = Nst_kk
+        self.sites_kk = sites_kk
+
+        self.charge_kk = charge_kk
+        self.sigma_born_kk = sigma_born_kk
+
+        self.mw_kk = mw_kk
+        self.Mw = np.dot(vki, mw_kk)
+
+        sigma_kk3 = sigma_kk**3
+        sigma_kl = np.add.outer(sigma_kk, sigma_kk)/2
+        sigma_kl3 = sigma_kl**3
+        la_kl = np.sqrt(np.multiply.outer(la_kk-3., la_kk-3.)) + 3
+        lr_kl = np.sqrt(np.multiply.outer(lr_kk-3., lr_kk-3.)) + 3
+
+        eps_kl = np.sqrt(np.multiply.outer(eps_kk, eps_kk))
+        eps_kl *= np.sqrt(np.multiply.outer(sigma_kk3, sigma_kk3))
+        eps_kl /= sigma_kl3
+
+        for k, groupK in enumerate(subgroups):
+            for l in range(k, ngtotal):
+                groupL = subgroups[l]
+
+                bool_kk = df_mie_kl.group_k == groupK
+                bool_ll = df_mie_kl.group_l == groupL
+                bool_kl = df_mie_kl.group_k == groupL
+                bool_lk = df_mie_kl.group_l == groupK
+
+                df1 = df_mie_kl[bool_kk & bool_ll]
+                len1 = df1.shape[0]
+
+                df2 = df_mie_kl[bool_kl & bool_lk]
+                len2 = df2.shape[0]
+
+                if len1 == 1:
+                    df = df1
+                    n = len1
+                elif len2 == 1:
+                    df = df2
+                    n = len2
+                else:
+                    n = 0
+
+                if n == 1:
+                    _, _, eps, lr = df.values[0]
+
+                    if eps != 'CR':
+                        eps_kl[k, l] = eps
+                        eps_kl[l, k] = eps
+                    if lr != 'CR':
+                        lr_kl[k, l] = lr
+                        lr_kl[l, k] = lr
+
+        # second order modifications
+        secondorder47_1(nc, group_indexes, subgroups, vki, eps_kl,
+                        df_secondorder)
+        secondorder47_2(nc, group_indexes, subgroups, vki, eps_kl,
+                        df_secondorder)
+
+        asso_bool = np.any(Nst_kk > 0)
+        self.asso_bool = asso_bool
+        if asso_bool:
+            values = asso_aux(Nst_kk, sites_kk, groups_index, subgroups,
+                              df_asso_kl)
+            kAB_kl, epsAB_kl, sites_asso, group_asso_index = values[0:4]
+            nsites = values[4]
+            DIJ = np.zeros([nsites, nsites])
+            DIJ[:] = sites_asso[np.nonzero(sites_asso)]
+            DIJ[epsAB_kl == 0.] = 0
+            self.S = sites_asso[np.nonzero(sites_asso)]
+            self.sites_asso = sites_asso
+            self.kAB_kl = kAB_kl
+            self.epsAB_kl = epsAB_kl
+            self.DIJ = DIJ
+            self.diagasso = np.diag_indices(nsites)
+            self.nsites = len(sites_asso[np.nonzero(sites_asso)])
+            self.group_asso_index = group_asso_index
+
+        self.sigma_kl = sigma_kl
+        self.eps_kl = eps_kl
+        self.lr_kl = lr_kl
+        self.la_kl = la_kl
 
 
 class mixture(object):
@@ -227,6 +389,7 @@ class mixture(object):
         self.Vc = [component1.Vc, component2.Vc]
         self.cii = [component1.cii, component2.cii]
         self.Mw = [component1.Mw, component2.Mw]
+        self.GC = [component1.GC,  component2.GC]
         self.nc = 2
 
         self.lr = [component1.lambda_r, component2.lambda_r]
@@ -262,6 +425,7 @@ class mixture(object):
         self.w.append(component.w)
         self.cii.append(component.cii)
         self.Mw.append(component.Mw)
+        self.GC.append(component.GC)
 
         self.lr.append(component.lambda_r)
         self.la.append(component.lambda_a)
@@ -278,6 +442,13 @@ class mixture(object):
         self.npol.append(component.npol)
 
         self.nc += 1
+
+    def __add__(self, new_component):
+        if isinstance(new_component, component):
+            self.add_component(new_component)
+        else:
+            raise Exception('You can only add components objects to an existing mixture')
+        return self
 
     def kij_saft(self, kij):
         r"""
@@ -358,3 +529,202 @@ class mixture(object):
             returns a copy a of the mixture
         """
         return copy(self)
+
+    def saftgammamie(self, database=database):
+        """
+        saftgammamie method
+
+        Method that reads the SAFT-Gamma-Mie database and set the necessary
+        interactions parameters to use the equation of state.
+
+        Parameters
+        ----------
+        database: Object
+            database object
+        """
+        df_groups = database.df_groups
+        df_mie_kl = database.df_mie_kl
+        df_asso_kl = database.df_asso_kl
+        df_secondorder = database.df_secondorder
+        df_secondasso = database.df_secondasso
+
+        GC = self.GC
+        nc = self.nc
+
+        subgroups = []
+        ngroups = []
+        vki = []
+        for i in range(nc):
+            group_names = list(GC[i].keys())
+            group_vki = list(GC[i].values())
+            subgroups += group_names
+            vki += group_vki
+            ngroups.append(len(group_names))
+
+        subgroups = np.asarray(subgroups)
+        vki = np.asarray(vki)
+
+        ngtotal = np.sum(ngroups)
+        groups_index = np.zeros(ngtotal, dtype=np.int64)
+        group_indexes = []
+
+        index0 = 0
+        for i in range(nc):
+            indexf = ngroups[i] + index0
+            group_indexes.append([index0, indexf])
+            groups_index[index0:indexf] = i
+            index0 = indexf
+
+        group_filter = df_groups.loc[subgroups]
+
+        vk = np.asarray(group_filter['vk*'])
+        Sk = np.asarray(group_filter['Sk'])
+
+        sigma_kk = np.asarray(group_filter['sigma_kk'])
+        eps_kk = np.array(group_filter['eps_kk'])
+        lr_kk = np.asarray(group_filter['lr_kk'])
+        la_kk = np.asarray(group_filter['la_kk'])
+
+        Nst_kk = np.asarray(group_filter['Nst_kk'])
+        sites_kk = np.array(group_filter[['nH_kk', 'ne1_kk', 'ne2_kk']])
+
+        charge_kk = np.array(group_filter['charge_kk'])
+        sigma_born_kk = np.array(group_filter['sigma_born_kk'])
+
+        mw_kk = np.array(group_filter['mw_kk'])
+
+        sigma_kk3 = sigma_kk**3
+        sigma_kl = np.add.outer(sigma_kk, sigma_kk)/2
+        sigma_kl3 = sigma_kl**3
+        la_kl = np.sqrt(np.multiply.outer(la_kk-3., la_kk-3.)) + 3
+        lr_kl = np.sqrt(np.multiply.outer(lr_kk-3., lr_kk-3.)) + 3
+
+        eps_kl = np.sqrt(np.multiply.outer(eps_kk, eps_kk))
+        eps_kl *= np.sqrt(np.multiply.outer(sigma_kk3, sigma_kk3))
+        eps_kl /= sigma_kl3
+
+        for k, groupK in enumerate(subgroups):
+            for l in range(k, ngtotal):
+                groupL = subgroups[l]
+
+                bool_kk = df_mie_kl.group_k == groupK
+                bool_ll = df_mie_kl.group_l == groupL
+                bool_kl = df_mie_kl.group_k == groupL
+                bool_lk = df_mie_kl.group_l == groupK
+
+                df1 = df_mie_kl[bool_kk & bool_ll]
+                len1 = df1.shape[0]
+
+                df2 = df_mie_kl[bool_kl & bool_lk]
+                len2 = df2.shape[0]
+
+                if len1 == 1:
+                    df = df1
+                    n = len1
+                elif len2 == 1:
+                    df = df2
+                    n = len2
+                else:
+                    n = 0
+
+                if n == 1:
+                    _, _, eps, lr = df.values[0]
+
+                    if eps != 'CR':
+                        eps_kl[k, l] = eps
+                        eps_kl[l, k] = eps
+                    if lr != 'CR':
+                        lr_kl[k, l] = lr
+                        lr_kl[l, k] = lr
+
+        self.vki = vki
+        self.subgroups = subgroups
+        self.ngroups = ngroups
+        self.ngtotal = ngtotal
+        self.groups_index = groups_index
+        self.groups_indexes = group_indexes
+
+        self.vk = vk
+        self.Sk = Sk
+        self.sigma_kk = sigma_kk
+        self.eps_kk = eps_kk
+        self.lr_kk = lr_kk
+        self.la_kk = la_kk
+
+        self.Nst_kk = Nst_kk
+        self.sites_kk = sites_kk
+
+        self.charge_kk = charge_kk
+        self.sigma_born_kk = sigma_born_kk
+
+        self.mw_kk = mw_kk
+
+        Mw_i = np.zeros(nc)
+        for i in range(nc):
+            i0 = group_indexes[i][0]
+            i1 = group_indexes[i][1]
+            Mw_i[i] = np.dot(vki[i0:i1], mw_kk[i0:i1])
+        self.Mw = Mw_i
+
+        # second order modifications
+        secondorder47_1(nc, group_indexes, subgroups, vki, eps_kl,
+                        df_secondorder)
+        secondorder47_2(nc, group_indexes, subgroups, vki, eps_kl,
+                        df_secondorder)
+
+        asso_bool = np.any(Nst_kk > 0)
+        self.asso_bool = asso_bool
+        if asso_bool:
+            values = asso_aux(Nst_kk, sites_kk, groups_index, subgroups,
+                              df_asso_kl)
+            kAB_kl, epsAB_kl, sites_asso, group_asso_index = values[0:4]
+            nsites, molecule_id_index_sites = values[4:6]
+            indexAB_id, indexABij, subgroup_id_asso = values[6:9]
+            molecule_id_index_asso, sites_cumsum = values[9:11]
+
+            secondorder19_14(nc, group_indexes, subgroups, vki, eps_kl, lr_kl,
+                             df_secondorder, subgroup_id_asso,
+                             molecule_id_index_asso, sites_cumsum, epsAB_kl,
+                             kAB_kl, df_secondasso)
+
+            secondorder21(nc, group_indexes, subgroups, vki, eps_kl, lr_kl,
+                          df_secondorder, subgroup_id_asso,
+                          molecule_id_index_asso, sites_cumsum, epsAB_kl,
+                          kAB_kl, df_secondasso)
+
+            secondorder22(nc, group_indexes, subgroups, vki, eps_kl, lr_kl,
+                          df_secondorder, subgroup_id_asso,
+                          molecule_id_index_asso, sites_cumsum, epsAB_kl,
+                          kAB_kl, df_secondasso)
+
+            secondorder23(nc, group_indexes, subgroups, vki, eps_kl, lr_kl,
+                          df_secondorder, subgroup_id_asso,
+                          molecule_id_index_asso, sites_cumsum, epsAB_kl,
+                          kAB_kl, df_secondasso)
+
+            DIJ = np.zeros([nsites, nsites])
+            DIJ[:] = sites_asso[np.nonzero(sites_asso)]
+            DIJ[epsAB_kl == 0.] = 0
+            self.S = sites_asso[np.nonzero(sites_asso)]
+            self.sites_asso = sites_asso
+            self.kAB_kl = kAB_kl
+            self.epsAB_kl = epsAB_kl
+            self.DIJ = DIJ
+            self.diagasso = np.diag_indices(nsites)
+            self.nsites = nsites
+            self.group_asso_index = group_asso_index
+            self.molecule_id_index_sites = molecule_id_index_sites
+            self.indexAB_id = indexAB_id
+            self.indexABij = indexABij
+            self.vki_asso = vki[self.group_asso_index]
+
+            dxjdx = np.zeros([nc, nsites])
+            for i in range(nc):
+                dxjdx[i] = molecule_id_index_sites == i
+                dxjdx[i] *= self.vki_asso
+            self.dxjasso_dx = dxjdx
+
+        self.sigma_kl = sigma_kl
+        self.eps_kl = eps_kl
+        self.lr_kl = lr_kl
+        self.la_kl = la_kl

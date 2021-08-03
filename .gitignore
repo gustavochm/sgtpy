@@ -7,8 +7,10 @@ dist/
 docs/build/
 SGTPy.egg-info/
 SGTPy/__pycache__/
-SGTPy/mixtures/__pycache__/
-SGTPy/pure/__pycache__/
+SGTPy/vrmie_mixtures/__pycache__/
+SGTPy/vrmie_pure/__pycache__/
+SGTPy/gammamie_mixtures/__pycache__/
+SGTPy/gammamie_pure/__pycache__/
 SGTPy/equilibrium/__pycache__/
 SGTPy/sgt/__pycache__/
 SGTPy/src/build/
