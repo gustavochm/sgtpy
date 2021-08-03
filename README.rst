@@ -5,7 +5,7 @@ SGTPy
 What is SGTPy?
 --------------
 
-SGTPy is an open-source python package of SAFT-VR-Mie Equation of State (EOS).
+SGTPy is an open-source python package of SAFT-VR-Mie SAFT-Gamma-Mie Equations of State (EOS).
 SGTPy allows to work with pure fluids and fluid mixtures, additionally the fluids
 can be modeled considering association, cross-association and polar contributions.
 SGTPy was built on top of phasepy's phase equilibrium and Square
@@ -14,12 +14,16 @@ calculations of associative mixtures.
 
 SGTPy relies on Numpy, SciPy and PhasePy.
 
+**New in v0.0.12: Group contribution SAFT-Gamma-Mie**
+
 
 Installation Prerequisites
 --------------------------
 - numpy
 - scipy
 - cython
+- pandas
+- numba
 
 Installation
 ------------
