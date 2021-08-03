@@ -4,3 +4,4 @@ cython
 matplotlib
 setuptools
 sphinxemoji
+ternary
