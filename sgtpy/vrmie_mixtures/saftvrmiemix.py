@@ -16,7 +16,7 @@ from .polarGV import aij, bij, cij
 from .density_solver import density_topliss, density_newton
 from ..constants import kb, Na
 
-from ..pure import saftvrmie
+from ..vrmie_pure import saftvrmie
 
 R = Na * kb
 
