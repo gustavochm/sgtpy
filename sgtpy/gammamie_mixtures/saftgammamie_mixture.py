@@ -10,6 +10,7 @@ from .ideal import aideal, daideal_drho, d2aideal_drho
 from .ideal import daideal_dx, daideal_dx_drho
 from .density_solver import density_topliss, density_newton
 
+from ..gammamie_pure import saftgammamie_pure
 
 R = kb * Na
 
@@ -169,7 +170,7 @@ class saftgammamie_mix():
     def __init__(self, mixture):
 
         self.nc = mixture.nc
-
+        self.mixture = mixture
         self.mw_kk = mixture.mw_kk
         self.Mw = mixture.Mw
 
@@ -2068,3 +2069,21 @@ class saftgammamie_mix():
         w = np.sqrt(w2)
 
         return w
+    
+    def get_lngamma(self, xi, T, p):
+        if isinstance(xi, (float, int)):
+            xi = np.array([xi, 1.-xi])
+        elif not isinstance(xi, np.ndarray):
+            xi = np.array(xi)
+        
+        if self.nc > 2 and xi.shape[0] < 2:
+            raise ValueError('Please supply the whole molfrac vector for non-binary mixtures')
+
+        lnphi_mix, _ = self.logfugef(xi, T, p, 'L')
+        lnphi_pure = np.zeros_like(xi)
+        for i, component in enumerate(self.mixture.components):
+            component.saftgammamie()
+            eos = saftgammamie_pure(component)
+            lnphi_pure[i], _ = eos.logfug(T, p, 'L')
+        lngamma = lnphi_mix - lnphi_pure
+        return lngamma
