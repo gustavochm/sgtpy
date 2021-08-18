@@ -76,7 +76,7 @@ class component(object):
         self.Zc = Zc  # Critical compresibility factor
         self.Vc = Vc  # Critical volume in m3/mol
         self.w = w  # Acentric Factor
-        self.cii = cii  # Influence factor SGT, list or array
+        self.cii = np.atleast_1d(cii)  # Influence factor SGT, list or array
         self.Mw = Mw  # molar weight in g/mol
         self.nc = 1
         self.GC = GC  # Dict, Group contribution info

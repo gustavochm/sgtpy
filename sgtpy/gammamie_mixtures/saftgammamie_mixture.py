@@ -348,7 +348,7 @@ class saftgammamie_mix():
 
         # for SGT calculation
         self.cii = mixture.cii
-        self.cij = np.sqrt(np.outer(self.cii, self.cii))
+        # self.cij = np.sqrt(np.outer(self.cii, self.cii))
         self.beta = np.zeros([self.nc, self.nc])
 
         self.secondorder = False
@@ -1538,12 +1538,14 @@ class saftgammamie_mix():
         '''
         beta = 1 / (kb*T)
         RT = (Na/beta)
+        cii0 = np.polyval(self.cii[0], T)  # computing first component cii
 
         Tfactor = 1.
         Pfactor = 1. / RT
         rofactor = 1.
-        tenfactor = np.sqrt(self.cii[0]*RT) * 1000  # To give tension in mN/m
-        zfactor = 10**-10 * np.sqrt(RT / self.cii[0])
+        tenfactor = np.sqrt(cii0*RT) * 1000  # To give tension in mN/m
+        zfactor = 10**-10 * np.sqrt(RT / cii0)
+
         return Tfactor, Pfactor, rofactor, tenfactor, zfactor
 
     def beta_sgt(self, beta):
@@ -1580,7 +1582,13 @@ class saftgammamie_mix():
             influence parameter matrix at given temperature [J m^5 / mol^2]
 
         """
-        return self.cij * (1 - self.beta)
+        n = self.nc
+        ci = np.zeros(n)
+        for i in range(n):
+            ci[i] = np.polyval(self.cii[i], T)
+        cij = np.sqrt(np.outer(ci, ci))
+        cij *= (1 - self.beta)
+        return cij
 
     def EntropyR(self, x, T, P, state, v0=None, Xass0=None, T_step=0.1):
         """

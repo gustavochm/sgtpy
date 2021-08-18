@@ -338,7 +338,7 @@ class saftvrmie_mix():
             self.mupolad2 = self.mupol**2*cte/(self.ms*self.eps*self.sigma3)
 
         self.cii = mixture.cii
-        self.cij = np.sqrt(np.outer(self.cii, self.cii))
+        # self.cij = np.sqrt(np.outer(self.cii, self.cii))
         self.beta = np.zeros([self.nc, self.nc])
 
     def cii_correlation(self, overwrite=False):
@@ -365,9 +365,11 @@ class saftvrmie_mix():
         cii = self.ms * (0.12008072630855947 + 2.2197907527439655 * self.alpha)
         cii *= np.sqrt(Na**2 * self.eps * self.sigma**5)
         cii **= 2
+
+        cii = np.array(cii).reshape([self.nc, 1])
         if overwrite:
             self.cii = cii
-            self.cij = np.sqrt(np.outer(self.cii, self.cii))
+            # self.cij = np.sqrt(np.outer(self.cii, self.cii))
         return cii
 
     def diameter(self, beta):
@@ -1598,12 +1600,13 @@ class saftvrmie_mix():
         '''
         beta = 1 / (kb*T)
         RT = (Na/beta)
+        cii0 = np.polyval(self.cii[0], T)  # computing first component cii
 
         Tfactor = 1.
         Pfactor = 1. / RT
         rofactor = 1.
-        tenfactor = np.sqrt(self.cii[0]*RT) * 1000  # To give tension in mN/m
-        zfactor = 10**-10 * np.sqrt(RT / self.cii[0])
+        tenfactor = np.sqrt(cii0*RT) * 1000  # To give tension in mN/m
+        zfactor = 10**-10 * np.sqrt(RT / cii0)
         return Tfactor, Pfactor, rofactor, tenfactor, zfactor
 
     def beta_sgt(self, beta):
@@ -1640,7 +1643,13 @@ class saftvrmie_mix():
             influence parameter matrix at given temperature [J m^5 / mol^2]
 
         """
-        return self.cij * (1 - self.beta)
+        n = self.nc
+        ci = np.zeros(n)
+        for i in range(n):
+            ci[i] = np.polyval(self.cii[i], T)
+        cij = np.sqrt(np.outer(ci, ci))
+        cij *= (1 - self.beta)
+        return cij
 
     def EntropyR(self, x, T, P, state, v0=None, Xass0=None, T_step=0.1):
         """

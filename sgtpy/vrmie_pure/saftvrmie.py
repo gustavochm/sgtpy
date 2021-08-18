@@ -251,6 +251,8 @@ class saftvrmie_pure():
         cii = self.ms * (0.12008072630855947 + 2.2197907527439655 * self.alpha)
         cii *= np.sqrt(Na**2 * self.eps * self.sigma**5)
         cii **= 2
+
+        cii = np.array([cii], ndmin=1)
         if overwrite:
             self.cii = cii
         return cii
@@ -1009,6 +1011,26 @@ class saftvrmie_pure():
         lnphi, v, Xass = self.logfug_aux(temp_aux, P, state, v0, Xass0)
         return lnphi, v
 
+    def ci(self, T):
+        '''
+        ci(T)
+
+        Method that evaluates the polynomial for the influence parameters used
+        in the SGT theory for surface tension calculations.
+
+        Parameters
+        ----------
+        T : float
+            absolute temperature [K]
+
+        Returns
+        -------
+        ci: float
+            influence parameters [J m5 mol-2]
+        '''
+
+        return np.polyval(self.cii, T)
+
     def sgt_adim(self, T):
         '''
         sgt_adim(T)
@@ -1035,11 +1057,12 @@ class saftvrmie_pure():
         zfactor : float
             factor to obtain dimentionless distance  (Amstrong -> m)
         '''
+        cii = self.ci(T)  # computing temperature dependent cii
 
         Tfactor = 1.
         Pfactor = 1.
         rofactor = 1.
-        tenfactor = np.sqrt(self.cii) * 1000  # To give tension in mN/m
+        tenfactor = np.sqrt(cii) * 1000  # To give tension in mN/m
         zfactor = 10**-10
 
         return Tfactor, Pfactor, rofactor, tenfactor, zfactor

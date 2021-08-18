@@ -1019,6 +1019,26 @@ class saftgammamie_pure():
         lnphi, v, Xass = self.logfug_aux(temp_aux, P, state, v0, Xass0)
         return lnphi, v
 
+    def ci(self, T):
+        '''
+        ci(T)
+
+        Method that evaluates the polynomial for the influence parameters used
+        in the SGT theory for surface tension calculations.
+
+        Parameters
+        ----------
+        T : float
+            absolute temperature [K]
+
+        Returns
+        -------
+        ci: float
+            influence parameters [J m5 mol-2]
+        '''
+
+        return np.polyval(self.cii, T)
+
     def sgt_adim(self, T):
         '''
         sgt_adim(T)
@@ -1046,19 +1066,21 @@ class saftgammamie_pure():
             factor to obtain dimentionless distance  (Amstrong -> m)
         '''
 
-        Tfactor = 1
-        Pfactor = 1
-        rofactor = 1
-        tenfactor = np.sqrt(self.cii) * 1000  # To give tension in mN/m
+        cii = self.ci(T)  # computing temperature dependent cii
+
+        Tfactor = 1.
+        Pfactor = 1.
+        rofactor = 1.
+        tenfactor = np.sqrt(cii) * 1000  # To give tension in mN/m
         zfactor = 10**-10
 
         return Tfactor, Pfactor, rofactor, tenfactor, zfactor
 
     def sgt_adim_fit(self, T):
 
-        Tfactor = 1
-        Pfactor = 1
-        rofactor = 1
+        Tfactor = 1.
+        Pfactor = 1.
+        rofactor = 1.
         tenfactor = 1. * 1000  # To give tension in mN/m
 
         return Tfactor, Pfactor, rofactor, tenfactor

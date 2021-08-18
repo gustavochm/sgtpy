@@ -3,7 +3,7 @@ import numpy as np
 from ..math import gauss
 
 
-def fit_cii(tension, Tsat, Psat, rhol, rhov, eos, n=100):
+def fit_cii(tension, Tsat, Psat, rhol, rhov, eos, n=100, deg=0):
     """
     fit_cii
     Optimize influence parameter for SGT for pure componentes
@@ -23,6 +23,8 @@ def fit_cii(tension, Tsat, Psat, rhol, rhov, eos, n=100):
         Computed vapor density [mol/m3]
     eos : object
         created from pure fluid and saftvrmie function
+    deg : int
+        degree of the influence parameter polynomial
 
     Returns
     -------
@@ -52,4 +54,5 @@ def fit_cii(tension, Tsat, Psat, rhol, rhov, eos, n=100):
         tena[i] *= tenfactor
 
     cii0 = (tension/tena)**2
-    return np.mean(cii0)
+    cii = np.polyfit(Tsat, cii0, deg)
+    return cii
