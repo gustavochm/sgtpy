@@ -199,15 +199,23 @@ class saftvrmie_mix():
         self.sigmaij3 = self.sigmaij**3
         # Eq A51
 
-        if hasattr(mixture, 'KIJsaft'):
-            kij = mixture.KIJsaft
-        else:
-            kij = np.zeros([mixture.nc, mixture.nc])
         self.epsij = np.multiply.outer(sigma3, sigma3)
         self.epsij *= np.multiply.outer(self.eps, self.eps)
         self.epsij **= 0.5
         self.epsij /= self.sigmaij3
-        self.epsij *= (1-kij)
+        '''
+        if hasattr(mixture, 'KIJsaft'):
+            kij0 = mixture.KIJ0saft
+        else:
+            kij0 = np.zeros([mixture.nc, mixture.nc])
+        # self.epsij *= (1-kij)
+        '''
+
+        # kij matrix: kij = kij0 + kij1 T + kij2 T^2 + kij3 / T
+        self.KIJ0saft = mixture.KIJ0saft
+        self.KIJ1saft = mixture.KIJ1saft
+        self.KIJ2saft = mixture.KIJ2saft
+        self.KIJ3saft = mixture.KIJ3saft
 
         # Eq A48
         self.lrij = np.sqrt(np.multiply.outer(self.lr-3., self.lr-3.)) + 3
@@ -281,11 +289,18 @@ class saftvrmie_mix():
 
         # association config
         self.eABij = np.sqrt(np.multiply.outer(mixture.eAB, mixture.eAB))
+        # lij matrix: lij = lij0 + lij1 T + lij2 T^2 + lij3 / T
+        self.LIJ0saft = mixture.LIJ0saft
+        self.LIJ1saft = mixture.LIJ1saft
+        self.LIJ2saft = mixture.LIJ2saft
+        self.LIJ3saft = mixture.LIJ3saft
+        '''
         if hasattr(mixture, 'LIJsaft'):
             lij = mixture.LIJsaft
         else:
             lij = np.zeros([mixture.nc, mixture.nc])
         self.eABij *= (1.-lij)
+        '''
         self.rcij = np.add.outer(mixture.rc, mixture.rc)/2
         self.rdij = np.add.outer(mixture.rd, mixture.rd)/2
 
@@ -339,7 +354,55 @@ class saftvrmie_mix():
 
         self.cii = mixture.cii
         # self.cij = np.sqrt(np.outer(self.cii, self.cii))
-        self.beta = np.zeros([self.nc, self.nc])
+        # self.beta = np.zeros([self.nc, self.nc])
+        self.beta0 = np.zeros([self.nc, self.nc])
+        self.beta1 = np.zeros([self.nc, self.nc])
+        self.beta2 = np.zeros([self.nc, self.nc])
+        self.beta3 = np.zeros([self.nc, self.nc])
+
+    def set_induced_asso(self, selfasso, inducedasso, rcij, eABij=None):
+        r"""
+        This method modifies the eos.rcij and eos.eABij attributes to set
+        induced association (solvation). You need to provide the fitted rcij
+        distance in Amstrong (used to compute the association volume).
+        If no induced association energy is supplied, by default the half of
+        the self-association energy of the self-associative component is used.
+
+        Parameters
+        ----------
+        selfasso : int
+            index of  self associating component.
+        inducedasso : int
+            index of induced associating component.
+        rcij : float
+            rcij distance (fitted) [Amstrong]
+        eABij : float, optional
+            cross-association energy [K]. Default to eAB(self-associating)/2.
+
+        """
+        type_self = type(selfasso) == int
+        typej_ind = type(inducedasso) == int
+
+        nc = self.nc
+        nc_self = 0 <= selfasso <= (nc - 1)
+        nc_ind = 0 <= inducedasso <= (nc - 1)
+
+        self_induced = selfasso != inducedasso
+
+        if (not nc_self) or (not nc_ind):
+            raise Exception('Index selfasso or inducedasso bigger than (nc-1)')
+        if not self_induced:
+            raise Exception('Cannot set induced association for selfasso=inducedasso')
+
+        if type_self and typej_ind and nc_self and nc_ind:
+            self.rcij[selfasso, inducedasso] = rcij * 1e-10  # rcij in m
+            self.rcij[inducedasso, selfasso] = rcij * 1e-10  # rcij in m
+            if eABij is None:
+                self.eABij[selfasso, inducedasso] = self.eABij[selfasso, selfasso] / 2
+                self.eABij[inducedasso, selfasso] = self.eABij[selfasso, selfasso] / 2
+            else:
+                self.eABij[selfasso, inducedasso] = eABij * kb  # eABij in J
+                self.eABij[inducedasso, selfasso] = eABij * kb  # eABij in J
 
     def cii_correlation(self, overwrite=False):
         """
@@ -488,8 +551,14 @@ class saftvrmie_mix():
         J_lar = J_lam(x0, self.larij)
         J_lambdasij = (J_la, J_lr, J_2la, J_2lr, J_lar)
 
+        # computing temperature dependent kij and epsij
+        kij = self.KIJ0saft + self.KIJ1saft*T + self.KIJ2saft*T**2
+        kij += self.KIJ3saft/T
+        epsij = self.epsij*(1.-kij)
+
         # Monomer necessary terms
-        a1vdw_cteij = -12 * self.epsij * dij3
+        # a1vdw_cteij = -12 * self.epsij * dij3
+        a1vdw_cteij = -12 * epsij * dij3
 
         a1vdw_laij = a1vdw_cteij / (self.laij - 3)
         a1vdw_lrij = a1vdw_cteij / (self.lrij - 3)
@@ -506,11 +575,16 @@ class saftvrmie_mix():
 
         beps = beta * self.eps
         beps2 = beps**2
-
         # tetha = np.exp(beta * self.eps) - 1.
         tetha = np.exp(beps) - 1.
+
+        # computing temperature depedent lij and epsABij
+        lij = self.LIJ0saft + self.LIJ1saft*T + self.LIJ2saft*T**2
+        lij += self.LIJ3saft/T
+        eABij = self.eABij*(1.-lij)
         # For associating mixtures
-        Fab = np.exp(beta * self.eABij) - 1.
+        # Fab = np.exp(beta * self.eABij) - 1.
+        Fab = np.exp(beta * eABij) - 1.
         aux_dii = np.multiply.outer(dii, dii)/np.add.outer(dii, dii)
         aux_dii2 = aux_dii**2
         dij2 = dij**2
@@ -532,9 +606,10 @@ class saftvrmie_mix():
 
         # For Polar mixtures
         epsa = beps
-        epsija = self.epsij * beta
+        # epsija = self.epsij * beta
+        epsija = epsij * beta
 
-        temp_aux = [beta, beta2, beta3, dii, dij, x0, x0i, di03, dij3,
+        temp_aux = [beta, beta2, beta3, epsij, dii, dij, x0, x0i, di03, dij3,
                     I_lambdasij, J_lambdasij, a1vdw_cteij, a1vdwij,
                     beps, beps2, a1vdw_cte, x0i_matrix, tetha,
                     x0_a1, x0_a2, x0_g1, x0_g2, x0_a1ii, x0_a2ii,
@@ -1609,23 +1684,137 @@ class saftvrmie_mix():
         zfactor = 10**-10 * np.sqrt(RT / cii0)
         return Tfactor, Pfactor, rofactor, tenfactor, zfactor
 
-    def beta_sgt(self, beta):
+    def beta_sgt(self, beta0, beta1=None, beta2=None, beta3=None):
         r"""
         beta_sgt(beta)
 
         Method that adds beta correction for cross influence parameters used
-        in SGT.
+        in SGT. The beta correction is computed as follows:
+
+        .. math::
+            \beta_{ij} =  \beta_{ij,0} + \beta_{ij,1} \cdot T +  \beta_{ij,2} \cdot T^2 + \frac{\beta_{ij,3}}{T}
+
+        Parameters
+        ----------
+        beta0 : array_like
+            beta0 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [Adim]
+        beta1 : array_like, optional
+            beta1 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [1/K].
+            If None, then a zero matrix is assumed.
+        beta2 : array_like, optional
+            beta2 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [1/K^2].
+            If None, then a zero matrix is assumed.
+        beta3 : array_like, optional
+            beta3 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [K]
+            If None, then a zero matrix is assumed.
 
         """
         nc = self.nc
-        Beta = np.asarray(beta)
-        shape = Beta.shape
+
+        Beta0 = np.asarray(beta0)
+        shape = Beta0.shape
         isSquare = shape == (nc, nc)
-        isSymmetric = np.allclose(Beta, Beta.T)
-        if isSquare and isSymmetric:
-            self.beta = Beta
+        isSymmetric = np.allclose(Beta0, Beta0.T)
+        diagZero = np.all(np.diagonal(Beta0) == 0.)
+        if isSquare and isSymmetric and diagZero:
+            self.beta0 = Beta0
         else:
-            raise Exception('beta matrix is not square or symmetric')
+            raise Exception('beta0 matrix is not square, symmetric or diagonal==0')
+
+        if beta1 is None:
+            Beta1 = np.zeros([nc, nc])
+            self.beta1 = Beta1
+        else:
+            Beta1 = np.asarray(beta1)
+            shape = Beta1.shape
+            isSquare = shape == (nc, nc)
+            isSymmetric = np.allclose(Beta1, Beta1.T)
+            diagZero = np.all(np.diagonal(Beta1) == 0.)
+            if isSquare and isSymmetric and diagZero:
+                self.beta1 = Beta1
+            else:
+                raise Exception('beta1 matrix is not square, symmetric or diagonal==0')
+        if beta2 is None:
+            Beta2 = np.zeros([nc, nc])
+            self.beta2 = Beta2
+        else:
+            Beta2 = np.asarray(beta2)
+            shape = Beta2.shape
+            isSquare = shape == (nc, nc)
+            isSymmetric = np.allclose(Beta2, Beta2.T)
+            diagZero = np.all(np.diagonal(Beta2) == 0.)
+            if isSquare and isSymmetric and diagZero:
+                self.beta2 = Beta2
+            else:
+                raise Exception('beta2 matrix is not square, symmetric or diagonal==0')
+
+        if beta3 is None:
+            Beta3 = np.zeros([nc, nc])
+            self.beta3 = Beta3
+        else:
+            Beta3 = np.asarray(beta3)
+            shape = Beta3.shape
+            isSquare = shape == (nc, nc)
+            isSymmetric = np.allclose(Beta3, Beta3.T)
+            diagZero = np.all(np.diagonal(Beta3) == 0.)
+            if isSquare and isSymmetric and diagZero:
+                self.beta3 = Beta3
+            else:
+                raise Exception('beta3 matrix is not square, symmetric or diagonal==0')
+
+    def set_betaijsgt(self, i, j, beta0, beta1=0., beta2=0., beta3=0.):
+        r"""
+        set_betaijsgt(i,j, beta0, beta1, beta2, beta3)
+
+        Method that sets the betaij correction for cross influence parameter
+        between component i and j.
+        The beta correction is computed as follows:
+
+        .. math::
+            \beta_{ij} =  \beta_{ij,0} + \beta_{ij,1} \cdot T +  \beta_{ij,2} \cdot T^2 + \frac{\beta_{ij,3}}{T}
+
+        Parameters
+        ----------
+        i : int
+            index of component i.
+        j : int
+            index of component j.
+        beta0 : float
+            beta0 value between component i and j [Adim]
+        beta1 : float, optional
+            beta1 value between component i and j [1/K]. Default to zero.
+        beta2 : float, optional
+            beta2 value between component i and j [1/K^2]. Default to zero.
+        beta3 : float, optional
+            beta3 value between component i and j [K]. Default to zero.
+
+        """
+        typei = type(i) == int
+        typej = type(j) == int
+
+        nc = self.nc
+        nc_i = 0 <= i <= (nc - 1)
+        nc_j = 0 <= j <= (nc - 1)
+
+        i_j = i != j
+
+        if (not nc_i) or (not nc_j):
+            raise Exception('Index i or j bigger than (nc-1)')
+        if not i_j:
+            raise Exception('Cannot set betaij for i=j')
+
+        if typei and typej and nc_i and nc_j and i_j:
+            self.beta0[i, j] = beta0
+            self.beta0[j, i] = beta0
+
+            self.beta1[i, j] = beta1
+            self.beta1[j, i] = beta1
+
+            self.beta2[i, j] = beta2
+            self.beta2[j, i] = beta2
+
+            self.beta3[i, j] = beta3
+            self.beta3[j, i] = beta3
 
     def ci(self, T):
         """
@@ -1648,7 +1837,10 @@ class saftvrmie_mix():
         for i in range(n):
             ci[i] = np.polyval(self.cii[i], T)
         cij = np.sqrt(np.outer(ci, ci))
-        cij *= (1 - self.beta)
+
+        beta = self.beta0 + self.beta1*T + self.beta2*T**2 + self.beta3/T
+
+        cij *= (1 - beta)
         return cij
 
     def EntropyR(self, x, T, P, state, v0=None, Xass0=None, T_step=0.1):

@@ -349,7 +349,11 @@ class saftgammamie_mix():
         # for SGT calculation
         self.cii = mixture.cii
         # self.cij = np.sqrt(np.outer(self.cii, self.cii))
-        self.beta = np.zeros([self.nc, self.nc])
+        # self.beta = np.zeros([self.nc, self.nc])
+        self.beta0 = np.zeros([self.nc, self.nc])
+        self.beta1 = np.zeros([self.nc, self.nc])
+        self.beta2 = np.zeros([self.nc, self.nc])
+        self.beta3 = np.zeros([self.nc, self.nc])
 
         self.secondorder = False
         self.secondordersgt = True
@@ -1548,23 +1552,137 @@ class saftgammamie_mix():
 
         return Tfactor, Pfactor, rofactor, tenfactor, zfactor
 
-    def beta_sgt(self, beta):
+    def beta_sgt(self, beta0, beta1=None, beta2=None, beta3=None):
         r"""
         beta_sgt(beta)
 
         Method that adds beta correction for cross influence parameters used
-        in SGT.
+        in SGT. The beta correction is computed as follows:
+
+        .. math::
+            \beta_{ij} =  \beta_{ij,0} + \beta_{ij,1} \cdot T +  \beta_{ij,2} \cdot T^2 + \frac{\beta_{ij,3}}{T}
+
+        Parameters
+        ----------
+        beta0 : array_like
+            beta0 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [Adim]
+        beta1 : array_like, optional
+            beta1 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [1/K].
+            If None, then a zero matrix is assumed.
+        beta2 : array_like, optional
+            beta2 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [1/K^2].
+            If None, then a zero matrix is assumed.
+        beta3 : array_like, optional
+            beta3 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [K]
+            If None, then a zero matrix is assumed.
 
         """
         nc = self.nc
-        Beta = np.asarray(beta)
-        shape = Beta.shape
+
+        Beta0 = np.asarray(beta0)
+        shape = Beta0.shape
         isSquare = shape == (nc, nc)
-        isSymmetric = np.allclose(Beta, Beta.T)
-        if isSquare and isSymmetric:
-            self.beta = Beta
+        isSymmetric = np.allclose(Beta0, Beta0.T)
+        diagZero = np.all(np.diagonal(Beta0) == 0.)
+        if isSquare and isSymmetric and diagZero:
+            self.beta0 = Beta0
         else:
-            raise Exception('beta matrix is not square or symmetric')
+            raise Exception('beta0 matrix is not square, symmetric or diagonal==0')
+
+        if beta1 is None:
+            Beta1 = np.zeros([nc, nc])
+            self.beta1 = Beta1
+        else:
+            Beta1 = np.asarray(beta1)
+            shape = Beta1.shape
+            isSquare = shape == (nc, nc)
+            isSymmetric = np.allclose(Beta1, Beta1.T)
+            diagZero = np.all(np.diagonal(Beta1) == 0.)
+            if isSquare and isSymmetric and diagZero:
+                self.beta1 = Beta1
+            else:
+                raise Exception('beta1 matrix is not square, symmetric or diagonal==0')
+        if beta2 is None:
+            Beta2 = np.zeros([nc, nc])
+            self.beta2 = Beta2
+        else:
+            Beta2 = np.asarray(beta2)
+            shape = Beta2.shape
+            isSquare = shape == (nc, nc)
+            isSymmetric = np.allclose(Beta2, Beta2.T)
+            diagZero = np.all(np.diagonal(Beta2) == 0.)
+            if isSquare and isSymmetric and diagZero:
+                self.beta2 = Beta2
+            else:
+                raise Exception('beta2 matrix is not square, symmetric or diagonal==0')
+
+        if beta3 is None:
+            Beta3 = np.zeros([nc, nc])
+            self.beta3 = Beta3
+        else:
+            Beta3 = np.asarray(beta3)
+            shape = Beta3.shape
+            isSquare = shape == (nc, nc)
+            isSymmetric = np.allclose(Beta3, Beta3.T)
+            diagZero = np.all(np.diagonal(Beta3) == 0.)
+            if isSquare and isSymmetric and diagZero:
+                self.beta3 = Beta3
+            else:
+                raise Exception('beta3 matrix is not square, symmetric or diagonal==0')
+
+    def set_betaijsgt(self, i, j, beta0, beta1=0., beta2=0., beta3=0.):
+        r"""
+        set_betaijsgt(i,j, beta0, beta1, beta2, beta3)
+
+        Method that set betaij correction cross influence parameter between
+        component i and j.
+        The beta correction is computed as follows:
+
+        .. math::
+            \beta_{ij} =  \beta_{ij,0} + \beta_{ij,1} \cdot T +  \beta_{ij,2} \cdot T^2 + \frac{\beta_{ij,3}}{T}
+
+        Parameters
+        ----------
+        i : int
+            index of component i.
+        j : int
+            index of component j.
+        beta0 : float
+            beta0 value between component i and j [Adim]
+        beta1 : float, optional
+            beta1 value between component i and j [1/K]. Default to zero.
+        beta2 : float, optional
+            beta2 value between component i and j [1/K^2]. Default to zero.
+        beta3 : float, optional
+            beta3 value between component i and j [K]. Default to zero.
+
+        """
+        typei = type(i) == int
+        typej = type(j) == int
+
+        nc = self.nc
+        nc_i = 0 <= i <= (nc - 1)
+        nc_j = 0 <= j <= (nc - 1)
+
+        i_j = i != j
+
+        if (not nc_i) or (not nc_j):
+            raise Exception('Index i or j bigger than (nc-1)')
+        if not i_j:
+            raise Exception('Cannot set betaij for i=j')
+
+        if typei and typej and nc_i and nc_j and i_j:
+            self.beta0[i, j] = beta0
+            self.beta0[j, i] = beta0
+
+            self.beta1[i, j] = beta1
+            self.beta1[j, i] = beta1
+
+            self.beta2[i, j] = beta2
+            self.beta2[j, i] = beta2
+
+            self.beta3[i, j] = beta3
+            self.beta3[j, i] = beta3
 
     def ci(self, T):
         """
@@ -1587,7 +1705,10 @@ class saftgammamie_mix():
         for i in range(n):
             ci[i] = np.polyval(self.cii[i], T)
         cij = np.sqrt(np.outer(ci, ci))
-        cij *= (1 - self.beta)
+
+        beta = self.beta0 + self.beta1*T + self.beta2*T**2 + self.beta3/T
+
+        cij *= (1 - beta)
         return cij
 
     def EntropyR(self, x, T, P, state, v0=None, Xass0=None, T_step=0.1):

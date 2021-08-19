@@ -406,6 +406,18 @@ class mixture(object):
         self.mupol = [component1.mupol, component2.mupol]
         self.npol = [component1.npol, component2.npol]
 
+        ## kij matrix
+        self.KIJ0saft = np.zeros([self.nc, self.nc])
+        self.KIJ1saft = np.zeros([self.nc, self.nc])
+        self.KIJ2saft = np.zeros([self.nc, self.nc])
+        self.KIJ3saft = np.zeros([self.nc, self.nc])
+
+        ## lij matrix
+        self.LIJ0saft = np.zeros([self.nc, self.nc])
+        self.LIJ1saft = np.zeros([self.nc, self.nc])
+        self.LIJ2saft = np.zeros([self.nc, self.nc])
+        self.LIJ3saft = np.zeros([self.nc, self.nc])
+
     def add_component(self, component):
         """
         add_component(component)
@@ -443,6 +455,18 @@ class mixture(object):
 
         self.nc += 1
 
+        # kij matrix
+        self.KIJ0saft = np.zeros([self.nc, self.nc])
+        self.KIJ1saft = np.zeros([self.nc, self.nc])
+        self.KIJ2saft = np.zeros([self.nc, self.nc])
+        self.KIJ3saft = np.zeros([self.nc, self.nc])
+
+        # lij matrix
+        self.LIJ0saft = np.zeros([self.nc, self.nc])
+        self.LIJ1saft = np.zeros([self.nc, self.nc])
+        self.LIJ2saft = np.zeros([self.nc, self.nc])
+        self.LIJ3saft = np.zeros([self.nc, self.nc])
+
     def __add__(self, new_component):
         if isinstance(new_component, component):
             self.add_component(new_component)
@@ -450,7 +474,7 @@ class mixture(object):
             raise Exception('You can only add components objects to an existing mixture')
         return self
 
-    def kij_saft(self, kij):
+    def kij_saft(self, kij0, kij1=None, kij2=None, kij3=None):
         r"""
         kij_saft(kij)
 
@@ -459,20 +483,87 @@ class mixture(object):
         .. math::
             \epsilon_{ij} = (1-k_{ij}) \frac{\sqrt{\sigma_i^3 \sigma_j^3}}{\sigma_{ij}^3} \sqrt{\epsilon_i \epsilon_j}
 
+        kij correction is computed as follows:
+        .. math::
+            k_{ij} = k_{ij,0} + k_{ij,1} \cdot T +  k_{ij,2} \cdot T^2 + k_{ij,3} / T
+
+        Parameters
+        ----------
+        kij0 : array_like
+            kij0 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [Adim]
+        kij1 : array_like, optional
+            kij1 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [1/K].
+            If None, then a zero matrix is assumed.
+        kij2 : array_like, optional
+            kij2 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [1/K^2].
+            If None, then a zero matrix is assumed.
+        kij3 : array_like, optional
+            kij3 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [K].
+            If None, then a zero matrix is assumed.
+
         """
         nc = self.nc
-        KIJ = np.asarray(kij)
-        shape = KIJ.shape
+        KIJ0 = np.asarray(kij0)
+        shape = KIJ0.shape
 
         isSquare = shape == (nc, nc)
-        isSymmetric = np.allclose(KIJ, KIJ.T)
+        isSymmetric = np.allclose(KIJ0, KIJ0.T)
+        diagZero = np.all(np.diagonal(KIJ0) == 0.)
 
-        if isSquare and isSymmetric:
-            self.KIJsaft = kij
+        if isSquare and isSymmetric and diagZero:
+            self.KIJ0saft = KIJ0
         else:
-            raise Exception('kij matrix is not square or symmetric')
+            raise Exception('kij0 matrix is not square, symmetric or diagonal==0')
 
-    def lij_saft(self, lij):
+        if kij1 is None:
+            KIJ1 = np.zeros_like(kij0)
+            self.KIJ1saft = KIJ1
+        else:
+            KIJ1 = np.asarray(kij1)
+            shape = KIJ1.shape
+
+            isSquare = shape == (nc, nc)
+            isSymmetric = np.allclose(KIJ1, KIJ1.T)
+            diagZero = np.all(np.diagonal(KIJ1) == 0.)
+
+            if isSquare and isSymmetric and diagZero:
+                self.KIJ1saft = KIJ1
+            else:
+                raise Exception('kij1 matrix is not square, symmetric or diagonal==0')
+
+        if kij2 is None:
+            KIJ2 = np.zeros_like(kij0)
+            self.KIJ2saft = KIJ2
+        else:
+            KIJ2 = np.asarray(kij2)
+            shape = KIJ2.shape
+
+            isSquare = shape == (nc, nc)
+            isSymmetric = np.allclose(KIJ2, KIJ2.T)
+            diagZero = np.all(np.diagonal(KIJ2) == 0.)
+
+            if isSquare and isSymmetric and diagZero:
+                self.KIJ2saft = KIJ2
+            else:
+                raise Exception('kij2 matrix is not square, symmetric or diagonal==0')
+
+        if kij3 is None:
+            KIJ3 = np.zeros_like(kij0)
+            self.KIJ3saft = KIJ3
+        else:
+            KIJ3 = np.asarray(kij3)
+            shape = KIJ3.shape
+
+            isSquare = shape == (nc, nc)
+            isSymmetric = np.allclose(KIJ3, KIJ3.T)
+            diagZero = np.all(np.diagonal(KIJ3) == 0.)
+
+            if isSquare and isSymmetric and diagZero:
+                self.KIJ3saft = KIJ3
+            else:
+                raise Exception('kij3 matrix is not square, symmetric or diagonal==0')
+
+    def lij_saft(self, lij0, lij1=None, lij2=None, lij3=None):
         r"""
         lij_saft(lij)
 
@@ -481,19 +572,202 @@ class mixture(object):
         .. math::
             \epsilon_{ij}^{AB} = (1 - l_{ij})\sqrt{\epsilon_{ii}^{AB} \epsilon_{jj}^{AB}}
 
+        lij correction is computed as follows:
+        .. math::
+            l_{ij} = l_{ij,0} + l_{ij,1} \cdot T +  l_{ij,2} \cdot T^2 + l_{ij,3} / T
+
+        Parameters
+        ----------
+        lij0 : array_like
+            lij0 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [Adim]
+        lij1 : array_like, optional
+            lij1 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [1/K].
+            If None, then a zero matrix is assumed.
+        lij2 : array_like, optional
+            lij2 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [1/K^2].
+            If None, then a zero matrix is assumed.
+        lij3 : array_like, optional
+            lij3 matrix (Symmetric, Diagonal==0, shape=(nc, nc)) [K]
+            If None, then a zero matrix is assumed.
+
         """
 
         nc = self.nc
-        LIJ = np.asarray(lij)
-        shape = LIJ.shape
+        LIJ0 = np.asarray(lij0)
+        shape = LIJ0.shape
 
         isSquare = shape == (nc, nc)
-        isSymmetric = np.allclose(LIJ, LIJ.T)
+        isSymmetric = np.allclose(LIJ0, LIJ0.T)
+        diagZero = np.all(np.diagonal(LIJ0) == 0.)
 
-        if isSquare and isSymmetric:
-            self.LIJsaft = lij
+        if isSquare and isSymmetric and diagZero:
+            self.LIJ0saft = LIJ0
         else:
-            raise Exception('kij matrix is not square or symmetric')
+            raise Exception('lij0 matrix is not square, symmetric or digonal==0')
+
+        if lij1 is None:
+            LIJ1 = np.zeros_like(lij0)
+            self.LIJ1saft = LIJ1
+        else:
+            LIJ1 = np.asarray(lij1)
+            shape = LIJ1.shape
+
+            isSquare = shape == (nc, nc)
+            isSymmetric = np.allclose(LIJ1, LIJ1.T)
+            diagZero = np.all(np.diagonal(LIJ1) == 0.)
+
+            if isSquare and isSymmetric and diagZero:
+                self.LIJ1saft = LIJ1
+            else:
+                raise Exception('lij1 matrix is not square, symmetric or diagonal==0')
+
+        if lij2 is None:
+            LIJ2 = np.zeros_like(lij0)
+            self.LIJ2saft = LIJ2
+        else:
+            LIJ2 = np.asarray(lij2)
+            shape = LIJ2.shape
+
+            isSquare = shape == (nc, nc)
+            isSymmetric = np.allclose(LIJ2, LIJ2.T)
+            diagZero = np.all(np.diagonal(LIJ2) == 0.)
+
+            if isSquare and isSymmetric and diagZero:
+                self.LIJ2saft = LIJ2
+            else:
+                raise Exception('lij2 matrix is not square, symmetric or diagonal==0')
+
+        if lij3 is None:
+            LIJ3 = np.zeros_like(lij0)
+            self.LIJ3saft = LIJ3
+        else:
+            LIJ3 = np.asarray(lij3)
+            shape = LIJ3.shape
+
+            isSquare = shape == (nc, nc)
+            isSymmetric = np.allclose(LIJ3, LIJ3.T)
+            diagZero = np.all(np.diagonal(LIJ3) == 0.)
+
+            if isSquare and isSymmetric and diagZero:
+                self.LIJ3saft = LIJ3
+            else:
+                raise Exception('lij3 matrix is not square, symmetric or diagonal==0')
+
+    def set_kijsaft(self, i, j, kij0, kij1=0., kij2=0., kij3=0.):
+        r"""
+        set_kijsaft(i,j, kij0, kij1, kij2, kij3)
+
+        Method that sets the kij correction for Mie potential well depth
+        between component i and component j.
+
+        .. math::
+            \epsilon_{ij} = (1-k_{ij}) \frac{\sqrt{\sigma_i^3 \sigma_j^3}}{\sigma_{ij}^3} \sqrt{\epsilon_i \epsilon_j}
+
+        kij correction is computed as follows:
+        .. math::
+            k_{ij} = k_{ij,0} + k_{ij,1} \cdot T +  k_{ij,2} \cdot T^2 + k_{ij,3} / T
+
+        Parameters
+        ----------
+        i : int
+            index of component i.
+        j : int
+            index of component j.
+        kij0 : float
+            kij0 value between component i and j [Adim]
+        kij1 : float, optional
+            kij1 value between component i and j [1/K]. Default to zero.
+        kij2 : float, optional
+            kij2 value between component i and j [1/K^2]. Default to zero.
+        kij3 : float, optional
+            kij3 value between component i and j [K]. Default to zero.
+
+        """
+
+        typei = type(i) == int
+        typej = type(j) == int
+
+        nc = self.nc
+        nc_i = 0 <= i <= (nc - 1)
+        nc_j = 0 <= j <= (nc - 1)
+
+        i_j = i != j
+
+        if (not nc_i) or (not nc_j):
+            raise Exception('Index i or j bigger than (nc-1)')
+        if not i_j:
+            raise Exception('Cannot set kij for i=j')
+
+        if typei and typej and nc_i and nc_j and i_j:
+            self.KIJ0saft[i, j] = kij0
+            self.KIJ0saft[j, i] = kij0
+
+            self.KIJ1saft[i, j] = kij1
+            self.KIJ1saft[j, i] = kij1
+
+            self.KIJ2saft[i, j] = kij2
+            self.KIJ2saft[j, i] = kij2
+
+            self.KIJ3saft[i, j] = kij3
+            self.KIJ3saft[j, i] = kij3
+
+    def set_lijsaft(self, i, j, lij0, lij1=0., lij2=0., lij3=0.):
+        r"""
+        set_lijsaft(i,j, lij0, lij1, lij2, lij3)
+
+        Method that sets the lij correction for cross-association energy
+        between component i and component j.
+
+        .. math::
+            \epsilon_{ij}^{AB} = (1 - l_{ij})\sqrt{\epsilon_{ii}^{AB} \epsilon_{jj}^{AB}}
+
+        lij correction is computed as follows:
+        .. math::
+            l_{ij} = l_{ij,0} + l_{ij,1} \cdot T +  l_{ij,2} \cdot T^2 + l_{ij,3} / T
+
+        Parameters
+        ----------
+        i : int
+            index of component i.
+        j : int
+            index of component j.
+        lij0 : float
+            lij0 value between component i and j [Adim]
+        lij1 : float, optional
+            lij1 value between component i and j [1/K]. Default to zero.
+        lij2 : float, optional
+            lij2 value between component i and j [1/K^2]. Default to zero.
+        lij3 : float, optional
+            lij3 value between component i and j [K]. Default to zero.
+
+        """
+
+        typei = type(i) == int
+        typej = type(j) == int
+
+        nc = self.nc
+        nc_i = 0 <= i <= (nc - 1)
+        nc_j = 0 <= j <= (nc - 1)
+
+        i_j = i != j
+
+        if (not nc_i) or (not nc_j):
+            raise Exception('Index i or j bigger than (nc-1)')
+        if not i_j:
+            raise Exception('Cannot set lij for i=j')
+
+        if typei and typej and nc_i and nc_j and i_j:
+            self.LIJ0saft[i, j] = lij0
+            self.LIJ0saft[j, i] = lij0
+
+            self.LIJ1saft[i, j] = lij1
+            self.LIJ1saft[j, i] = lij1
+
+            self.LIJ2saft[i, j] = lij2
+            self.LIJ2saft[j, i] = lij2
+
+            self.LIJ3saft[i, j] = lij3
+            self.LIJ3saft[j, i] = lij3
 
     def ci(self, T):
         """
