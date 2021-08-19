@@ -1,20 +1,22 @@
 =====
-SGTPy
+sgtpy
 =====
 
-What is SGTPy?
+What is sgtpy?
 --------------
 
-SGTPy is an open-source python package of SAFT-VR-Mie SAFT-Gamma-Mie Equations of State (EOS).
-SGTPy allows to work with pure fluids and fluid mixtures, additionally the fluids
+sgtpy is an open-source python package of SAFT-VR-Mie and SAFT-Gamma-Mie Equations of State (EOS).
+sgtpy allows to work with pure fluids and fluid mixtures, additionally the fluids
 can be modeled considering association, cross-association and polar contributions.
-SGTPy was built on top of phasepy's phase equilibrium and Square
+sgtpy was built on top of phasepy's phase equilibrium and Square
 Gradient Theory (SGT) functions. These functions were updated to speed-up
 calculations of associative mixtures.
 
-SGTPy relies on Numpy, SciPy and PhasePy.
+sgtpy relies on numpy, scipy and phasepy.
 
 **New in v0.0.12: Group contribution SAFT-Gamma-Mie**
+
+**Note in v0.0.13:** Due to PEP-8 standard's the module name has change from `SGTPy` to `sgtpy`.
 
 
 Installation Prerequisites
@@ -28,13 +30,13 @@ Installation Prerequisites
 Installation
 ------------
 
-Get the latest version of SGTPy from
+Get the latest version of sgtpy from
 https://pypi.python.org/pypi/SGTPy/
 
 
 If you have an installation of Python with pip, simple install it with:
 
-    $ pip install SGTPy
+    $ pip install sgtpy
 
 To get the git version, run:
 
@@ -52,14 +54,14 @@ SGTPy's documentation is available on the web (under development):
 Getting Started
 ---------------
 
-SGTPy easily allows you to perform phase equilibria and interfacial properties
-calculations using SAFT-VR-Mie EoS. First, components are defined with their
+sgtpy easily allows you to perform phase equilibria and interfacial properties
+calculations using SAFT-VR-Mie or SAFT-gamma-Mie EoS. First, components are defined with their
 molecular parameters, then a mixture can be created with them.
 
 .. code-block:: python
 
       >>> import numpy as np
-      >>> from SGTPy import component, mixture, saftvrmie
+      >>> from sgtpy import component, mixture, saftvrmie
       >>> ethanol = component('ethanol2C', ms=1.7728, sigma=3.5592 , eps=224.50,
                     lambda_r=11.319, lambda_a=6., eAB=3018.05, rcAB=0.3547,
                     rdAB=0.4, sites=[1,0,1], cii=5.3141080872882285e-20)
@@ -77,7 +79,7 @@ The eos object can be used to compute phase equilibria.
 
 .. code-block:: python
 
-      >>> from SGTPy.equilibrium import bubblePy
+      >>> from sgtpy.equilibrium import bubblePy
       >>> # computing bubble point
       >>> T = 298.15 # K
       >>> x = np.array([0.3, 0.7])
@@ -91,7 +93,7 @@ the mixture using SGT.
 
 .. code-block:: python
 
-      >>> from SGTPy.sgt import sgt_mix
+      >>> from sgtpy.sgt import sgt_mix
       >>> # reading solution object
       >>> y, P = sol.Y, sol.P
       >>> vl, vv = sol.v1, sol.v2
@@ -137,6 +139,6 @@ Erich A. Müller and Gustavo Chaparro. J. Chem. Inf. Model., 2021,
 See ``LICENSE.txt`` for information on the terms & conditions for usage
 of this software, and a DISCLAIMER OF ALL WARRANTIES.
 
-Although not required by the SGTPy license, if it is convenient for you,
-please cite SGTPy if used in your work. Please also consider contributing
+Although not required by the sgtpy license, if it is convenient for you,
+please cite sgtpy if used in your work. Please also consider contributing
 any changes you make back, and benefit the community.
