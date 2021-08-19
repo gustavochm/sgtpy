@@ -26,8 +26,6 @@ def saftvrmie(mix_or_component):
     return eos
 
 
-
-
 def saftgammamie(mix_or_component):
     '''
     Returns SAFT-Gamma-Mie EoS object.
