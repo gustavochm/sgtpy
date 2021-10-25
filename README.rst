@@ -42,9 +42,7 @@ To get the git version, run:
 
     $ git clone https://github.com/gustavochm/sgtpy
 
-**Note for Apple Silicon users:** it is recommended to install python and sgtpy dependencies
- (numpy, scipy, cython, pandas and numba) through conda miniforge, then you can install sgtpy running
- ``pip install sgtpy``.
+**Note for Apple Silicon users:** It is recommended to install python and sgtpy dependencies (numpy, scipy, cython, pandas and numba) through conda miniforge, then you can install sgtpy running ``pip install sgtpy``.
 
 Documentation
 -------------
