@@ -85,8 +85,8 @@ class component(object):
         self.ms = ms
         self.sigma = sigma * 1e-10  # meters
         self.eps = eps * kb  # Joule
-        self.lambda_a = np.asarray(lambda_a)
-        self.lambda_r = np.asarray(lambda_r)
+        self.lambda_a = np.asarray(lambda_a, dtype=float)
+        self.lambda_r = np.asarray(lambda_r, dtype=float)
         self.lambda_ar = self.lambda_r + self.lambda_a
 
         # For ring molecules (see Langmuir 2017, 33, 11518-11529, Table I.)
