@@ -59,6 +59,9 @@ class saftvrmie_pure():
     ----------
     pure : object
         pure component created with component class
+    compute_critical: bool
+        If True the critical point of the fluid will attempt to be computed
+        (it might fail for some fluids).
 
     Attributes
     ----------
@@ -122,7 +125,7 @@ class saftvrmie_pure():
     dOm_aux : computes dOm
     '''
 
-    def __init__(self, pure):
+    def __init__(self, pure, compute_critical=True):
 
         self.pure = pure
         self.Mw = pure.Mw
@@ -220,12 +223,14 @@ class saftvrmie_pure():
 
         # computing critical point
         self.critical = False
-        out = get_critical(self, None, None, method='hybr', full_output=True)
-        if out.success:
-            self.critical = True
-            self.Tc = out.Tc
-            self.Pc = out.Pc
-            self.rhoc = out.rhoc
+        if compute_critical:
+            out = get_critical(self, None, None, method='hybr',
+                               full_output=True)
+            if out.success:
+                self.critical = True
+                self.Tc = out.Tc
+                self.Pc = out.Pc
+                self.rhoc = out.rhoc
 
     def cii_correlation(self, overwrite=False):
         """

@@ -59,6 +59,9 @@ class saftgammamie_pure():
     ----------
     pure : object
         pure component created with component class
+    compute_critical: bool
+        If True the critical point of the fluid will attempt to be computed
+        (it might fail for some fluids).
 
     Attributes
     ----------
@@ -147,7 +150,7 @@ class saftgammamie_pure():
     muad_aux : computes muad
     dOm_aux : computes dOm
     '''
-    def __init__(self, pure):
+    def __init__(self, pure, compute_critical=True):
 
         self.mw_kk = pure.mw_kk
         self.Mw = pure.Mw
@@ -294,15 +297,17 @@ class saftgammamie_pure():
 
         # for SGT calculation
         self.cii = pure.cii
-
+        
         # computing critical point
         self.critical = False
-        out = get_critical(self, None, None, method='hybr', full_output=True)
-        if out.success:
-            self.critical = True
-            self.Tc = out.Tc
-            self.Pc = out.Pc
-            self.rhoc = out.rhoc
+        if compute_critical:
+            out = get_critical(self, None, None, method='hybr',
+                               full_output=True)
+            if out.success:
+                self.critical = True
+                self.Tc = out.Tc
+                self.Pc = out.Pc
+                self.rhoc = out.rhoc
 
     def diameter(self, beta):
         integrer = np.exp(-beta * self.umie)

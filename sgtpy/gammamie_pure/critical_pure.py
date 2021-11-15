@@ -167,7 +167,7 @@ def get_critical(eos, Tc0=None, rhoc0=None, method='hybr', full_output=False):
     """
 
     if Tc0 is None and rhoc0 is None:
-        Tc0, rhoc0 = initial_guess_criticalpure(eos, n=20)
+        Tc0, rhoc0 = initial_guess_criticalpure(eos, n=30)
 
     inc0 = np.array([Tc0, rhoc0])
     sol = root(fobj_crit, inc0, method=method, args=eos)

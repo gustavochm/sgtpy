@@ -5,7 +5,7 @@ from .gammamie_mixtures.saftgammamie_mixture import saftgammamie_mix
 from .gammamie_pure.saftgammamie_pure import saftgammamie_pure
 
 
-def saftvrmie(mix_or_component):
+def saftvrmie(mix_or_component, compute_critical=True):
     '''
     Returns SAFT-VR-Mie EoS object.
 
@@ -13,6 +13,9 @@ def saftvrmie(mix_or_component):
     ----------
     mix_or_component : object
         :class:`SGTPy.mixture` or :class:`SGTPy.component` object
+    compute_critical: bool
+        If True the critical point of the fluid will attempt to be computed
+        (it might fail for some fluids).
     Returns
     -------
     eos : object
@@ -20,13 +23,13 @@ def saftvrmie(mix_or_component):
     '''
     nc = mix_or_component.nc
     if nc == 1:
-        eos = saftvrmie_pure(mix_or_component)
+        eos = saftvrmie_pure(mix_or_component, compute_critical)
     else:
         eos = saftvrmie_mix(mix_or_component)
     return eos
 
 
-def saftgammamie(mix_or_component):
+def saftgammamie(mix_or_component, compute_critical=True):
     '''
     Returns SAFT-Gamma-Mie EoS object.
 
@@ -34,6 +37,9 @@ def saftgammamie(mix_or_component):
     ----------
     mix_or_component : object
         :class:`saftgammamie.mixture` or :class:`saftgammamie.component` object
+    compute_critical: bool
+        If True the critical point of the fluid will attempt to be computed
+        (it might fail for some fluids).
     Returns
     -------
     eos : object
@@ -41,7 +47,7 @@ def saftgammamie(mix_or_component):
     '''
     nc = mix_or_component.nc
     if nc == 1:
-        eos = saftgammamie_pure(mix_or_component)
+        eos = saftgammamie_pure(mix_or_component, compute_critical)
     else:
         eos = saftgammamie_mix(mix_or_component)
     return eos
