@@ -30,7 +30,11 @@ examples/.ipynb_checkpoints/
 *.pyd
 
 #Compiled objects#
-# *.c
+*.c
+
+# C extensions
+*.so
+*.DS_Store
 
 # Packages #
 ############
