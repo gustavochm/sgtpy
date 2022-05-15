@@ -39,10 +39,10 @@ cmdclass.update({'build_ext': build_ext})
 setup(
   name='sgtpy',
   license='MIT',
-  version='0.0.14',
+  version='0.0.15',
   description='SAFT-VR-MIE EOS and SGT',
   author='Gustavo Chaparro Maldonado, Andres Mejia Matallana, Erich A. Muller',
-  author_email='gustavochaparro@udec.cl',
+  author_email='g.chaparro-maldonado21@imperial.ac.uk',
   url='https://github.com/gustavochm/sgtpy',
   download_url='https://github.com/gustavochm/sgtpy.git',
   long_description=open('long_description.rst').read(),
