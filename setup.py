@@ -8,8 +8,10 @@ except ImportError:
 else:
     use_cython = True
 
+"""
 cmdclass = {}
 ext_modules = []
+
 
 if use_cython:
     ext_modules += [Extension('sgtpy.coloc_cy',
@@ -21,8 +23,8 @@ else:
     ext_modules += [Extension('sgtpy.coloc_cy', ['sgtpy/src/coloc_cy.c']),
                     Extension('sgtpy.sgt.cijmix_cy',
                     ['sgtpy/src/cijmix_cy.c'])]
-
 """
+
 cmdclass = {}
 ext_modules = []
 
@@ -32,15 +34,15 @@ ext_modules += [Extension('SGTPy.coloc_cy',
                 Extension('SGTPy.sgt.cijmix_cy',
                           ['SGTPy/src/cijmix_cy.pyx'])]
 cmdclass.update({'build_ext': build_ext})
-"""
+
 
 setup(
   name='sgtpy',
   license='MIT',
-  version='0.0.14',
+  version='0.0.15',
   description='SAFT-VR-MIE EOS and SGT',
   author='Gustavo Chaparro Maldonado, Andres Mejia Matallana, Erich A. Muller',
-  author_email='gustavochaparro@udec.cl',
+  author_email='g.chaparro-maldonado21@imperial.ac.uk',
   url='https://github.com/gustavochm/sgtpy',
   download_url='https://github.com/gustavochm/sgtpy.git',
   long_description=open('long_description.rst').read(),
