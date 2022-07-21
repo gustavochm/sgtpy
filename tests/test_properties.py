@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
-from SGTPy import mixture, component
-from SGTPy import saftvrmie
+from sgtpy import mixture, component
+from sgtpy import saftvrmie
 
 
 def setup(T=298.15):
