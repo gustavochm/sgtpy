@@ -381,6 +381,7 @@ class mixture(object):
 
     def __init__(self, component1, component2):
 
+        self.components = [component1, component2]
         self.names = [component1.name, component2.name]
         self.Tc = [component1.Tc, component2.Tc]
         self.Pc = [component1.Pc, component2.Pc]
@@ -429,6 +430,7 @@ class mixture(object):
         component : object
             pure fluid created with component function
         """
+        self.components.append(component)
         self.names.append(component.name)
         self.Tc.append(component.Tc)
         self.Pc.append(component.Pc)

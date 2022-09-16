@@ -10,6 +10,7 @@ from .ideal import aideal, daideal_drho, d2aideal_drho
 from .ideal import daideal_dx, daideal_dx_drho
 from .density_solver import density_topliss, density_newton
 
+from ..gammamie_pure import saftgammamie_pure
 
 R = kb * Na
 
@@ -166,10 +167,10 @@ class saftgammamie_mix():
     dmuad_aux : computes dmuad
     dOm_aux : computes dOm
     '''
-    def __init__(self, mixture):
+    def __init__(self, mixture, compute_critical=True):
 
         self.nc = mixture.nc
-
+        self.mixture = mixture
         self.mw_kk = mixture.mw_kk
         self.Mw = mixture.Mw
 
@@ -357,6 +358,14 @@ class saftgammamie_mix():
 
         self.secondorder = False
         self.secondordersgt = True
+
+        # creating pure fluid's eos
+        pure_eos = []
+        for i, component in enumerate(self.mixture.components):
+            component.saftgammamie()
+            model = saftgammamie_pure(component, compute_critical=compute_critical)
+            pure_eos.append(model)
+        self.pure_eos = pure_eos
 
     def diameter(self, beta):
         integrer = np.exp(-beta * self.umie)
@@ -2068,3 +2077,78 @@ class saftgammamie_mix():
         w = np.sqrt(w2)
 
         return w
+
+    def get_lnphi_pure(self, T, P, state):
+        """
+        get_lnphi_pure(T, P, state)
+
+        Method that computes the logarithm of the pure component's fugacity
+        coefficient at given state, temperature T and pressure P.
+
+        Parameters
+        ----------
+        T: float
+            absolute temperature [K]
+        P: float
+            pressure [Pa]
+        state : string
+            'L' for liquid phase and 'V' for vapor phase
+
+        Returns
+        -------
+        lnphi_pure: float
+            logarithm of pure component's fugacity coefficient
+        """
+
+        lnphi_pure = np.zeros(self.nc)
+        for i, pure_eos in enumerate(self.pure_eos):
+            lnphi_pure[i], _ = pure_eos.logfug(T, P, state)
+        return lnphi_pure
+    
+    def get_lngamma(self, x, T, P, v0=None, Xass0=None, lnphi_pure=None):
+        """
+        get_lngamma(x, T, P, v0, Xass0)
+
+        Method that computes the activity coefficient of the mixture at given
+        composition x, temperature T and pressure P.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        T: float
+            absolute temperature [K]
+        P: float
+            pressure [Pa]
+        v0: float, optional
+            initial guess for volume root [m^3/mol]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+        lnphi_pure: array, optional
+            logarithm of the pure components's fugacity coefficient.
+            Computed if not provided.
+
+        Returns
+        -------
+        lngamma: float
+            logarithm of activity coefficient model
+        """
+
+
+        if isinstance(x, (float, int)):
+            x = np.array([x, 1.-x])
+        elif not isinstance(x, np.ndarray):
+            x = np.array(x)
+
+        if self.nc > 2 and x.shape[0] < 2:
+            raise ValueError('Please supply the whole molfrac vector for non-binary mixtures')
+
+        lnphi_mix, _ = self.logfugef(x, T, P, 'L', v0=v0, Xass0=Xass0)
+
+        if lnphi_pure is None:
+            lnphi_pure = np.zeros_like(x)
+            for i, pure_eos in enumerate(self.pure_eos):
+                lnphi_pure[i], _ = pure_eos.logfug(T, P, 'L')
+
+        lngamma = lnphi_mix - lnphi_pure
+        return lngamma

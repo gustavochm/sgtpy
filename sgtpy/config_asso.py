@@ -243,11 +243,11 @@ def asso_aux(Nst_kk, sites_kk, groups_index, subgroups, df_asso_kl):
                         indexABij1.append(index0)
                         indexABij2.append(indexf)
 
-    indexABij1 = np.hstack(indexABij1)
-    indexABij2 = np.hstack(indexABij2)
+    indexABij1 = np.hstack([indexABij1])
+    indexABij2 = np.hstack([indexABij2])
 
-    indexAB_id1 = np.hstack(indexAB_id1)
-    indexAB_id2 = np.hstack(indexAB_id2)
+    indexAB_id1 = np.hstack([indexAB_id1])
+    indexAB_id2 = np.hstack([indexAB_id2])
 
     indexAB_id = (indexAB_id1, indexAB_id2)
     indexABij = (indexABij1, indexABij2)

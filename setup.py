@@ -29,10 +29,10 @@ cmdclass = {}
 ext_modules = []
 
 
-ext_modules += [Extension('SGTPy.coloc_cy',
-                          ['SGTPy/src/coloc_cy.pyx']),
-                Extension('SGTPy.sgt.cijmix_cy',
-                          ['SGTPy/src/cijmix_cy.pyx'])]
+ext_modules += [Extension('sgtpy.coloc_cy',
+                          ['sgtpy/src/coloc_cy.pyx']),
+                Extension('sgtpy.sgt.cijmix_cy',
+                          ['sgtpy/src/cijmix_cy.pyx'])]
 cmdclass.update({'build_ext': build_ext})
 
 
