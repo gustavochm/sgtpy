@@ -248,6 +248,12 @@ def asso_aux(Nst_kk, sites_kk, groups_index, subgroups, df_asso_kl):
 
     indexAB_id1 = np.hstack([indexAB_id1])
     indexAB_id2 = np.hstack([indexAB_id2])
+    
+    # make sure association indeces are integers
+    indexABij1 = indexABij1.astype(int)
+    indexABij2 = indexABij2.astype(int)
+    indexAB_id1 = indexAB_id1.astype(int)
+    indexAB_id2 = indexAB_id2.astype(int)
 
     indexAB_id = (indexAB_id1, indexAB_id2)
     indexABij = (indexABij1, indexABij2)
