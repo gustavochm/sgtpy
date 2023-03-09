@@ -21,7 +21,7 @@ def fobj_beta(beta, iftexp, rho1, rho2, T, P, eos):
     return fo
 
 
-def fit_beta(beta0, ExpTension, EquilibriumInfo, eos):
+def fit_beta(beta0, ExpTension, EquilibriumInfo, eos, method='bounded', minimize_scalar_kwargs={}):
     """
     fit_beta
     Optimize beta for SGT for binary mixtures
@@ -37,6 +37,10 @@ def fit_beta(beta0, ExpTension, EquilibriumInfo, eos):
         tuple = (rho1, rho2, T, P)
     eos : model
         saft vr mie model set up with the binary mixture
+    method : str
+        method to use for SciPy's minimize_scalar: 'bounded', 'brent' or 'golden' (default is 'bounded')
+    minimize_scalar_kwargs : dict
+        keyword arguments for SciPy's minimize_scalar
 
     Returns
     -------
@@ -45,5 +49,9 @@ def fit_beta(beta0, ExpTension, EquilibriumInfo, eos):
     """
     rho1, rho2, T, P = EquilibriumInfo
     args = (ExpTension, rho1, rho2, T, P, eos)
-    opti = minimize_scalar(fobj_beta, beta0, args=args)
+
+    if method=='bounded':
+        opti = minimize_scalar(fobj_beta, bounds=beta0, args=args, method=method, **minimize_scalar_kwargs)
+    else:
+        opti = minimize_scalar(fobj_beta, bracket=beta0, args=args, method=method, **minimize_scalar_kwargs)
     return opti
