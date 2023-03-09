@@ -214,9 +214,12 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None,
     all_minima.append(w)
     f_minima.append(tpd)
     for i in range(1, nc):
+        # if len(f_minima) >= nmin: break 
+
         alpha0 = 2*Id[i]**0.5
         alpha0[alpha0 < 1e-1] = 1e-1
         alpha0 = alpha0[z_notzero]
+        # vw = None
         vgw = copy(vw)
         # Xassgw = copy(Xassw)
         alpha = minimize(tpd_obj, alpha0, jac=True, method='BFGS',
@@ -231,7 +234,10 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None,
                 f_minima.append(tpd)
                 all_minima.append(w)
                 if len(f_minima) == nmin:
-                    return tuple(all_minima), np.array(f_minima)
+                    break
+                    # return tuple(all_minima), np.array(f_minima)
+    
+
 
     # random seach
     niter = 0
@@ -242,6 +248,7 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None,
         alpha0 = 2*Al**0.5
         alpha0[alpha0 < 1e-1] = 1e-1
         alpha0 = alpha0[z_notzero]
+        # vw = None
         vgw = copy(vw)
         # Xassgw = copy(Xassw)
         alpha = minimize(tpd_obj, alpha0, jac=True, method='BFGS',
@@ -257,12 +264,26 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None,
                 all_minima.append(w)
                 if len(f_minima) == nmin:
                     return tuple(all_minima), np.array(f_minima)
+    
+    f_minima = np.array(f_minima)
+    sort = np.argsort(f_minima)
+    f_minima = f_minima[sort]
 
+    all_minima = np.array(all_minima)
+    all_minima = all_minima[sort]
+
+    f_minima = list(f_minima)
+    all_minima = list(all_minima)
+    
     while len(f_minima) < nmin:
         all_minima.append(all_minima[0])
         f_minima.append(f_minima[0])
+    
+    if len(f_minima) > nmin:
+        f_minima = f_minima[:nmin]
+        all_minima = all_minima[:nmin]
 
-    return tuple(all_minima), np.array(f_minima)
+    return tuple(all_minima), f_minima
 
 
 def lle_init(Z, T, P, model, vw=None, vz=None):
