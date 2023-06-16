@@ -33,9 +33,10 @@ def asso_aux(Nst_kk, sites_kk, groups_index, subgroups, df_asso_kl):
     where_0e2 = sites_asso[:, 1] == 0
     move_pos_asso[where_0e2] = np.array([0, 0, 0])
 
+    # index of associating molecule number
     indexABij1 = []
     indexABij2 = []
-
+    # index of interacting site numbers
     indexAB_id1 = []
     indexAB_id2 = []
     for k, groupK in enumerate(subgroup_id_asso):
@@ -91,15 +92,24 @@ def asso_aux(Nst_kk, sites_kk, groups_index, subgroups, df_asso_kl):
                 kAB_kl[index0, indexf] = kAB
                 kAB_kl[indexf, index0] = kAB
 
+                # the lenght of the list is the number of interactions
+                # they should have the same length as the number of interacting sites
                 indexAB_id1.append(molecule_id_index_sites[index0])
                 indexAB_id2.append(molecule_id_index_sites[indexf])
                 indexABij1.append(index0)
                 indexABij2.append(indexf)
+
+                indexAB_id1.append(molecule_id_index_sites[indexf])
+                indexAB_id2.append(molecule_id_index_sites[index0])
+                indexABij1.append(indexf)
+                indexABij2.append(index0)
+                """
                 if siteK != siteL:
                     indexAB_id1.append(molecule_id_index_sites[indexf])
                     indexAB_id2.append(molecule_id_index_sites[index0])
                     indexABij1.append(indexf)
                     indexABij2.append(index0)
+                """
 
             if len1 == 0 and len2 == 0:
                 # mixing rule if both groups self-associate
