@@ -1,5 +1,9 @@
 # SGTPy Changelog
 
+## v0.0.18
+
+* Fixed bug in assosiation configuration for SAFT-gamma-mie. The bug only affected association sites of the same type in differenent groups (e.g. 'e1' - 'e1' and 'H'-'H' association.)
+
 ## v0.0.13
 
 * New `eos.set_induced_asso` method in SAFT-VR-Mie to set up induced association (solvation).
