@@ -218,15 +218,18 @@ class GCdatabase(object):
         """
         bool_kk = self.df_asso_kl.group_k == group_k
         bool_ll = self.df_asso_kl.group_l == group_l
-        bool_kl = self.df_asso_kl.group_k == group_l
-        bool_lk = self.df_asso_kl.group_l == group_k
         boolsite_kk = self.df_asso_kl.iloc[:, 1] == site_k
         boolsite_ll = self.df_asso_kl.iloc[:, 3] == site_l
+
+        bool_kl = self.df_asso_kl.group_k == group_l
+        bool_lk = self.df_asso_kl.group_l == group_k
+        boolsite_kl = self.df_asso_kl.iloc[:, 1] == site_l
+        boolsite_lk = self.df_asso_kl.iloc[:, 3] == site_k
 
         index1 = self.df_asso_kl.index[bool_kk & bool_ll & boolsite_kk & boolsite_ll]
         len1 = index1.shape[0]
 
-        index2 = self.df_asso_kl.index[bool_kl & bool_lk & boolsite_kk & boolsite_ll]
+        index2 = self.df_asso_kl.index[bool_kl & bool_lk & boolsite_kl & boolsite_lk]
         len2 = index2.shape[0]
 
         if len1 == 1:
