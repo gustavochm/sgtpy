@@ -5,7 +5,7 @@ from scipy.optimize import minimize
 from .equilibriumresult import EquilibriumResult
 
 
-def rachfordrice(beta, K, Z):
+def rachfordrice(beta, K, Z, tol=1e-8, maxiter=20):
     '''
     Solves Rachford Rice equation by Halley's method
     '''
@@ -24,7 +24,7 @@ def rachfordrice(beta, K, Z):
         singlephase = True
     it = 0
     e = 1.
-    while e > 1e-8 and it < 20 and not singlephase:
+    while e > tol and it < maxiter and not singlephase:
         it += 1
         D = 1 + beta*K1
         KD = K1/D
@@ -66,7 +66,8 @@ def Gibbs_obj(vap, phases, Z, z_notzero, temp_aux, P, model):
 
 
 def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
-          Xass0=[None, None], K_tol=1e-8, nacc=5, full_output=False):
+          Xass0=[None, None], K_tol=1e-8, nacc=5, accelerate_every=5, 
+          full_output=False):
     """
     Isothermic isobaric flash (z, T, P) -> (x,y,beta)
 
@@ -116,7 +117,7 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
     itacc = 0
     it = 0
     it2 = 0
-    n = 5
+    n = accelerate_every
     # nacc = 3
     X = x_guess
     Y = y_guess
@@ -131,6 +132,8 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
     bmin = max(np.hstack([((K*Z-1.)/(K-1.))[K > 1], 0.]))
     bmax = min(np.hstack([((1.-Z)/(1.-K))[K < 1], 1.]))
     beta = (bmin + bmax)/2
+
+    singlephase = False
 
     while e1 > K_tol and itacc < nacc:
         it += 1
