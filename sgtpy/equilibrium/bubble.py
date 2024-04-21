@@ -187,17 +187,16 @@ def bubblePy(y_guess, P_guess, X, T, model, good_initial=False,
         sol1 = root(bubble_newton, inc0, args=(X, temp_aux, 'T', model, in_y))
         if sol1.success:
             method = 'second-order'
+            error = np.linalg.norm(sol1.fun)
+            it += sol1.nfev
+
             sol = sol1.x
             lnK_newton = sol[:-1]
-            error = np.linalg.norm(sol1.fun)
-
             K_newton = np.exp(lnK_newton)
             Y = np.zeros(nc)
             Y[in_y] = X[in_y] * K_newton
             Y /= np.sum(Y)
             P = sol[-1]
-            error = np.linalg.norm(sol1.fun)
-            it += sol1.nfev
 
             rhol, Xassl = model.density_aux(X, temp_aux, P, 'L', rho0=1./vl,
                                             Xass0=Xassl)
@@ -218,7 +217,7 @@ def bubblePy(y_guess, P_guess, X, T, model, good_initial=False,
 
 
 def bubbleTy(y_guess, T_guess, X, P, model, good_initial=False,
-             v0=[None, None], Xass0=[None, None], 
+             v0=[None, None], Xass0=[None, None],
              not_in_y_list=[],
              full_output=False):
     """
@@ -308,17 +307,16 @@ def bubbleTy(y_guess, T_guess, X, P, model, good_initial=False,
         sol1 = root(bubble_newton, inc0, args=(X, P, 'P', model, in_y))
         if sol1.success:
             method = 'second-order'
+            error = np.linalg.norm(sol1.fun)
+            it += sol1.nfev
+
             sol = sol1.x
             lnK_newton = sol[:-1]
-            error = np.linalg.norm(sol1.fun)
-
             K_newton = np.exp(lnK_newton)
             Y = np.zeros(nc)
             Y[in_y] = X[in_y] * K_newton
             Y /= np.sum(Y)
             T = sol[-1]
-            error = np.linalg.norm(sol1.fun)
-            it += sol1.nfev
 
             rhol, Xassl = model.density_aux(X, temp_aux, P, 'L', rho0=1./vl,
                                             Xass0=Xassl)
