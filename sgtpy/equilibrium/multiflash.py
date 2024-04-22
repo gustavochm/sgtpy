@@ -150,7 +150,7 @@ def multiflash(X0, betatetha, equilibrium, z, T, P, model, v0=[None],
     K = np.exp(lnK)
 
     x = betatetha
-
+    method = "ASS"
     while error > K_tol and itacc < nacc:
         ittotal += 1
         it += 1
@@ -216,31 +216,34 @@ def multiflash(X0, betatetha, equilibrium, z, T, P, model, v0=[None],
         ind1 = minimize(fobj, ind0, args=(equilibrium, z, z_notzero, n_nonzero,
                         temp_aux, P, model), jac=jac, method=method,
                         hess=hess)
-        v = vg.copy()
-        Xass = Xassg.copy()
 
-        ittotal += ind1.nit
-        error = np.linalg.norm(ind1.jac)
-        nc = model.nc
+        if ind1.success:
+            method = "Gibbs_minimization"
+            v = vg.copy()
+            Xass = Xassg.copy()
 
-        ind = 1.*ind0.reshape(nfase-1, n_nonzero)
-        dep = z[z_notzero] - ind.sum(axis=0)
+            ittotal += ind1.nit
+            error = np.linalg.norm(ind1.jac)
+            nc = model.nc
 
-        X = np.zeros((nfase, nc))
-        X[1:, z_notzero] = ind
-        X[0, z_notzero] = dep
-        beta = X.sum(axis=1)
-        X = (X.T/beta).T
-        # updating volume roots for founded equilibria compositions
-        for i, state in enumerate(equilibrium):
-            rho, Xass[i] = model.density_aux(X[i], temp_aux, P, state,
-                                             rho0=1/v[i], Xass0=Xass[i])
-            v[i] = 1./rho
+            ind = 1.*ind1.x.reshape(nfase-1, n_nonzero)
+            dep = z[z_notzero] - ind.sum(axis=0)
+
+            X = np.zeros((nfase, nc))
+            X[1:, z_notzero] = ind
+            X[0, z_notzero] = dep
+            beta = X.sum(axis=1)
+            X = (X.T/beta).T
+            # updating volume roots for founded equilibria compositions
+            for i, state in enumerate(equilibrium):
+                rho, Xass[i] = model.density_aux(X[i], temp_aux, P, state,
+                                                 rho0=1/v[i], Xass0=Xass[i])
+                v[i] = 1./rho
 
     if full_output:
         sol = {'T': T, 'P': P, 'error_outer': error, 'error_inner': ef,
                'iter': ittotal, 'beta': beta, 'tetha': tetha, 'X': X, 'v': v,
-               'Xass': Xass, 'states': equilibrium}
+               'Xass': Xass, 'states': equilibrium, 'method': method}
         out = EquilibriumResult(sol)
         return out
 

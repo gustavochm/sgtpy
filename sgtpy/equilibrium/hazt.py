@@ -192,7 +192,8 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
         info = {'T': T, 'P': P, 'error_outer': out.error_outer,
                 'error_inner': error_inner, 'iter': out.iter,
                 'beta': beta, 'tetha': tetha, 'X': Xm, 'v': v,
-                'Xass': Xass, 'states': ['L', 'L', 'V']}
+                'Xass': Xass, 'states': ['L', 'L', 'V'],
+                'method': out.method}
         out = EquilibriumResult(info)
         return out
 
@@ -331,7 +332,7 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
         info = {'T': T, 'P': P, 'error_outer': out.error_outer,
                 'error_inner': error_inner, 'iter': out.iter, 'beta': beta,
                 'tetha': tetha, 'X': Xm, 'v': v, 'Xass': Xass,
-                'states': ['L', 'L', 'V']}
+                'states': ['L', 'L', 'V'], 'method': out.method}
         out = EquilibriumResult(info)
         return out
 
