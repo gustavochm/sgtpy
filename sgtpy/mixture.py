@@ -279,7 +279,7 @@ class component(object):
                     n = 0
 
                 if n == 1:
-                    _, _, eps, lr = df.values[0]
+                    _, _, eps, lr = df.values[0][0:4]
 
                     if eps != 'CR':
                         eps_kl[k, l] = eps
@@ -904,7 +904,7 @@ class mixture(object):
                     n = 0
 
                 if n == 1:
-                    _, _, eps, lr = df.values[0]
+                    _, _, eps, lr = df.values[0][0:4]
 
                     if eps != 'CR':
                         eps_kl[k, l] = eps

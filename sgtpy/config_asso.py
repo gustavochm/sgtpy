@@ -64,7 +64,7 @@ def asso_aux(Nst_kk, sites_kk, groups_index, subgroups, df_asso_kl):
                 n2 = len2
 
             for j in range(n2):
-                values = df.iloc[j].values
+                values = df.iloc[j].values[0:6]
                 groupK2, siteK, groupL2, siteL, epsAB, kAB = values
 
                 if groupK2 != groupK:
@@ -98,7 +98,7 @@ def asso_aux(Nst_kk, sites_kk, groups_index, subgroups, df_asso_kl):
                 indexAB_id2.append(molecule_id_index_sites[indexf])
                 indexABij1.append(index0)
                 indexABij2.append(indexf)
-                
+
                 molecule_id0 = molecule_id_index_sites[index0]
                 molecule_idf = molecule_id_index_sites[indexf]
                 self_site_associating = molecule_id0 == molecule_idf
@@ -124,10 +124,10 @@ def asso_aux(Nst_kk, sites_kk, groups_index, subgroups, df_asso_kl):
                 kAB = 0.
 
                 if lenkk == 1 and lenll == 1:
-                    values = dfkk.iloc[0].values
+                    values = dfkk.iloc[0].values[0:6]
                     _, siteK_kk, _, siteL_kk, epsAB_kk, kAB_kk = values
 
-                    values = dfll.iloc[0].values
+                    values = dfll.iloc[0].values[0:6]
                     _, siteK_ll, _, siteL_ll, epsAB_ll, kAB_ll = values
 
                     epsAB = np.sqrt(epsAB_kk * epsAB_ll)
@@ -261,7 +261,7 @@ def asso_aux(Nst_kk, sites_kk, groups_index, subgroups, df_asso_kl):
 
     indexAB_id1 = np.hstack([indexAB_id1])
     indexAB_id2 = np.hstack([indexAB_id2])
-    
+
     # make sure association indeces are integers
     indexABij1 = indexABij1.astype(int)
     indexABij2 = indexABij2.astype(int)

@@ -78,6 +78,7 @@ class GCdatabase(object):
 
     def add_group(self, name, vk=1., Sk=1., sigma=0., eps=0., lr=12., la=6.,
                   nH=0, ne1=0, ne2=0, charge=0., sigma_born=0., mw=0.,
+                  author_key='', doi='',
                   overwrite=False):
         """
         add_group method
@@ -112,6 +113,10 @@ class GCdatabase(object):
             diameter used in Born contribution [Amstrong]
         mw: float
             molar weight of the group [g/mol]
+        author_key: string
+            key of the author that provided the parameters
+        doi: string
+            doi of the publication that provided the parameters
         overwrite: bool, optional
             whether to overwrite or not current parameters of the database
         """
@@ -123,14 +128,16 @@ class GCdatabase(object):
                             ' overwrite=True to overwrite the current parameters')
         elif group_included and overwrite:
             new_parameters = np.array([vk, Sk, sigma, eps, lr, la, Nst, nH,
-                                       ne1, ne2, charge, sigma_born, mw])
+                                       ne1, ne2, charge, sigma_born, mw,
+                                       author_key, doi])
             self.df_groups.loc[name] = new_parameters
         else:
             new_group = {'groups': name, 'vk*': vk, 'Sk': Sk,
                          'sigma_kk': sigma, 'eps_kk': eps,
                          'lr_kk': lr, 'la_kk': la, 'Nst_kk': Nst, 'nH_kk': nH,
                          'ne1_kk': ne1, 'ne2_kk': ne2, 'charge_kk': charge,
-                         'sigma_born_kk': sigma_born, 'mw_kk': mw}
+                         'sigma_born_kk': sigma_born, 'mw_kk': mw,
+                         'author_key': author_key, 'doi': doi}
             groups_aux = self.df_groups.reset_index()
             groups_new = groups_aux.append(new_group, ignore_index=True)
             groups_new.set_index('groups', inplace=True)
@@ -138,6 +145,7 @@ class GCdatabase(object):
             self.group_list = list(self.df_groups.index)
 
     def new_interaction_mie(self, group_k, group_l, eps_kl=0., lr_kl='CR',
+                            author_key='', doi='',
                             overwrite=False):
         """
         new_interaction_mie method
@@ -155,6 +163,10 @@ class GCdatabase(object):
             unlike energy scale between the groups, used in Mie potential [K]
         lr_kl: float
             unlike repulsive exponent between the groups, used in Mie potential
+        author_key: string
+            key of the author that provided the parameters
+        doi: string
+            doi of the publication that provided the parameters
         overwrite: bool, optional
             whether to overwrite or not current parameters of the database
         """
@@ -184,15 +196,18 @@ class GCdatabase(object):
                             ' set overwrite=True to overwrite the current parameters')
 
         elif already_in and overwrite:
-            self.df_mie_kl.iloc[index, [2, 3]] = [eps_kl, lr_kl]
+            self.df_mie_kl.iloc[index, [2, 3, 4, 5]] = [eps_kl, lr_kl, author_key, doi]
         else:
             new_interaction = {'group_k': group_k, 'group_l': group_l,
-                               'eps_kl': eps_kl, 'lr_kl': lr_kl}
+                               'eps_kl': eps_kl, 'lr_kl': lr_kl,
+                               'author_key': author_key, 'doi': doi}
             df_mie_new = self.df_mie_kl.append(new_interaction, ignore_index=True)
             self.df_mie_kl = df_mie_new
 
     def new_interaction_asso(self, group_k, group_l, site_k, site_l,
-                             epsAB_kl=0., kAB_kl=0, overwrite=False):
+                             epsAB_kl=0., kAB_kl=0, 
+                             author_key='', doi='',
+                             overwrite=False):
         """
         new_interaction_mie method
 
@@ -213,6 +228,10 @@ class GCdatabase(object):
             unlike association energy between the the groups [K]
         kAB_kl: float
             unlike association volume between the groups [Amstrong^3]
+        author_key: string
+            key of the author that provided the parameters
+        doi: string
+            doi of the publication that provided the parameters
         overwrite: bool, optional
             whether to overwrite or not current parameters of the database
         """
@@ -249,13 +268,14 @@ class GCdatabase(object):
                             ' set overwrite=True to overwrite the current parameters')
 
         elif already_in and overwrite:
-            self.df_asso_kl.iloc[index, [4, 5]] = [epsAB_kl, kAB_kl]
+            self.df_asso_kl.iloc[index, [4, 5, 6, 7]] = [epsAB_kl, kAB_kl, author_key, doi]
         else:
             new_interaction = {'group_k': group_k,
                                'site\xa0a\xa0of group\xa0k': site_k,
                                'group_l': group_l,
                                'site\xa0b\xa0of group\xa0l': site_l,
-                               'epsAB_kl': epsAB_kl, 'KAB_kl': kAB_kl}
+                               'epsAB_kl': epsAB_kl, 'KAB_kl': kAB_kl,
+                               'author_key': author_key, 'doi': doi}
             df_asso_new = self.df_asso_kl.append(new_interaction, ignore_index=True)
             self.df_asso_kl = df_asso_new
 

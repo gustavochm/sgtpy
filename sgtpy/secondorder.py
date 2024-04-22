@@ -170,7 +170,7 @@ def secondorder19_14(nc, group_indexes, subgroups, vki, eps_kl, lr_kl,
         for k in range(ncond19):
             for j in range(len1):
 
-                values = df.iloc[j].values
+                values = df.iloc[j].values[0:7]
                 groupK2, siteK, groupL2, siteL, _, epsAB, kAB = values
 
                 if siteK == 'H' and siteL == 'e1':
@@ -272,7 +272,7 @@ def secondorder21(nc, group_indexes, subgroups, vki, eps_kl, lr_kl,
         for k in range(ncond21):
             for j in range(len1):
 
-                values = df.iloc[j].values
+                values = df.iloc[j].values[0:7]
                 groupK2, siteK, groupL2, siteL, _, epsAB, kAB = values
                 if siteK == 'H' and siteL == 'e1':
                     indexH = sites_cumsum[where14] + 1
@@ -307,7 +307,7 @@ def secondorder21(nc, group_indexes, subgroups, vki, eps_kl, lr_kl,
         for k in range(ncond21):
             for j in range(len1):
 
-                values = df.iloc[j].values
+                values = df.iloc[j].values[0:7]
                 groupK2, siteK, groupL2, siteL, _, epsAB, kAB = values
                 if siteK == 'e1' and siteL == 'e1':
                     indexCO2 = sites_cumsum[where17]
@@ -339,7 +339,7 @@ def secondorder21(nc, group_indexes, subgroups, vki, eps_kl, lr_kl,
         for k in range(ncond21):
             for j in range(len1):
 
-                values = df.iloc[j].values
+                values = df.iloc[j].values[0:7]
                 groupK2, siteK, groupL2, siteL, _, epsAB, kAB = values
 
                 if siteK == 'H' and siteL == 'e1':
@@ -440,7 +440,7 @@ def secondorder22(nc, group_indexes, subgroups, vki, eps_kl, lr_kl,
         len1 = df.shape[0]
         for k in range(ncond22):
             for j in range(len1):
-                values = df.iloc[j].values
+                values = df.iloc[j].values[0:7]
                 groupK2, siteK, groupL2, siteL, _, epsAB, kAB = values
                 if siteK == 'e1' and siteL == 'H':
                     indexH2O = sites_cumsum[where14]
@@ -469,7 +469,7 @@ def secondorder22(nc, group_indexes, subgroups, vki, eps_kl, lr_kl,
         for k in range(ncond22):
             for j in range(len1):
 
-                values = df.iloc[j].values
+                values = df.iloc[j].values[0:7]
                 groupK2, siteK, groupL2, siteL, _, epsAB, kAB = values
                 if siteK == 'e1' and siteL == 'e1':
                     indexCO2 = sites_cumsum[where17]
@@ -503,7 +503,7 @@ def secondorder22(nc, group_indexes, subgroups, vki, eps_kl, lr_kl,
         for k in range(ncond22):
             for j in range(len1):
 
-                values = df.iloc[j].values
+                values = df.iloc[j].values[0:7]
                 groupK2, siteK, groupL2, siteL, _, epsAB, kAB = values
                 if siteK == 'H' and siteL == 'e1':
                     indexOH = sites_cumsum[where19] + 1
@@ -610,7 +610,7 @@ def secondorder23(nc, group_indexes, subgroups, vki, eps_kl, lr_kl,
         for k in range(ncond23):
             for j in range(len1):
 
-                values = df.iloc[j].values
+                values = df.iloc[j].values[0:7]
                 groupK2, siteK, groupL2, siteL, _, epsAB, kAB = values
 
                 if siteK == 'e1' and siteL == 'H':
@@ -634,7 +634,7 @@ def secondorder23(nc, group_indexes, subgroups, vki, eps_kl, lr_kl,
         for k in range(ncond23):
             for j in range(len1):
 
-                values = df.iloc[j].values
+                values = df.iloc[j].values[0:7]
                 groupK2, siteK, groupL2, siteL, _, epsAB, kAB = values
 
                 if siteK == 'e1' and siteL == 'e1':
@@ -667,7 +667,7 @@ def secondorder23(nc, group_indexes, subgroups, vki, eps_kl, lr_kl,
         for k in range(ncond23):
             for j in range(len1):
 
-                values = df.iloc[j].values
+                values = df.iloc[j].values[0:7]
                 groupK2, siteK, groupL2, siteL, _, epsAB, kAB = values
 
                 if siteK == 'e1' and siteL == 'H':
