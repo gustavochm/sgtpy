@@ -5,12 +5,14 @@ from ..math import gdem
 from .equilibriumresult import EquilibriumResult
 
 
-def bubble_sus(P_T, X, T_P, tipo, y_guess, eos, vl0, vv0, Xassl0, Xassv0):
+def bubble_sus(P_T, X, T_P, bubble_type, y_guess, eos,
+               vl0, vv0, Xassl0, Xassv0,
+               not_in_y=[]):
 
-    if tipo == 'T':
+    if bubble_type == 'T':
         P = P_T
         temp_aux = T_P
-    elif tipo == 'P':
+    elif bubble_type == 'P':
         temp_aux = P_T
         P = T_P
 
@@ -36,6 +38,9 @@ def bubble_sus(P_T, X, T_P, tipo, y_guess, eos, vl0, vv0, Xassl0, Xassv0):
         Y_calc_old = Y_calc
         Y_calc = X*K
 
+        # modification for non-volatile components Ki -> 0
+        Y_calc[not_in_y] = 0.
+
         if niter == (n-3):
             Y3 = Y_calc
         elif niter == (n-2):
@@ -52,43 +57,47 @@ def bubble_sus(P_T, X, T_P, tipo, y_guess, eos, vl0, vv0, Xassl0, Xassv0):
         # Vapor fugacities
         lnphiv, vv, Xassv = eos.logfugef_aux(Y, temp_aux, P, 'V', vv, Xassv)
 
-    if tipo == 'T':
+    if bubble_type == 'T':
         f0 = Y_calc.sum() - 1
-    elif tipo == 'P':
+    elif bubble_type == 'P':
         f0 = np.log(Y_calc.sum())
 
     return f0, Y, lnK, vl, vv, Xassl, Xassv
 
 
-def bubble_newton(inc, X, T_P, tipo, eos):
+def bubble_newton(inc, X, T_P, bubble_type, eos, in_y=[]):
     global vl, vv, Xassl, Xassv
     f = np.zeros_like(inc)
     lnK = inc[:-1]
     K = np.exp(lnK)
 
-    if tipo == 'T':
+    if bubble_type == 'T':
         P = inc[-1]
         temp_aux = T_P
-    elif tipo == 'P':
+    elif bubble_type == 'P':
         T = inc[-1]
         temp_aux = eos.temperature_aux(T)
         P = T_P
 
-    Y = X*K
+    nc = eos.nc
+    Y = np.zeros(nc)
+    Y[in_y] = X[in_y] * K
 
     # Liquid fugacities
     lnphil, vl, Xassl = eos.logfugef_aux(X, temp_aux, P, 'L', vl, Xassl)
     # Vapour fugacities
     lnphiv, vv, Xassv = eos.logfugef_aux(Y, temp_aux, P, 'V', vv, Xassv)
 
-    f[:-1] = lnK + lnphiv - lnphil
+    f[:-1] = lnK + (lnphiv - lnphil)[in_y]
     f[-1] = (Y-X).sum()
 
     return f
 
 
 def bubblePy(y_guess, P_guess, X, T, model, good_initial=False,
-             v0=[None, None], Xass0=[None, None], full_output=False):
+             v0=[None, None], Xass0=[None, None],
+             not_in_y_list=[],
+             full_output=False):
     """
     Bubble point (T, x) -> (P, y)
 
@@ -115,6 +124,8 @@ def bubblePy(y_guess, P_guess, X, T, model, good_initial=False,
         if supplied volume used as initial value to compute fugacities
     Xass0 : list, optional
         if supplied X association non-bonded fraction sites initial value
+    not_in_y_list : list, optional
+        index of components not present in the vapour phase (default is empty)
     full_output: bool, optional
         wheter to outputs all calculation info
 
@@ -128,6 +139,13 @@ def bubblePy(y_guess, P_guess, X, T, model, good_initial=False,
     if len(y_guess) != nc or len(X) != nc:
         raise Exception('Composition vector lenght must be equal to nc')
 
+    if np.any([i > (nc-1) for i in not_in_y_list]):
+        raise Exception('Index of components not_in_y_list must be less than nc')
+
+    not_in_y = np.zeros(nc, dtype=bool)
+    not_in_y[not_in_y_list] = 1
+    in_y = np.logical_not(not_in_y)
+
     global vl, vv, Xassl, Xassv
     vl0, vv0 = v0
     Xassl0, Xassv0 = Xass0
@@ -140,16 +158,19 @@ def bubblePy(y_guess, P_guess, X, T, model, good_initial=False,
 
     P = P_guess
     out = bubble_sus(P, X, temp_aux, 'T', y_guess, model, vl0, vv0,
-                     Xassl0, Xassv0)
+                     Xassl0, Xassv0, not_in_y=not_in_y)
     f, Y, lnK, vl, vv, Xassl, Xassv = out
     error = np.abs(f)
     h = 1e-4
 
+    method = 'quasi-newton + ASS'
     while error > tol and it <= itmax and not good_initial:
         it += 1
-        out = bubble_sus(P+h, X, temp_aux, 'T', Y, model, vl, vv, Xassl, Xassv)
+        out = bubble_sus(P+h, X, temp_aux, 'T', Y, model, vl, vv,
+                         Xassl, Xassv, not_in_y=not_in_y)
         f1, Y1, lnK1, vl, vv, Xassl, Xassv = out
-        out = bubble_sus(P, X, temp_aux, 'T', Y, model, vl, vv, Xassl, Xassv)
+        out = bubble_sus(P, X, temp_aux, 'T', Y, model, vl, vv,
+                         Xassl, Xassv, not_in_y=not_in_y)
         f, Y, lnK, vl, vv, Xassl, Xassv = out
         df = (f1-f)/h
         dP = f / df
@@ -162,27 +183,33 @@ def bubblePy(y_guess, P_guess, X, T, model, good_initial=False,
         error = np.abs(f)
 
     if error > tol:
-        inc0 = np.hstack([lnK, P])
-        sol1 = root(bubble_newton, inc0, args=(X, temp_aux, 'T', model))
-        sol = sol1.x
-        lnK = sol[:-1]
-        error = np.linalg.norm(sol1.fun)
-        it += sol1.nfev
-        Y = np.exp(lnK)*X
-        Y /= Y.sum()
-        P = sol[-1]
+        inc0 = np.hstack([lnK[in_y], P])
+        sol1 = root(bubble_newton, inc0, args=(X, temp_aux, 'T', model, in_y))
+        if sol1.success:
+            method = 'second-order'
+            error = np.linalg.norm(sol1.fun)
+            it += sol1.nfev
 
-        rhol, Xassl = model.density_aux(X, temp_aux, P, 'L', rho0=1./vl,
-                                        Xass0=Xassl)
-        rhov, Xassv = model.density_aux(Y, temp_aux, P, 'V', rho0=1./vv,
-                                        Xass0=Xassv)
-        vl = 1./rhol
-        vv = 1./rhov
+            sol = sol1.x
+            lnK_newton = sol[:-1]
+            K_newton = np.exp(lnK_newton)
+            Y = np.zeros(nc)
+            Y[in_y] = X[in_y] * K_newton
+            Y /= np.sum(Y)
+            P = sol[-1]
+
+            rhol, Xassl = model.density_aux(X, temp_aux, P, 'L', rho0=1./vl,
+                                            Xass0=Xassl)
+            rhov, Xassv = model.density_aux(Y, temp_aux, P, 'V', rho0=1./vv,
+                                            Xass0=Xassv)
+            vl = 1./rhol
+            vv = 1./rhov
 
     if full_output:
         sol = {'T': T, 'P': P, 'error': error, 'iter': it,
                'X': X, 'v1': vl, 'Xassl': Xassl, 'state1': 'Liquid',
-               'Y': Y, 'v2': vv, 'Xassv': Xassv, 'state2': 'Vapor'}
+               'Y': Y, 'v2': vv, 'Xassv': Xassv, 'state2': 'Vapor',
+               'method': method}
         out = EquilibriumResult(sol)
         return out
 
@@ -190,7 +217,9 @@ def bubblePy(y_guess, P_guess, X, T, model, good_initial=False,
 
 
 def bubbleTy(y_guess, T_guess, X, P, model, good_initial=False,
-             v0=[None, None], Xass0=[None, None], full_output=False):
+             v0=[None, None], Xass0=[None, None],
+             not_in_y_list=[],
+             full_output=False):
     """
     Bubble point (P, x) -> (T, y)
 
@@ -217,6 +246,8 @@ def bubbleTy(y_guess, T_guess, X, P, model, good_initial=False,
         if supplied volume used as initial value to compute fugacities
     Xass0 : list, optional
         if supplied X association non-bonded fraction sites initial value
+    not_in_y_list : list, optional
+        index of components not present in the vapour phase (default is empty)
     full_output: bool, optional
         wheter to outputs all calculation info
 
@@ -233,6 +264,13 @@ def bubbleTy(y_guess, T_guess, X, P, model, good_initial=False,
     if len(y_guess) != nc or len(X) != nc:
         raise Exception('Composition vector lenght must be equal to nc')
 
+    if np.any([i > (nc-1) for i in not_in_y_list]):
+        raise Exception('Index of components not_in_y_list must be less than nc')
+
+    not_in_y = np.zeros(nc, dtype=bool)
+    not_in_y[not_in_y_list] = 1
+    in_y = np.logical_not(not_in_y)
+
     global vl, vv, Xassl, Xassv
     vl0, vv0 = v0
     Xassl0, Xassv0 = Xass0
@@ -244,49 +282,54 @@ def bubbleTy(y_guess, T_guess, X, P, model, good_initial=False,
     T = T_guess
     temp_aux = model.temperature_aux(T)
     out = bubble_sus(temp_aux, X, P, 'P', y_guess, model, vl0, vv0, Xassl0,
-                     Xassv0)
+                     Xassv0, not_in_y=not_in_y)
     f, Y, lnK, vl, vv, Xassl, Xassv = out
     # f, Y, lnK, vl, vv = bubble_sus(T, X, P, 'P', y_guess, model, vl0, vv0)
     error = np.abs(f)
     h = 1e-4
-
+    method = 'quasi-newton + ASS'
     while error > tol and it <= itmax and not good_initial:
         it += 1
         temp_aux = model.temperature_aux(T+h)
-        out = bubble_sus(temp_aux, X, P, 'P', Y, model, vl, vv, Xassl, Xassv)
+        out = bubble_sus(temp_aux, X, P, 'P', Y, model, vl, vv, 
+                         Xassl, Xassv, not_in_y=not_in_y)
         f1, Y1, lnK1, vl, vv, Xassl, Xassv = out
         temp_aux = model.temperature_aux(T)
-        out = bubble_sus(temp_aux, X, P, 'P', Y, model, vl, vv, Xassl, Xassv)
+        out = bubble_sus(temp_aux, X, P, 'P', Y, model, vl, vv, 
+                         Xassl, Xassv, not_in_y=not_in_y)
         f, Y, lnK, vl, vv, Xassl, Xassv = out
         df = (f1-f)/(h)
         T -= f/df
         error = np.abs(f)
 
     if error > tol:
-        inc0 = np.hstack([lnK, T])
-        # sol1 = root(bubble_newton, inc0, args=(X, P, 'P', model, vl, vv,
-        #             Xassl, Xassv))
-        sol1 = root(bubble_newton, inc0, args=(X, P, 'P', model))
-        sol = sol1.x
-        lnK = sol[:-1]
-        error = np.linalg.norm(sol1.fun)
-        it += sol1.nfev
-        Y = np.exp(lnK)*X
-        Y /= Y.sum()
-        T = sol[-1]
+        inc0 = np.hstack([lnK[in_y], T])
+        sol1 = root(bubble_newton, inc0, args=(X, P, 'P', model, in_y))
+        if sol1.success:
+            method = 'second-order'
+            error = np.linalg.norm(sol1.fun)
+            it += sol1.nfev
 
-        temp_aux = model.temperature_aux(T)
-        rhol, Xassl = model.density_aux(X, temp_aux, P, 'L', rho0=1./vl,
-                                        Xass0=Xassl)
-        rhov, Xassv = model.density_aux(Y, temp_aux, P, 'V', rho0=1./vv,
-                                        Xass0=Xassv)
-        vl = 1./rhol
-        vv = 1./rhov
+            sol = sol1.x
+            lnK_newton = sol[:-1]
+            K_newton = np.exp(lnK_newton)
+            Y = np.zeros(nc)
+            Y[in_y] = X[in_y] * K_newton
+            Y /= np.sum(Y)
+            T = sol[-1]
+
+            rhol, Xassl = model.density_aux(X, temp_aux, P, 'L', rho0=1./vl,
+                                            Xass0=Xassl)
+            rhov, Xassv = model.density_aux(Y, temp_aux, P, 'V', rho0=1./vv,
+                                            Xass0=Xassv)
+            vl = 1./rhol
+            vv = 1./rhov
 
     if full_output:
         sol = {'T': T, 'P': P, 'error': error, 'iter': it,
                'X': X, 'v1': vl, 'Xassl': Xassl, 'state1': 'Liquid',
-               'Y': Y, 'v2': vv, 'Xassv': Xassv, 'state2': 'Vapor'}
+               'Y': Y, 'v2': vv, 'Xassv': Xassv, 'state2': 'Vapor',
+               'method': method}
         out = EquilibriumResult(sol)
         return out
 

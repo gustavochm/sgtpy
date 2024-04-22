@@ -5,13 +5,14 @@ from ..math import gdem
 from .equilibriumresult import EquilibriumResult
 
 
-# ELV phi-phi
-def dew_sus(P_T, Y, T_P, tipo, x_guess, eos, vl0, vv0, Xassl0, Xassv0):
+# VLE phi-phi
+def dew_sus(P_T, Y, T_P, dew_type, x_guess, eos, vl0, vv0,
+            Xassl0, Xassv0, not_in_x=[]):
 
-    if tipo == 'T':
+    if dew_type == 'T':
         P = P_T
         temp_aux = T_P
-    elif tipo == 'P':
+    elif dew_type == 'P':
         T = P_T
         temp_aux = eos.temperature_aux(T)
         P = T_P
@@ -38,6 +39,9 @@ def dew_sus(P_T, Y, T_P, tipo, x_guess, eos, vl0, vv0, Xassl0, Xassv0):
         X_calc_old = X_calc
         X_calc = Y/K
 
+        # modification for non-condensable components Ki -> infty
+        X_calc[not_in_x] = 0.
+
         if niter == (n-3):
             X3 = X_calc
         elif niter == (n-2):
@@ -54,15 +58,15 @@ def dew_sus(P_T, Y, T_P, tipo, x_guess, eos, vl0, vv0, Xassl0, Xassv0):
         # Liquid fugacitiies
         lnphil, vl, Xassl = eos.logfugef_aux(X, temp_aux, P, 'L', vl, Xassl)
 
-    if tipo == 'T':
+    if dew_type == 'T':
         f0 = X_calc.sum() - 1
-    elif tipo == 'P':
+    elif dew_type == 'P':
         f0 = np.log(X_calc.sum())
 
     return f0, X, lnK, vl, vv, Xassl, Xassv
 
 
-def dew_newton(inc, Y, T_P, tipo, eos):
+def dew_newton(inc, Y, T_P, dew_type, eos, in_x=[]):
 
     global vl, vv, Xassl, Xassv
 
@@ -70,29 +74,33 @@ def dew_newton(inc, Y, T_P, tipo, eos):
     lnK = inc[:-1]
     K = np.exp(lnK)
 
-    if tipo == 'T':
+    if dew_type == 'T':
         P = inc[-1]
         temp_aux = T_P
-    elif tipo == 'P':
+    elif dew_type == 'P':
         T = inc[-1]
         temp_aux = eos.temperature_aux(T)
         P = T_P
 
-    X = Y/K
+    nc = eos.nc
+    X = np.zeros(nc)
+    X[in_x] = Y[in_x] / K
 
     # Liquid fugacities
     lnphil, vl, Xassl = eos.logfugef_aux(X, temp_aux, P, 'L', vl, Xassl)
     # Vapor fugacities
     lnphiv, vv, Xassv = eos.logfugef_aux(Y, temp_aux, P, 'V', vv, Xassv)
 
-    f[:-1] = lnK + lnphiv - lnphil
+    f[:-1] = lnK + (lnphiv - lnphil)[in_x]
     f[-1] = (Y-X).sum()
 
     return f
 
 
 def dewPx(x_guess, P_guess, y, T, model, good_initial=False,
-          v0=[None, None], Xass0=[None, None], full_output=False):
+          v0=[None, None], Xass0=[None, None],
+          not_in_x_list=[],
+          full_output=False):
     """
     Dew point (T, y) -> (P, y)
 
@@ -119,6 +127,8 @@ def dewPx(x_guess, P_guess, y, T, model, good_initial=False,
         if supplied volume used as initial value to compute fugacities
     Xass0 : list, optional
         if supplied X association non-bonded fraction sites initial value
+    not_in_x_list : list, optional
+        index of components not present in the liquid phase (default is empty)
     full_output: bool, optional
         wheter to outputs all calculation info
 
@@ -134,6 +144,13 @@ def dewPx(x_guess, P_guess, y, T, model, good_initial=False,
     if len(x_guess) != nc or len(y) != nc:
         raise Exception('Composition vector lenght must be equal to nc')
 
+    if np.any([i > (nc-1) for i in not_in_x_list]):
+        raise Exception('Index of components not_in_y_list must be less than nc')
+
+    not_in_x = np.zeros(nc, dtype=bool)
+    not_in_x[not_in_x_list] = 1
+    in_x = np.logical_not(not_in_x)
+
     temp_aux = model.temperature_aux(T)
 
     global vl, vv, Xassl, Xassv
@@ -145,17 +162,20 @@ def dewPx(x_guess, P_guess, y, T, model, good_initial=False,
     tol = 1e-8
 
     P = P_guess
-    out = dew_sus(P, y, temp_aux, 'T', x_guess, model, vl0, vv0, Xassl0,
-                  Xassv0)
+    out = dew_sus(P, y, temp_aux, 'T', x_guess, model, vl0, vv0,
+                  Xassl0, Xassv0, not_in_x=not_in_x)
     f, X, lnK, vl, vv, Xassl, Xassv = out
     error = np.abs(f)
     h = 1e-3
 
+    method = 'quasi-newton + ASS'
     while error > tol and it <= itmax and not good_initial:
         it += 1
-        out = dew_sus(P+h, y, temp_aux, 'T', X, model, vl, vv, Xassl, Xassv)
+        out = dew_sus(P+h, y, temp_aux, 'T', X, model, vl, vv, Xassl, Xassv,
+                      not_in_x=not_in_x)
         f1, X1, lnK1, vl, vv, Xassl, Xassv = out
-        out = dew_sus(P, y, temp_aux, 'T', X, model, vl, vv, Xassl, Xassv)
+        out = dew_sus(P, y, temp_aux, 'T', X, model, vl, vv, Xassl, Xassv, 
+                      not_in_x=not_in_x)
         f, X, lnK, vl, vv, Xassl, Xassv = out
         df = (f1-f)/h
         dP = f / df
@@ -168,27 +188,33 @@ def dewPx(x_guess, P_guess, y, T, model, good_initial=False,
         error = np.abs(f)
 
     if error > tol:
-        inc0 = np.hstack([lnK, P])
-        sol1 = root(dew_newton, inc0, args=(y, temp_aux, 'T', model))
-        sol = sol1.x
-        lnK = sol[:-1]
-        error = np.linalg.norm(sol1.fun)
-        it += sol1.nfev
-        lnK = sol[:-1]
-        X = y / np.exp(lnK)
-        P = sol[-1]
+        inc0 = np.hstack([lnK[in_x], P])
+        sol1 = root(dew_newton, inc0, args=(y, temp_aux, 'T', model, in_x))
+        if sol1.success:
+            method = 'second-order'
+            error = np.linalg.norm(sol1.fun)
+            it += sol1.nfev
 
-        rhol, Xassl = model.density_aux(X, temp_aux, P, 'L', rho0=1./vl,
-                                        Xass0=Xassl)
-        rhov, Xassv = model.density_aux(y, temp_aux, P, 'V', rho0=1./vv,
-                                        Xass0=Xassv)
-        vl = 1./rhol
-        vv = 1./rhov
+            sol = sol1.x
+            lnK_newton = sol[:-1]
+            K_newton = np.exp(lnK_newton)
+            X = np.zeros(nc)
+            X[in_x] = y[in_x] / K_newton
+            X /= np.sum(X)
+            P = sol[-1]
+
+            rhol, Xassl = model.density_aux(X, temp_aux, P, 'L', rho0=1./vl,
+                                            Xass0=Xassl)
+            rhov, Xassv = model.density_aux(y, temp_aux, P, 'V', rho0=1./vv,
+                                            Xass0=Xassv)
+            vl = 1./rhol
+            vv = 1./rhov
 
     if full_output:
         sol = {'T': T, 'P': P, 'error': error, 'iter': it,
                'X': X, 'v1': vl, 'Xassl': Xassl, 'state1': 'Liquid',
-               'Y': y, 'v2': vv, 'Xassv': Xassv, 'state2': 'Vapor'}
+               'Y': y, 'v2': vv, 'Xassv': Xassv, 'state2': 'Vapor',
+               'method': method}
         out = EquilibriumResult(sol)
         return out
 
@@ -196,7 +222,9 @@ def dewPx(x_guess, P_guess, y, T, model, good_initial=False,
 
 
 def dewTx(x_guess, T_guess, y, P, model, good_initial=False,
-          v0=[None, None], Xass0=[None, None], full_output=False):
+          v0=[None, None], Xass0=[None, None],
+          not_in_x_list=[],
+          full_output=False):
     """
     Dew point (T, y) -> (P, y)
 
@@ -239,6 +267,13 @@ def dewTx(x_guess, T_guess, y, P, model, good_initial=False,
     if len(x_guess) != nc or len(y) != nc:
         raise Exception('Composition vector lenght must be equal to nc')
 
+    if np.any([i > (nc-1) for i in not_in_x_list]):
+        raise Exception('Index of components not_in_y_list must be less than nc')
+
+    not_in_x = np.zeros(nc, dtype=bool)
+    not_in_x[not_in_x_list] = 1
+    in_x = np.logical_not(not_in_x)
+
     global vl, vv, Xassl, Xassv
     vl0, vv0 = v0
     Xassl0, Xassv0 = Xass0
@@ -248,16 +283,19 @@ def dewTx(x_guess, T_guess, y, P, model, good_initial=False,
     tol = 1e-8
 
     T = T_guess
-    out = dew_sus(T, y, P, 'P', x_guess, model, vl0, vv0, Xassl0, Xassv0)
+    out = dew_sus(T, y, P, 'P', x_guess, model, vl0, vv0, 
+                  Xassl0, Xassv0, not_in_x=not_in_x)
     f, X, lnK, vl, vv, Xassl, Xassv = out
     error = np.abs(f)
     h = 1e-4
-
+    method = 'quasi-newton + ASS'
     while error > tol and it <= itmax and not good_initial:
         it += 1
-        out = dew_sus(T+h, y, P, 'P', X, model, vl, vv, Xassl, Xassv)
+        out = dew_sus(T+h, y, P, 'P', X, model, vl, vv, 
+                      Xassl, Xassv, not_in_x=not_in_x)
         f1, X1, lnK1, vl, vv, Xassl, Xassv = out
-        out = dew_sus(T, y, P, 'P', X, model, vl, vv, Xassl, Xassv)
+        out = dew_sus(T, y, P, 'P', X, model, vl, vv, 
+                      Xassl, Xassv, not_in_x=not_in_x)
         f, X, lnK, vl, vv, Xassl, Xassv = out
         df = (f1-f)/h
         if np.isnan(df):
@@ -267,28 +305,34 @@ def dewTx(x_guess, T_guess, y, P, model, good_initial=False,
         error = np.abs(f)
 
     if error > tol:
-        inc0 = np.hstack([lnK, T])
-        sol1 = root(dew_newton, inc0, args=(y, P, 'P', model))
-        sol = sol1.x
-        lnK = sol[:-1]
-        error = np.linalg.norm(sol1.fun)
-        it += sol1.nfev
-        lnK = sol[:-1]
-        X = y / np.exp(lnK)
-        T = sol[-1]
+        inc0 = np.hstack([lnK[in_x], T])
+        sol1 = root(dew_newton, inc0, args=(y, P, 'P', model, in_x))
+        if sol1.success:
+            method = 'second-order'
+            error = np.linalg.norm(sol1.fun)
+            it += sol1.nfev
 
-        temp_aux = model.temperature_aux(T)
-        rhol, Xassl = model.density_aux(X, temp_aux, P, 'L', rho0=1./vl,
-                                        Xass0=Xassl)
-        rhov, Xassv = model.density_aux(y, temp_aux, P, 'V', rho0=1./vv,
-                                        Xass0=Xassv)
-        vl = 1./rhol
-        vv = 1./rhov
+            sol = sol1.x
+            lnK_newton = sol[:-1]
+            K_newton = np.exp(lnK_newton)
+            X = np.zeros(nc)
+            X[in_x] = y[in_x] / K_newton
+            X /= np.sum(X)
+            T = sol[-1]
+
+            temp_aux = model.temperature_aux(T)
+            rhol, Xassl = model.density_aux(X, temp_aux, P, 'L', rho0=1./vl,
+                                            Xass0=Xassl)
+            rhov, Xassv = model.density_aux(y, temp_aux, P, 'V', rho0=1./vv,
+                                            Xass0=Xassv)
+            vl = 1./rhol
+            vv = 1./rhov
 
     if full_output:
         sol = {'T': T, 'P': P, 'error': error, 'iter': it,
                'X': X, 'v1': vl, 'Xassl': Xassl, 'state1': 'Liquid',
-               'Y': y, 'v2': vv, 'Xassv': Xassv, 'state2': 'Vapor'}
+               'Y': y, 'v2': vv, 'Xassv': Xassv, 'state2': 'Vapor',
+               'method': method}
         out = EquilibriumResult(sol)
         return out
 
