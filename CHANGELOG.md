@@ -1,5 +1,14 @@
 # SGTPy Changelog
 
+
+## v0.0.19
+* The SAFT-gamma-Mie database has been updated to include recent parameters of the following articles: [Wehbe et al. (2022)](https://doi.org/10.1080/00268976.2023.2197712), [Perdomo et al. (2023)](https://doi.org/10.1016/j.fluid.2022.113635), [Valsecchi et al. (2024)](https://doi.org/10.1016/j.fluid.2023.113952) and [Bernet et al. (2024)](https://doi.org/10.1021/acs.jced.3c00358).
+* The SAFT-gamma-Mie database now includes a `author_key` and `doi` to identify where the parameters come from.
+* The `bubbleTy` and `bubblePy` functions now include an attribute `not_in_y_list` in which the user can provide the index (or indices) of a compononent not present in the vapor phase. This is useful is there are very heavy non-volatile components in a mixture.  
+* The `dewTx` and `dewPx` functions now include an attribute `not_in_x_list` in which the user can provide the index (or indices) of a compononent not present in the liquid phase. This is useful is there are light non-condensables components in a mixture.
+* The `flash` function now includes the attributes  `not_in_x_list` and `not_in_y_list`, where the user can provide the indices of the components not present in the phase `x` or `y`. This is useful in VLE if there are non-volatile/non-condensables components in the mixture.
+
+
 ## v0.0.18
 
 * Fixed bug in assosiation configuration for SAFT-gamma-mie. The bug only affected association sites of the same type in differenent groups (e.g. 'e1' - 'e1' and 'H'-'H' association.)
