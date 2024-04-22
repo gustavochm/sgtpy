@@ -143,6 +143,12 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
     if len(x_guess) != nc or len(y_guess) != nc or len(Z) != nc:
         raise Exception('Composition vector lenght must be equal to nc')
 
+    if np.any([i > (nc-1) for i in not_in_y_list]):
+        raise Exception('Index of components not_in_y_list must be less than nc')
+
+    if np.any([i > (nc-1) for i in not_in_y_list]):
+        raise Exception('Index of components not_in_x_list must be less than nc')
+
     # creating list for non-condensable/non-volatiles
     not_in_x = np.zeros(nc, dtype=bool)
     not_in_x[not_in_x_list] = 1
