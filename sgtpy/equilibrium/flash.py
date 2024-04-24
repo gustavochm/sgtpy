@@ -276,11 +276,6 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
 
     # dummy variables to track iterarions and errors
     e1 = 100.
-    # itacc = 0
-    # it = 0
-    # it2 = 0
-    # n = accelerate_every
-
     it_acc = 0
     it_total = 0
     it_max = nacc * accelerate_every
@@ -339,60 +334,6 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
             beta_new = (bmin + bmax) / 2.
 
 
-
-    """
-    while e1 > K_tol and itacc < nacc and not good_initial:
-        it += 1
-        it2 += 1
-        lnK_old = lnK
-        beta, D, singlephase = rachfordrice(beta_new, K, Z,
-                                            tol=tol_rachfordrice,
-                                            maxiter=maxiter_radfordrice,
-                                            not_in_y=not_in_y,
-                                            not_in_x=not_in_x)
-        # updating phase compositions
-        X = Z/D
-        Y = X*K
-        # modification for for non-condensable/non-volatiles
-        if not singlephase:
-            # modification for not_in_y components Ki -> 0
-            X[not_in_y] = Z[not_in_y] / (1. - beta)
-            # modification for not_in_x components Ki -> infty
-            Y[not_in_x] = Z[not_in_x] / beta
-        Y[not_in_y] = 0.
-        X[not_in_x] = 0.
-        X /= X.sum()
-        Y /= Y.sum()
-        # updating fugacity coefficients
-        with np.errstate(all='ignore'):
-            fugx, vx, Xass_x = model.logfugef_aux(X, temp_aux, P, equilibrium[0],
-                                                  vx, Xass_x)
-            fugy, vy, Xass_y = model.logfugef_aux(Y, temp_aux, P, equilibrium[1],
-                                                  vy, Xass_y)
-        lnK = fugx - fugy
-
-        # acceleration
-        if it == (n-3):
-            lnK3 = lnK
-        elif it == (n-2):
-            lnK2 = lnK
-        elif it == (n-1):
-            lnK1 = lnK
-        elif it == n:
-            it = 0
-            itacc += 1
-            dacc = gdem(lnK, lnK1, lnK2, lnK3)
-            lnK += dacc
-        K = np.exp(lnK)
-        e1 = np.sum((lnK-lnK_old)**2, where=in_equilibria)
-
-        # getting a feasible beta (if not in the feasible range)
-        bmin = max(np.hstack([((K*Z-1.)/(K-1.))[K > 1], Z[not_in_x], 0.]))
-        bmax = min(np.hstack([((1.-Z)/(1.-K))[K < 1], 1.]))
-        if beta < bmin or beta > bmax:
-            beta_new = (bmin + bmax) / 2.
-
-    """
     ###################################
     # 2. Minimization of Gibbs energy #
     ###################################
