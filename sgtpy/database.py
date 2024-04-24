@@ -78,7 +78,7 @@ class GCdatabase(object):
 
     def add_group(self, name, vk=1., Sk=1., sigma=0., eps=0., lr=12., la=6.,
                   nH=0, ne1=0, ne2=0, charge=0., sigma_born=0., mw=0.,
-                  author_key='', doi='',
+                  author_key='author', doi='doi',
                   overwrite=False):
         """
         add_group method
@@ -127,9 +127,10 @@ class GCdatabase(object):
             raise Exception('group {} already included in database, set'.format(name) +
                             ' overwrite=True to overwrite the current parameters')
         elif group_included and overwrite:
-            new_parameters = np.array([vk, Sk, sigma, eps, lr, la, Nst, nH,
-                                       ne1, ne2, charge, sigma_born, mw,
-                                       author_key, doi])
+            new_parameters = [vk, Sk, sigma, eps, lr, la, Nst, nH,
+                              ne1, ne2, charge, sigma_born, mw,
+                              author_key, doi]
+
             self.df_groups.loc[name] = new_parameters
         else:
             new_group = {'groups': name, 'vk*': vk, 'Sk': Sk,
@@ -145,7 +146,7 @@ class GCdatabase(object):
             self.group_list = list(self.df_groups.index)
 
     def new_interaction_mie(self, group_k, group_l, eps_kl=0., lr_kl='CR',
-                            author_key='', doi='',
+                            author_key='author', doi='doi',
                             overwrite=False):
         """
         new_interaction_mie method
@@ -205,8 +206,8 @@ class GCdatabase(object):
             self.df_mie_kl = df_mie_new
 
     def new_interaction_asso(self, group_k, group_l, site_k, site_l,
-                             epsAB_kl=0., kAB_kl=0, 
-                             author_key='', doi='',
+                             epsAB_kl=0., kAB_kl=0,
+                             author_key='author', doi='doi',
                              overwrite=False):
         """
         new_interaction_mie method
