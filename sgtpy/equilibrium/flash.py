@@ -56,7 +56,7 @@ def rachfordrice(beta, K, Z, tol=1e-8, maxiter=20, not_in_x=[], not_in_y=[]):
     return beta, D, singlephase
 
 
-def Gibbs_obj(ny_var, phases, Z, z_notzero, nx, ny, in_x, in_y, 
+def Gibbs_obj(ny_var, phases, Z, z_notzero, nx, ny, in_x, in_y,
               where_equilibria, temp_aux, P, model):
     '''
     Objective function to minimize Gibbs energy in biphasic flash
