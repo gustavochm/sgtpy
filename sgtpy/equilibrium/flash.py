@@ -57,7 +57,7 @@ def rachfordrice(beta, K, Z, tol=1e-8, maxiter=20, not_in_x=[], not_in_y=[]):
     return beta, D, singlephase
 
 
-def Gibbs_obj(ny_var, phases, Z, z_notzero, nx, ny, in_x, in_y,
+def Gibbs_obj(ny_var, phases, Z, nx, ny, where_x, where_y,
               where_equilibria, temp_aux, P, model):
     '''
     Objective function to minimize Gibbs energy in biphasic flash
@@ -71,14 +71,14 @@ def Gibbs_obj(ny_var, phases, Z, z_notzero, nx, ny, in_x, in_y,
     global vx, vy, Xass_x, Xass_y
     with np.errstate(all='ignore'):
         lnfugx, vx, Xass_y = model.logfugef_aux(X, temp_aux, P, phases[0], vx,
-                                               Xass_x)
+                                                Xass_x)
         lnfugy, vy, Xass_x = model.logfugef_aux(Y, temp_aux, P, phases[1], vy,
-                                               Xass_y)
-        fugx = np.log(X[z_notzero]) + lnfugx[z_notzero]
-        fugy = np.log(Y[z_notzero]) + lnfugy[z_notzero]
+                                                Xass_y)
+        fugx = np.log(X) + lnfugx
+        fugy = np.log(Y) + lnfugy
 
-    fx = np.dot(nx[in_x], fugx[in_x])
-    fy = np.dot(ny[in_y], fugy[in_y])
+    fx = np.dot(nx[where_x], fugx[where_x])
+    fy = np.dot(ny[where_y], fugy[where_y])
 
     f = fx + fy
     df = (fugy - fugx)[where_equilibria]
@@ -425,12 +425,14 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
             nx[not_in_x] = 0.
             nx[not_in_y] = Z[not_in_y]
 
+            where_x = np.logical_and(z_notzero, in_x)
+            where_y = np.logical_and(z_notzero, in_y)
             where_equilibria = np.logical_and(z_notzero, in_equilibria)
             ny_var = beta * Y[where_equilibria]
 
             # bounds = [(0., ny_max) for ny_max in Z[where_equilibria]]
 
-            args = (equilibrium, Z, z_notzero, nx, ny, in_x, in_y, where_equilibria, temp_aux, P, model)
+            args = (equilibrium, Z, nx, ny, where_x, where_y, where_equilibria, temp_aux, P, model)
             ny_sol = minimize(fobj, ny_var, jac=jac, method=minimization_method, hess=hess,
                               tol=minimization_tol, args=args, options=minimization_options)
 
