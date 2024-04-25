@@ -81,19 +81,27 @@ def Gibbs_obj(ny_var, phases, Z, nx, ny, where_x, where_y,
     fy = np.dot(ny[where_y], fugy[where_y])
 
     f = fx + fy
-    df = (fugy - fugx)[where_equilibria]
+    with np.errstate(all='ignore'):
+        df = (fugy - fugx)[where_equilibria]
     return f, df
 
 
-def Qfun_obj(inc, temp_aux, Pspec, model):
-    nc = model.nc
+def Qfun_obj_uc(inc, nx, ny, where_equilibria, nc_equilibria, Z, temp_aux, Pspec, model):
+    '''
+    Objective function to minimize Q function = A + Pspec * V in biphasic flash
+    '''
     RT = Na / temp_aux[0]
     Pspec_by_RT = Pspec / RT
 
-    ny = inc[:nc]
-    nx = inc[nc:(nc+nc)]
-    lnvy_total = inc[(nc+nc)]
-    lnvx_total = inc[(nc+nc+1)]
+    ny_var = inc[:nc_equilibria]
+    nx_var = Z[where_equilibria] - ny_var
+
+    ny[where_equilibria] = ny_var
+    nx[where_equilibria] = nx_var
+
+    lnvy_total = inc[nc_equilibria]
+    lnvx_total = inc[nc_equilibria+1]
+
     vy_total = np.exp(lnvy_total)
     vx_total = np.exp(lnvx_total)
 
@@ -102,34 +110,86 @@ def Qfun_obj(inc, temp_aux, Pspec, model):
     vy = vy_total / ny_total
     vx = vx_total / nx_total
 
-    global Xass_y, Xass_x
-    #### phase Y
-    y = ny / ny_total
-    rho_y = 1./vy
-    rhom_y = Na * rho_y
-    a_y, ax_y, Xass_y = model.dafcn_dxrho_aux(y, rhom_y, temp_aux, Xass_y)
-    a_y /= RT
-    ax_y /= RT
-    afcn_y, dafcn_y = a_y
+    global Xass_x, Xass_y
+    with np.errstate(all='ignore'):
+        #### phase Y
+        y = ny / ny_total
+        rho_y = 1./vy
+        rhom_y = Na * rho_y
+        afcn_y, Xass_y = model.afcn_aux(y, rhom_y, temp_aux, Xass_y)
+        afcn_y /= RT
+        afcn_y *= ny_total
 
-    Zy = dafcn_y * rhom_y
-    Py_by_RT = Zy / vy
-    mu_nvt_y = afcn_y + ax_y - np.dot(y, ax_y) + Zy
-    afcn_y *= ny_total
+        #### phase X
+        x = nx / nx_total
+        rho_x = 1./vx
+        rhom_x = Na * rho_x
+        afcn_x, Xass_x = model.afcn_aux(x, rhom_x, temp_aux, Xass_x)
+        afcn_x /= RT
+        afcn_x *= nx_total
 
-    #### phase X
-    x = nx / nx_total
-    rho_x = 1./vx
-    rhom_x = Na * rho_x
-    a_x, ax_x, Xass_x = model.dafcn_dxrho_aux(x, rhom_x, temp_aux, Xass_x)
-    a_x /= RT
-    ax_x /= RT
-    afcn_x, dafcn_x = a_x
+    ## Objective function
+    A_total = afcn_y + afcn_x
+    PV_total = (vy_total + vx_total) * Pspec_by_RT
+    Q_total = A_total + PV_total
+    return Q_total
 
-    Zx = dafcn_x * rhom_x
-    Px_by_RT = Zx / vx
-    mu_nvt_x = afcn_x + ax_x - np.dot(x, ax_x) + Zx
-    afcn_x *= nx_total
+
+def dQfun_obj_uc(inc, nx, ny, where_equilibria, nc_equilibria, Z, temp_aux, Pspec, model):
+    '''
+    Objective function to minimize Q function = A + Pspec * V in biphasic flash
+    '''
+    RT = Na / temp_aux[0]
+    Pspec_by_RT = Pspec / RT
+
+    ny_var = inc[:nc_equilibria]
+    nx_var = Z[where_equilibria] - ny_var
+
+    ny[where_equilibria] = ny_var
+    nx[where_equilibria] = nx_var
+
+    lnvy_total = inc[nc_equilibria]
+    lnvx_total = inc[nc_equilibria+1]
+
+    vy_total = np.exp(lnvy_total)
+    vx_total = np.exp(lnvx_total)
+
+    ny_total = np.sum(ny)
+    nx_total = np.sum(nx)
+    vy = vy_total / ny_total
+    vx = vx_total / nx_total
+
+    global Xass_x, Xass_y
+    with np.errstate(all='ignore'):
+        #### phase Y
+        y = ny / ny_total
+        rho_y = 1./vy
+        rhom_y = Na * rho_y
+        a_y, ax_y, Xass_y = model.dafcn_dxrho_aux(y, rhom_y, temp_aux, Xass_y)
+        ax_y = np.nan_to_num(ax_y)
+        a_y /= RT
+        ax_y /= RT
+        afcn_y, dafcn_y = a_y
+
+        Zy = dafcn_y * rhom_y
+        Py_by_RT = Zy / vy
+        mu_nvt_y = afcn_y + ax_y - np.dot(y, ax_y) + Zy
+        afcn_y *= ny_total
+
+        #### phase X
+        x = nx / nx_total
+        rho_x = 1./vx
+        rhom_x = Na * rho_x
+        a_x, ax_x, Xass_x = model.dafcn_dxrho_aux(x, rhom_x, temp_aux, Xass_x)
+        ax_x = np.nan_to_num(ax_x)
+        a_x /= RT
+        ax_x /= RT
+        afcn_x, dafcn_x = a_x
+
+        Zx = dafcn_x * rhom_x
+        Px_by_RT = Zx / vx
+        mu_nvt_x = afcn_x + ax_x - np.dot(x, ax_x) + Zx
+        afcn_x *= nx_total
 
     ## Objective function
     A_total = afcn_y + afcn_x
@@ -138,29 +198,11 @@ def Qfun_obj(inc, temp_aux, Pspec, model):
 
     # gradient
     dQ = np.zeros_like(inc)
-    dQ[:nc] = mu_nvt_y
-    dQ[nc:(nc+nc)] = mu_nvt_x
-    dQ[(nc+nc)] = vy_total * (- Py_by_RT + Pspec_by_RT)
-    dQ[(nc+nc+1)] = vx_total * (- Px_by_RT + Pspec_by_RT)
+    dQ[:nc_equilibria] = mu_nvt_y[where_equilibria] - mu_nvt_x[where_equilibria]
+    dQ[nc_equilibria] = vy_total * (- Py_by_RT + Pspec_by_RT)
+    dQ[nc_equilibria+1] = vx_total * (- Px_by_RT + Pspec_by_RT)
 
     return Q_total, dQ
-
-
-def Qfun_mass_balance(inc, Z, nc):
-    ny = inc[:nc]
-    nx = inc[nc:(nc+nc)]
-    of = ny + nx - Z
-    return of
-
-
-def Qfun_jac_mass_balance(inc, Z, nc):
-    jac = np.zeros([nc, (nc+nc+2)])
-    index0 = np.array([i for i in range(nc)])
-    index1 = np.array([i+nc for i in range(nc)])
-
-    jac[index0, index0] = 1.
-    jac[index0, index1] = 1.
-    return jac
 
 
 def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
@@ -210,6 +252,19 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
         maximum number of iterations for Rachford-Rice equation
     tol_rachfordrice : float, optional
         tolerance for Rachford-Rice solver
+    good_initial : bool, optional
+        if True, the function assumes that the initial guesses are good and proceeds
+        to minimize the Gibbs energy without performing the accelerated successive substitution
+    minimization_approach : string, optional
+        'gibbs' or 'helmholtz' minimization approach
+    minimization_method : string, optional
+        minimization method to use in the minimization of the Gibbs energy 
+        only used if minimization_approach='gibbs'
+        see scipy.minimize for possible minimizers
+    minimization_tol : float, optional
+        tolerance for the minimization of the Gibbs energy
+    minimization_options : dict, optional
+        options for scipy.minimize function
     full_output: bool, optional
         wheter to outputs all calculation info
 
@@ -267,7 +322,25 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
     bmax = min(np.hstack([((1.-Z)/(1.-K))[K < 1], 1.]))
     beta_new = (bmin + bmax)/2
 
-    singlephase = False
+    # Even if good guesses are given it is good to do one Radford-Rice iteration
+    beta, D, singlephase = rachfordrice(beta_new, K, Z,
+                                        tol=tol_rachfordrice,
+                                        maxiter=maxiter_radfordrice,
+                                        not_in_y=not_in_y,
+                                        not_in_x=not_in_x)
+    # updating phase compositions
+    X = Z/D
+    Y = X*K
+    # modification for for non-condensable/non-volatiles
+    if not singlephase:
+        # modification for not_in_y components Ki -> 0
+        X[not_in_y] = Z[not_in_y] / (1. - beta)
+        # modification for not_in_x components Ki -> infty
+        Y[not_in_x] = Z[not_in_x] / beta
+    Y[not_in_y] = 0.
+    X[not_in_x] = 0.
+    X /= X.sum()
+    Y /= Y.sum()
 
     ##########################################
     # 1. Accelerated Successive Substitution #
@@ -277,32 +350,14 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
     # dummy variables to track iterarions and errors
     e1 = 100.
     it_acc = 0
-    it_total = 0
+    it_total = 1
     it_max = nacc * accelerate_every
 
-    while e1 > K_tol and it_total < it_max and not good_initial:
+    while e1 > K_tol and it_total <= it_max and not good_initial:
         it_total += 1
         it_acc += 1
         lnK_old = 1. * lnK
-        beta, D, singlephase = rachfordrice(beta_new, K, Z,
-                                            tol=tol_rachfordrice,
-                                            maxiter=maxiter_radfordrice,
-                                            not_in_y=not_in_y,
-                                            not_in_x=not_in_x)
 
-        # updating phase compositions
-        X = Z/D
-        Y = X*K
-        # modification for for non-condensable/non-volatiles
-        if not singlephase:
-            # modification for not_in_y components Ki -> 0
-            X[not_in_y] = Z[not_in_y] / (1. - beta)
-            # modification for not_in_x components Ki -> infty
-            Y[not_in_x] = Z[not_in_x] / beta
-        Y[not_in_y] = 0.
-        X[not_in_x] = 0.
-        X /= X.sum()
-        Y /= Y.sum()
         # updating fugacity coefficients
         with np.errstate(all='ignore'):
             fugx, vx, Xass_x = model.logfugef_aux(X, temp_aux, P, equilibrium[0],
@@ -333,15 +388,32 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
         if beta < bmin or beta > bmax:
             beta_new = (bmin + bmax) / 2.
 
+        # solving Rachford-Rice equation
+        beta, D, singlephase = rachfordrice(beta_new, K, Z,
+                                            tol=tol_rachfordrice,
+                                            maxiter=maxiter_radfordrice,
+                                            not_in_y=not_in_y,
+                                            not_in_x=not_in_x)
+
+        # updating phase compositions
+        X = Z/D
+        Y = X*K
+        # modification for for non-condensable/non-volatiles
+        if not singlephase:
+            # modification for not_in_y components Ki -> 0
+            X[not_in_y] = Z[not_in_y] / (1. - beta)
+            # modification for not_in_x components Ki -> infty
+            Y[not_in_x] = Z[not_in_x] / beta
+        Y[not_in_y] = 0.
+        X[not_in_x] = 0.
+        X /= X.sum()
+        Y /= Y.sum()
 
     ###################################
     # 2. Minimization of Gibbs energy #
     ###################################
 
     # if e1 > K_tol and it_total == it_max and not singlephase:
-    if good_initial:
-        beta = beta_new
-
     if e1 > K_tol and not singlephase:
         # in case the minimization does not converge, we save the previous values
         vx_copy = 1. * vx
@@ -349,35 +421,37 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
         Xass_x_copy = 1. * Xass_x
         Xass_y_copy = 1. * Xass_y
 
+        # If a componnent is not in the global phase, it is not considered in the minimization  
+        z_notzero = Z != 0
+
+        where_x = np.logical_and(z_notzero, in_x)
+        where_y = np.logical_and(z_notzero, in_y)
+        where_equilibria = np.logical_and(z_notzero, in_equilibria)
+
+        # setting up initial guesses
+        ny = np.zeros(nc)
+        nx = np.zeros(nc)
+
+        ny[not_in_y] = 0.
+        ny[not_in_x] = Z[not_in_x]
+
+        nx[not_in_x] = 0.
+        nx[not_in_y] = Z[not_in_y]
+
+        ny_var = beta * Y[where_equilibria]
+
         # PT flash by minimizing Gibbs energy
         if minimization_approach == 'gibbs':
             fobj = Gibbs_obj
             jac = True
             hess = None
-            # setting up initial guesses
-            z_notzero = Z != 0
-
-            ny = np.zeros(nc)
-            nx = np.zeros(nc)
-
-            ny[not_in_y] = 0.
-            ny[not_in_x] = Z[not_in_x]
-
-            nx[not_in_x] = 0.
-            nx[not_in_y] = Z[not_in_y]
-
-            where_x = np.logical_and(z_notzero, in_x)
-            where_y = np.logical_and(z_notzero, in_y)
-            where_equilibria = np.logical_and(z_notzero, in_equilibria)
-            ny_var = beta * Y[where_equilibria]
 
             # bounds = [(0., ny_max) for ny_max in Z[where_equilibria]]
 
             args = (equilibrium, Z, nx, ny, where_x, where_y, where_equilibria, temp_aux, P, model)
             ny_sol = minimize(fobj, ny_var, jac=jac, method=minimization_method, hess=hess,
                               tol=minimization_tol, args=args, options=minimization_options)
-
-            if ny_sol.success:
+            if ny_sol.success or np.mean(ny_sol.jac**2) < minimization_tol:
                 method = "Gibbs_minimization"
                 ny_var = ny_sol.x
                 ny[where_equilibria] = ny_var
@@ -404,15 +478,12 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
 
         #  PT flash by minimizing Gibbs energy (using a helmholtz approach)
         elif minimization_approach == 'helmholtz':
-            fobj = Qfun_obj
-            jac = True
-            hess = None
-
             # setting up initial guesses
-            z_notzero = Z != 0
+            nc_equilibria = np.sum(where_equilibria)
+            nx_var = Z[where_equilibria] - ny_var
 
-            ny = beta * Y
-            nx = Z - ny
+            ny[where_equilibria] = ny_var
+            nx[where_equilibria] = nx_var
 
             ny_total = np.sum(ny)
             nx_total = np.sum(nx)
@@ -422,25 +493,47 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
             lnvy_total = np.log(vy_total)
             lnvx_total = np.log(vx_total)
 
-            inc = np.hstack([ny, nx, lnvy_total, lnvx_total])
+            inc = np.hstack([ny_var, lnvy_total, lnvx_total])
 
-            # bounds for mole phase fractions
-            bounds = [(0, x) for x in Z] + [(0, x) for x in Z] + [(None, None), (None, None)]
-            # constraints for mass balance
-            cons = [{'type': 'eq', 'fun': Qfun_mass_balance, 'jac': Qfun_jac_mass_balance, 'args': (Z, nc)}]
-            # This minimization requires to check the mass balance constraints,
-            # I did some test and SLQP is the method that worked "the best"
-            Q_sol = minimize(fobj, inc, jac=jac, method='SLSQP', hess=hess,
-                             tol=minimization_tol, args=(temp_aux, P, model),
-                             bounds=bounds, constraints=cons, options=minimization_options)
-            print(Q_sol)
-            if Q_sol.success:
+            bounds = [(0, Z[i]) for i in range(nc) if where_equilibria[i]]
+            bounds += [(None, None), (None, None)]
+
+            args = (nx, ny, where_equilibria, nc_equilibria, Z, temp_aux, P, model)
+
+            # If the initial guess is "poor" the jacobian might suggest a wrong direction
+            # This is just to improve the initial guess without any derivative information
+            Qsol_init = minimize(Qfun_obj_uc, inc, args=args, jac=False,
+                                 method='SLSQP', bounds=bounds, options={'maxiter': 15})
+            it_total += Qsol_init.nit
+
+            # Now that we have a better initial guess, we can use the jacobian
+            # TNC method seems to work well after this step but the final solution might not be super accurate
+            Qsol_tnc = minimize(dQfun_obj_uc, Qsol_init.x, args=args,
+                                jac=True, method='TNC', bounds=bounds,
+                                options=minimization_options)
+            Qsol = Qsol_tnc
+            jac = Qsol_tnc.jac
+            # Refinining the solution. SLSQP works well when there is a very good initial guess
+            if np.mean(jac**2) > minimization_tol:
+                Qsol_slsqp = minimize(dQfun_obj_uc, Qsol_tnc.x, args=args,
+                                      jac=True, method='SLSQP',
+                                      bounds=bounds, tol=minimization_tol)
+                if Qsol_slsqp.fun < Qsol.fun:
+                    it_total += Qsol_tnc.nit
+                    Qsol = Qsol_slsqp
+
+            if Qsol.success or np.mean(Qsol.jac**2) < minimization_tol:
                 method = "Helmholtz_minimization"
-                inc = Q_sol.x
-                ny = inc[:nc]
-                nx = inc[nc:(nc+nc)]
-                lnvy_total = inc[(nc+nc)]
-                lnvx_total = inc[(nc+nc+1)]
+                inc = Qsol.x
+
+                ny_var = inc[:nc_equilibria]
+                nx_var = Z[where_equilibria] - ny_var
+
+                ny[where_equilibria] = ny_var
+                nx[where_equilibria] = nx_var
+
+                lnvy_total = inc[nc_equilibria]
+                lnvx_total = inc[nc_equilibria+1]
 
                 vy_total = np.exp(lnvy_total)
                 vx_total = np.exp(lnvx_total)
@@ -454,11 +547,17 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
                 Y = ny / ny_total
                 X = nx / nx_total
 
-                jac = Q_sol.jac
-                qerror = np.hstack([jac[:nc] - jac[nc:(nc+nc)], jac[(nc+nc):]])
-                e1 = np.linalg.norm(qerror)
+                # updating volume roots for the obtained equilibria compositions and volumes
+                rho_x, Xass_x = model.density_aux(X, temp_aux, P, equilibrium[0],
+                                                  rho0=1./vx, Xass0=Xass_x)
+                rho_y, Xass_y = model.density_aux(Y, temp_aux, P, equilibrium[1],
+                                                  rho0=1./vy, Xass0=Xass_y)
+                vx = 1./rho_x
+                vy = 1./rho_y
 
-                it_total += Q_sol.nit
+                jac = Qsol.jac
+                e1 = np.linalg.norm(jac)
+                it_total += Qsol.nit
             else:
                 vx = vx_copy
                 vy = vy_copy
