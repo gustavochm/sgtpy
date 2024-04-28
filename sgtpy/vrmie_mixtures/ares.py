@@ -147,9 +147,6 @@ def ares(self, x, rho, temp_aux, Xass0=None):
     etai = xhi00 * xmi * di03[:, 3]
     achain = - np.dot(x * (self.ms - 1 + etai*self.ring), lng)
 
-    # print('amono', amono)
-    # print('achain', achain)
-
     ares = amono + achain
 
     if self.assoc_bool:
@@ -170,9 +167,6 @@ def ares(self, x, rho, temp_aux, Xass0=None):
         Xass = Xass_solver(self.nsites, xj, rho, self.DIJ, Dabij,
                            self.diagasso, Xass)
         ares += np.dot(self.S * xj, (np.log(Xass) - Xass/2 + 1/2))
-        # print('iab', iab)
-        # print('Xass', Xass)
-        # print('asso', np.dot(self.S * xj, (np.log(Xass) - Xass/2 + 1/2)))
     else:
         Xass = None
 
