@@ -261,7 +261,6 @@ def dares_drho(self, rho, temp_aux, Xass0=None):
         dXass = dXass_drho(rho, vki_asso, Xass, DIJ, Dijklab, dDijklab_drho,
                            CIJ)
 
-        Xass = Xass_solver(rho, vki_asso, DIJ, Dijklab, diagasso, Xass)
         Svki = self.S * vki_asso
         ares[0] += np.dot(Svki, (np.log(Xass) - Xass/2 + 1/2))
         ares[1] += np.dot(Svki, (1/Xass - 1/2) * dXass)
