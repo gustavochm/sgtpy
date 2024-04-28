@@ -3,6 +3,7 @@ import numpy as np
 from ..math import gauss
 from .ideal import aideal, daideal_drho, d2aideal_drho
 from .association_aux import association_config
+from .association_aux import association_solver, association_check
 from .polarGV import aij, bij, cij
 from .monomer_aux import I_lam, J_lam
 from .a1sB_monomer import x0lambda_eval
@@ -104,6 +105,9 @@ class saftvrmie_pure():
     dOm : computes adimentional Thermodynamic Grand Potential
     ci :  computes influence parameters matrix for SGT
     sgt_adim : computes adimentional factors for SGT
+
+    association_solver: computes the fraction of non-bonded sites
+    association_check: checks the fraction of non-bonded sites solution
 
     EntropyR : computes the residual entropy of the fluid
     EnthalpyR : computes the residual enthalpy of the fluid
@@ -420,6 +424,63 @@ class saftvrmie_pure():
                     x0_a12, x0_a22, I_lambdas, J_lambdas, beps, beps2, tetha,
                     x0_vector, cte_g1s, cte_g2s, Fab, Kab, epsa]
         return temp_aux
+
+    def association_solver(self, rho, T, Xass0=None):
+        """
+        association_solver(rho, T, Xass0)
+
+        Method that computes the fraction of non-bonded sites.
+
+        Parameters
+        ----------
+        rho : float
+            molecular density [mol/m^3]
+        T : float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        Xass : array
+            computed fraction of nonbonded sites. (None if the fluid is non-associating)
+        """
+        if self.assoc_bool:
+            temp_aux = self.temperature_aux(T)
+            rhom = Na * rho
+            Xass = association_solver(self, rhom, temp_aux, Xass0)
+        else:
+            Xass = None
+        return Xass
+
+    def association_check(self, rho, T, Xass):
+        """
+        association_check(rho, T, Xass)
+
+        Method that computes the fraction of non-bonded sites.
+
+        Parameters
+        ----------
+        rho : float
+            molecular density [mol/m^3]
+        T : float
+            absolute temperature [K]
+        Xass : array
+            computed fraction of nonbonded sites
+
+        Returns
+        -------
+        of: array_like
+            objective function that should be zero if the association sites
+            are consistent. (Zero if the mixture is non-associating)
+        """
+        if self.assoc_bool:
+            temp_aux = self.temperature_aux(T)
+            rhom = Na * rho
+            fo = association_check(self, rhom, temp_aux, Xass)
+        else:
+            fo = 0.0
+        return fo
 
     def density_aux(self, temp_aux, P, state, rho0=None, Xass0=None):
         """

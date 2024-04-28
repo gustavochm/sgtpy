@@ -304,3 +304,69 @@ def dXass_dx(rhom, xj, Xass, DIJ, Dabij, dDabij_dx, dxjdx, CIJ):
     dXass = np.linalg.solve(CIJ, bx.T)
 
     return dXass.T
+
+
+def association_solver(self, x, rhom, temp_aux, Xass0=None):
+
+    if Xass0 is None:
+        Xass = 0.2 * np.ones(self.nsites)
+    else:
+        Xass = 1. * Xass0
+
+    di03 = temp_aux[8]
+    dxhi00_drho = self.dxhi00_drho
+    xmi = x * self.ms
+    xm = np.sum(xmi)
+    # Eq A8
+    xs = xmi / xm
+
+    # Defining xhi0 without x dependence
+    xhi00 = dxhi00_drho * rhom
+    # Eq A7
+    xhi = xhi00 * xm * np.matmul(xs, di03)
+    dxhi_dxhi00 = np.matmul(xmi, di03)
+    dxhi_dxhi00[0] = xm
+
+    xj = x[self.compindex]
+    Fab = temp_aux[25]
+    aux_dii = temp_aux[26]
+    aux_dii2 = temp_aux[27]
+    Kab = temp_aux[28]
+    iab = Iab(xhi, aux_dii, aux_dii2, Kab)
+    Dab = self.sigmaij3 * Fab * iab
+    Dabij = np.zeros([self.nsites, self.nsites])
+    Dabij[self.indexabij] = Dab[self.indexab]
+
+    Xass = Xass_solver(self.nsites, xj, rhom, self.DIJ, Dabij,
+                       self.diagasso, Xass)
+    return Xass
+
+
+def association_check(self, x, rhom, temp_aux, Xass):
+    di03 = temp_aux[8]
+    dxhi00_drho = self.dxhi00_drho
+    xmi = x * self.ms
+    xm = np.sum(xmi)
+    # Eq A8
+    xs = xmi / xm
+
+    # Defining xhi0 without x dependence
+    xhi00 = dxhi00_drho * rhom
+    # Eq A7
+    xhi = xhi00 * xm * np.matmul(xs, di03)
+    dxhi_dxhi00 = np.matmul(xmi, di03)
+    dxhi_dxhi00[0] = xm
+
+    xj = x[self.compindex]
+    Fab = temp_aux[25]
+    aux_dii = temp_aux[26]
+    aux_dii2 = temp_aux[27]
+    Kab = temp_aux[28]
+    iab = Iab(xhi, aux_dii, aux_dii2, Kab)
+    Dab = self.sigmaij3 * Fab * iab
+    Dabij = np.zeros([self.nsites, self.nsites])
+    Dabij[self.indexabij] = Dab[self.indexab]
+
+    aux_asso = rhom * self.DIJ * Dabij
+    fo = Xass - 1 / (1 + aux_asso@(xj*Xass))
+    return fo

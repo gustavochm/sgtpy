@@ -114,3 +114,39 @@ def d2Xass_drho(rho, Xass, dXass_drho, DIJ, Dabij, dDabij_drho, d2Dabij_drho,
 
     d2Xass_drho = np.linalg.solve(CIJ, b2rho)
     return d2Xass_drho
+
+
+def association_solver(self, rhom, temp_aux, Xass0=None):
+    if Xass0 is None:
+        Xass = 0.2 * np.ones(self.nsites)
+    else:
+        Xass = 1. * Xass0
+
+    dia3 = temp_aux[4]
+    eta, deta = self.eta_bh(rhom, dia3)
+
+    Fab = temp_aux[19]
+    Kab = temp_aux[20]
+    iab = Iab(Kab, eta)
+    Dab = self.sigma3 * Fab * iab
+    Dabij = np.zeros([self.nsites, self.nsites])
+    Dabij[self.indexabij] = Dab
+    KIJ = rhom * (self.DIJ*Dabij)
+    Xass = Xass_solver(self.nsites, KIJ, self.diagasso, Xass0)
+    return Xass
+
+
+def association_check(self, rhom, temp_aux, Xass):
+
+    dia3 = temp_aux[4]
+    eta, deta = self.eta_bh(rhom, dia3)
+
+    Fab = temp_aux[19]
+    Kab = temp_aux[20]
+    iab = Iab(Kab, eta)
+    Dab = self.sigma3 * Fab * iab
+    Dabij = np.zeros([self.nsites, self.nsites])
+    Dabij[self.indexabij] = Dab
+    KIJ = rhom * (self.DIJ*Dabij)
+    fo = Xass - 1. / (1. + KIJ@Xass)
+    return fo

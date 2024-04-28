@@ -10,7 +10,7 @@ from .density_solver import density_topliss, density_newton
 from .psat_saft import psat
 from .tsat_saft import tsat
 from .critical_pure import get_critical
-
+from .association_aux import association_solver, association_check
 
 R = kb * Na
 
@@ -130,6 +130,9 @@ class saftgammamie_pure():
     dOm : computes adimentional Thermodynamic Grand Potential
     ci :  computes influence parameters matrix for SGT
     sgt_adim : computes adimentional factors for SGT
+
+    association_solver: computes the fraction of non-bonded sites
+    association_check: checks the fraction of non-bonded sites solution
 
     EntropyR : computes the residual entropy of the fluid
     EnthalpyR : computes the residual enthalpy of the fluid
@@ -297,7 +300,7 @@ class saftgammamie_pure():
 
         # for SGT calculation
         self.cii = pure.cii
-        
+
         # computing critical point
         self.critical = False
         if compute_critical:
@@ -427,6 +430,65 @@ class saftgammamie_pure():
             temp_aux.append(T_ad)
             temp_aux.append(Fklab)
         return temp_aux
+
+    def association_solver(self, rho, T, Xass0=None):
+        """
+        association_solver(rho, T, Xass0)
+        Method that computes the fraction of non-bonded sites.
+
+        Parameters
+        ----------
+        rho: float
+            molecular density [mol/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+
+        Returns
+        -------
+        Xass: array
+            fraction of non-bonded sites. (None if the fluid is non-associating)
+        """
+
+        if self.asso_bool:
+            temp_aux = self.temperature_aux(T)
+            rhom = rho * Na
+            Xass = association_solver(self, rhom, temp_aux, Xass0)
+        else:
+            Xass = None
+
+        return Xass
+
+    def association_check(self, rho, T, Xass):
+        """
+        association_check(rho, T, Xass)
+        Method that checks the fraction of non-bonded sites.
+
+        Parameters
+        ----------
+        rho: float
+            molecular density [mol/m3]
+        T: float
+            absolute temperature [K]
+        Xass: array
+            fraction of non-bonded sites
+
+        Returns
+        -------
+        fo: array
+            objective function that should be zero if the association sites
+            are consistent. (Zero if the fluid is non-associating)
+        """
+
+        if self.asso_bool:
+            temp_aux = self.temperature_aux(T)
+            rhom = rho * Na
+            fo = association_check(self, rhom, temp_aux, Xass)
+        else:
+            fo = 0.
+
+        return fo
 
     def ares(self, rho, T, Xass0=None):
         """

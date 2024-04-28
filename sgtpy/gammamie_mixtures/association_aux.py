@@ -206,3 +206,82 @@ def dXass_dx(rhom, xjvk, Xass, DIJ, Dabij, dDabij_dx, dxjdx, CIJ):
     dXass = np.linalg.solve(CIJ, bx.T)
 
     return dXass.T
+
+
+def association_solver(self, x, rhom, temp_aux, Xass0=None):
+    if Xass0 is None:
+        Xass = 0.2 * np.ones(self.nsites)
+    else:
+        Xass = 1. * Xass0
+
+    # setting up component
+    Sk = self.Sk
+    vki = self.vki
+    vk = self.vk
+    x_k = x[self.groups_index]
+    diagasso = self.diagasso
+    vki_asso = self.vki_asso
+    DIJ = self.DIJ
+
+    xs_ki = x_k*Sk*vki*vk
+    xs_m = np.sum(xs_ki)
+    xs_k = xs_ki / xs_m
+
+    T_ad = temp_aux[29]
+    sigma_kl3 = self.sigma_kl3
+    sigma_x3 = np.matmul(np.matmul(sigma_kl3, xs_k), xs_k)
+    rho_ad = rhom * xs_m * sigma_x3
+
+    Iijklab = np.zeros([self.nc, self.nc])
+    Iab(rho_ad, T_ad, Iijklab)
+
+    # vki_asso = self.vki[self.group_asso_index]
+    vki_asso = self.vki_asso
+    DIJ = self.DIJ
+    xj_asso = x[self.molecule_id_index_sites]
+    xjvk = xj_asso*vki_asso
+
+    # Fklab = np.exp(self.epsAB_kl * beta) - 1
+    Fklab = temp_aux[30]
+    Dijklab = self.kAB_kl * Fklab
+    Dijklab[self.indexABij] *= Iijklab[self.indexAB_id]
+
+    Xass = Xass_solver(rhom, xjvk, DIJ, Dijklab, diagasso, Xass)
+    return Xass
+
+
+def assocation_check(self, x, rhom, temp_aux, Xass):
+    # setting up component
+    Sk = self.Sk
+    vki = self.vki
+    vk = self.vk
+    x_k = x[self.groups_index]
+    vki_asso = self.vki_asso
+    DIJ = self.DIJ
+
+    xs_ki = x_k*Sk*vki*vk
+    xs_m = np.sum(xs_ki)
+    xs_k = xs_ki / xs_m
+
+    T_ad = temp_aux[29]
+    sigma_kl3 = self.sigma_kl3
+    sigma_x3 = np.matmul(np.matmul(sigma_kl3, xs_k), xs_k)
+    rho_ad = rhom * xs_m * sigma_x3
+
+    Iijklab = np.zeros([self.nc, self.nc])
+    Iab(rho_ad, T_ad, Iijklab)
+
+    # vki_asso = self.vki[self.group_asso_index]
+    vki_asso = self.vki_asso
+    DIJ = self.DIJ
+    xj_asso = x[self.molecule_id_index_sites]
+    xjvk = xj_asso*vki_asso
+
+    # Fklab = np.exp(self.epsAB_kl * beta) - 1
+    Fklab = temp_aux[30]
+    Dijklab = self.kAB_kl * Fklab
+    Dijklab[self.indexABij] *= Iijklab[self.indexAB_id]
+
+    aux_asso = rhom * DIJ * Dijklab
+    fo = Xass - 1 / (1 + aux_asso@(xjvk*Xass))
+    return fo

@@ -188,3 +188,51 @@ def d2Xass_drho(rhom, vki_asso, Xass, dXass_drho, DIJ, Dabij, dDabij_drho,
 
     d2Xass = np.linalg.solve(CIJ, b2rho)
     return d2Xass
+
+
+def association_solver(self, rhom, temp_aux, Xass0=None):
+    if Xass0 is None:
+        Xass = 0.2 * np.ones(self.nsites)
+    else:
+        Xass = 1. * Xass0
+
+    sigma_kl3 = self.sigma_kl3
+    xs_k = self.xs_k
+    xs_m = self.xs_m
+
+    T_ad = temp_aux[29]
+    Fklab = temp_aux[30]
+    sigma_x3 = np.matmul(np.matmul(sigma_kl3, xs_k), xs_k)
+    rho_ad = rhom * xs_m * sigma_x3
+
+    Iijklab = Iab(rho_ad, T_ad)
+
+    diagasso = self.diagasso
+    vki_asso = self.vki[self.group_asso_index]
+    DIJ = self.DIJ
+    Dijklab = self.kAB_kl * Fklab * Iijklab
+
+    Xass = Xass_solver(rhom, vki_asso, DIJ, Dijklab, diagasso, Xass)
+    return Xass
+
+
+def association_check(self, rhom, temp_aux, Xass):
+    sigma_kl3 = self.sigma_kl3
+    xs_k = self.xs_k
+    xs_m = self.xs_m
+
+    T_ad = temp_aux[29]
+    Fklab = temp_aux[30]
+    sigma_x3 = np.matmul(np.matmul(sigma_kl3, xs_k), xs_k)
+    rho_ad = rhom * xs_m * sigma_x3
+
+    Iijklab = Iab(rho_ad, T_ad)
+
+    vki_asso = self.vki[self.group_asso_index]
+    DIJ = self.DIJ
+    Dabij = self.kAB_kl * Fklab * Iijklab
+
+    aux_asso = rhom * DIJ * Dabij
+    fo = Xass - 1 / (1 + aux_asso@(vki_asso*Xass))
+
+    return fo

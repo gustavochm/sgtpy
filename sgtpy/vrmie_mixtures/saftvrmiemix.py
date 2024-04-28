@@ -11,6 +11,7 @@ from .ideal import aideal, daideal_drho, d2aideal_drho, daideal_dx
 from .ideal import daideal_dxrho
 
 from .association_aux import association_config
+from .association_aux import association_solver, association_check
 from .polarGV import aij, bij, cij
 
 from .density_solver import density_topliss, density_newton
@@ -157,6 +158,10 @@ class saftvrmie_mix():
     ci :  computes influence parameters matrix for SGT
     sgt_adim : computes adimentional factors for SGT
     beta_sgt: method for setting beta correction used in SGT
+
+    association_solver: computes the fraction of non-bonded sites
+    association_check: checks the fraction of non-bonded sites solution
+
     EntropyR : computes the residual entropy of the fluid
     EnthalpyR : computes the residual enthalpy of the fluid
     CvR : computes the residual isochoric heat capacity
@@ -623,6 +628,65 @@ class saftvrmie_mix():
                     x0_a1, x0_a2, x0_g1, x0_g2, x0_a1ii, x0_a2ii,
                     Fab, aux_dii, aux_dii2, Kab, epsa, epsija]
         return temp_aux
+
+    def association_solver(self, x, rho, T, Xass0=None):
+        """
+        association_solver(x, rho, T, Xass0)
+
+        Method that computes the fraction of non-bonded sites.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molar density [mol/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+        Returns
+        -------
+        Xass: array_like
+            fraction of non-bonded sites. (None if the mixture is non-associating)
+        """
+        if self.assoc_bool:
+            temp_aux = self.temperature_aux(T)
+            rhom = rho * Na
+            Xass = association_solver(self, x, rhom, temp_aux, Xass0)
+        else:
+            Xass = None
+        return Xass
+
+    def association_check(self, x, rho, T, Xass):
+        """
+        association_check(x, rho, T, Xass0)
+
+        Method that checks if the association sites are consistent.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molar density [mol/m3]
+        T: float
+            absolute temperature [K]
+        Xass: array
+            Initial guess for the calculation of fraction of non-bonded sites
+        Returns
+        -------
+        of: array_like
+            objective function that should be zero if the association sites
+            are consistent. (Zero if the mixture is non-associating)
+        """
+        if self.assoc_bool:
+            temp_aux = self.temperature_aux(T)
+            rhom = rho * Na
+            fo = association_check(self, x, rhom, temp_aux, Xass)
+        else:
+            fo = 0.
+        return fo
 
     def ares(self, x, rho, T, Xass0=None):
         """
@@ -2235,7 +2299,7 @@ class saftvrmie_mix():
         for i, pure_eos in enumerate(self.pure_eos):
             lnphi_pure[i], _ = pure_eos.logfug(T, P, state)
         return lnphi_pure
-    
+
     def get_lngamma(self, x, T, P, v0=None, Xass0=None, lnphi_pure=None):
         """
         get_lngamma(x, T, P, v0, Xass0)

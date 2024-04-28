@@ -9,6 +9,7 @@ from .ares import dares_dx, dares_dx_drho
 from .ideal import aideal, daideal_drho, d2aideal_drho
 from .ideal import daideal_dx, daideal_dx_drho
 from .density_solver import density_topliss, density_newton
+from .association_aux import assocation_check, association_solver
 
 from ..gammamie_pure import saftgammamie_pure
 
@@ -119,6 +120,8 @@ class saftgammamie_mix():
     cii_correlation : correlates the influence parameter of the fluid
     diameter : computes the diameter at given temperature
     temperature_aux : computes temperature depedent parameters of the fluid
+    association_solver: computes the fraction of non-bonded sites
+    association_check: checks if the association sites are consistent
     ares: computes the residual dimentionless Helmholtz free energy
     dares_drho: computes the residual dimentionless Helmholtz free energy
                 and its density first density derivative
@@ -147,6 +150,10 @@ class saftgammamie_mix():
     ci :  computes influence parameters matrix for SGT
     sgt_adim : computes adimentional factors for SGT
     beta_sgt: method for setting beta correction used in SGT
+
+    association_solver: computes the fraction of non-bonded sites
+    association_check: checks the fraction of non-bonded sites solution
+
     EntropyR : computes the residual entropy of the fluid
     EnthalpyR : computes the residual enthalpy of the fluid
     CvR : computes the residual isochoric heat capacity
@@ -491,6 +498,66 @@ class saftgammamie_mix():
             temp_aux.append(T_ad)
             temp_aux.append(Fklab)
         return temp_aux
+
+    def association_solver(self, x, rho, T, Xass0=None):
+        """
+        association_solver(x, rho, T, Xass0)
+
+        Method that computes the fraction of non-bonded sites.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molar density [mol/m3]
+        T: float
+            absolute temperature [K]
+        Xass0: array, optional
+            Initial guess for the calculation of fraction of non-bonded sites
+        Returns
+        -------
+        Xass: array_like
+            fraction of non-bonded sites. (None if the mixture is non-associating)
+        """
+        if self.asso_bool:
+            temp_aux = self.temperature_aux(T)
+            rhom = rho * Na
+            Xass = association_solver(self, x, rhom, temp_aux, Xass0)
+        else:
+            Xass = None
+        return Xass
+
+    def association_check(self, x, rho, T, Xass):
+        """
+        association_check(x, rho, T, Xass0)
+
+        Method that checks if the association sites are consistent.
+
+        Parameters
+        ----------
+        x: array_like
+            molar fraction array
+        rho: float
+            molar density [mol/m3]
+        T: float
+            absolute temperature [K]
+        Xass: array
+            Initial guess for the calculation of fraction of non-bonded sites
+        Returns
+        -------
+        of: float
+            objective function that should be zero if the association sites
+            are consistent. (Zero if the mixture is non-associating)
+        """
+        if self.asso_bool:
+            temp_aux = self.temperature_aux(T)
+            rhom = rho * Na
+            of = assocation_check(self, x, rhom, temp_aux, Xass)
+        else:
+            of = 0.
+
+        return of
 
     def ares(self, x, rho, T, Xass0=None):
         """
