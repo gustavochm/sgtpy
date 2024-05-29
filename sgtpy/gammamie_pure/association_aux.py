@@ -147,8 +147,12 @@ def Xass_solver(rho, vki_asso, DIJ, Dabij, diagasso, Xass0):
         is_nan = np.isnan(Xnew)
         Xnew[is_nan] = 0.2
 
-        Xnew_neg = Xnew < 0
+        Xnew_neg = Xnew < 0.
         Xnew[Xnew_neg] = 0.2*Xass[Xnew_neg]
+
+        Xnew_big = Xnew > 1
+        Xnew[Xnew_big] = 1.
+
         Xass = Xnew
         KIJXass = KIJ@Xass
         dQ = vki_asso * (1/Xass - 1) - KIJXass

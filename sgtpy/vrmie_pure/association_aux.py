@@ -43,16 +43,31 @@ def Xass_solver(nsites, KIJ, diagasso, Xass0=None):
         dXass = (1 - omega) * (fo - Xass)
         Xass += dXass
 
+    KIJXass = KIJ@Xass
+    dQ = (1./Xass - 1.) - KIJXass
+    HIJ = - 1. * KIJ
+    HIJ[diagasso] -= (1. + KIJXass)/Xass
     for i in range(15):
+        dXass = np.linalg.solve(HIJ, -dQ)
+        Xnew = Xass + dXass
+
+        is_nan = np.isnan(Xnew)
+        Xnew[is_nan] = 0.2
+
+        Xnew_neg = Xnew < 0.
+        Xnew[Xnew_neg] = 0.2*Xass[Xnew_neg]
+
+        Xnew_big = Xnew > 1.
+        Xnew[Xnew_big] = 1.
+
+        Xass = Xnew
         KIJXass = KIJ@Xass
         dQ = (1./Xass - 1.) - KIJXass
-        HIJ = - 1. * KIJ
-        HIJ[diagasso] -= (1. + KIJXass)/Xass
-        dXass = np.linalg.solve(HIJ, -dQ)
-        Xass += dXass
-        sucess = np.linalg.norm(dXass) < 1e-9
+        sucess = np.linalg.norm(dQ) < 1e-9
         if sucess:
             break
+        HIJ = - 1. * KIJ
+        HIJ[diagasso] -= (1. + KIJXass)/Xass
 
     return Xass
 
