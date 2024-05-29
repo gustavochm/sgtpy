@@ -1,5 +1,8 @@
 # SGTPy Changelog
 
+## v0.0.20
+* Extra constraint to prevent the association non-bonded sites solver to return values bigger than ones.
+* Phase equilibrium solvers now check if the computed fugacity and volume root are a number. If not, these two are recomputed without using the previous solution as an initial guess, in this case the initial volume root is generated using Topliss method.
 
 ## v0.0.19
 * The SAFT-gamma-Mie database has been updated to include recent parameters of the following articles: [Febra et al. (2021)](https://doi.org/10.1016/j.fluid.2021.113002), [Wehbe et al. (2022)](https://doi.org/10.1080/00268976.2023.2197712), [Perdomo et al. (2023)](https://doi.org/10.1016/j.fluid.2022.113635), [Valsecchi et al. (2024)](https://doi.org/10.1016/j.fluid.2023.113952) and [Bernet et al. (2024)](https://doi.org/10.1021/acs.jced.3c00358).
