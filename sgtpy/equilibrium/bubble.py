@@ -18,6 +18,8 @@ def bubble_sus(P_T, X, T_P, bubble_type, y_guess, eos,
 
     # Liquid fugacities
     lnphil, vl, Xassl = eos.logfugef_aux(X, temp_aux, P, 'L', vl0, Xassl0)
+    if np.any(np.isnan(lnphil)) or np.isnan(vl):
+        lnphil, vl, Xassl = eos.logfugef_aux(X, temp_aux, P, 'L')
 
     tol = 1e-8
     error = 1
@@ -29,6 +31,8 @@ def bubble_sus(P_T, X, T_P, bubble_type, y_guess, eos,
 
     # Vapour fugacities
     lnphiv, vv, Xassv = eos.logfugef_aux(Y, temp_aux, P, 'V', vv0, Xassv0)
+    if np.any(np.isnan(lnphiv)) or np.isnan(vv):
+        lnphiv, vv, Xassv = eos.logfugef_aux(Y, temp_aux, P, 'V')
 
     while error > tol and itacc < 3:
         niter += 1
@@ -56,6 +60,8 @@ def bubble_sus(P_T, X, T_P, bubble_type, y_guess, eos,
         Y = Y_calc/Y_calc.sum()
         # Vapor fugacities
         lnphiv, vv, Xassv = eos.logfugef_aux(Y, temp_aux, P, 'V', vv, Xassv)
+        if np.any(np.isnan(lnphiv)) or np.isnan(vv):
+            lnphiv, vv, Xassv = eos.logfugef_aux(Y, temp_aux, P, 'V')
 
     if bubble_type == 'T':
         f0 = Y_calc.sum() - 1
@@ -85,8 +91,12 @@ def bubble_newton(inc, X, T_P, bubble_type, eos, in_y=[]):
 
     # Liquid fugacities
     lnphil, vl, Xassl = eos.logfugef_aux(X, temp_aux, P, 'L', vl, Xassl)
+    if np.any(np.isnan(lnphil)) or np.isnan(vl):
+        lnphil, vl, Xassl = eos.logfugef_aux(X, temp_aux, P, 'L')
     # Vapour fugacities
     lnphiv, vv, Xassv = eos.logfugef_aux(Y, temp_aux, P, 'V', vv, Xassv)
+    if np.any(np.isnan(lnphiv)) or np.isnan(vv):
+        lnphiv, vv, Xassv = eos.logfugef_aux(Y, temp_aux, P, 'V')
 
     f[:-1] = lnK + (lnphiv - lnphil)[in_y]
     f[-1] = (Y-X).sum()

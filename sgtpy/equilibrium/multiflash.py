@@ -70,6 +70,9 @@ def gibbs_obj(ind, phases, Z, z_notzero, n_nonzero, temp_aux, P, model):
     for i, state in enumerate(phases):
         lnphi[i], vg[i], Xassg[i] = model.logfugef_aux(X[i], temp_aux, P,
                                                        state, vg[i], Xassg[i])
+        if np.any(np.isnan(lnphi[i])) or np.isnan(vg[i]):
+            lnphi[i], vg[i], Xassg[i] = model.logfugef_aux(X[i], temp_aux, P, state)
+
     with np.errstate(invalid='ignore'):
         fug = np.nan_to_num(np.log(X[:, z_notzero]) + lnphi[:, z_notzero])
     G = np.sum(n[:, z_notzero] * fug)
@@ -145,6 +148,8 @@ def multiflash(X0, betatetha, equilibrium, z, T, P, model, v0=[None],
     for i, state in enumerate(equilibrium):
         lnphi[i], v[i], Xass[i] = model.logfugef_aux(X[i], temp_aux, P, state,
                                                      v[i], Xass[i])
+        if np.any(np.isnan(lnphi[i])) or np.isnan(v[i]):
+            lnphi[i], v[i], Xass[i] = model.logfugef_aux(X[i], temp_aux, P, state)
 
     lnK = lnphi[0] - lnphi[1:]
     K = np.exp(lnK)
@@ -181,6 +186,9 @@ def multiflash(X0, betatetha, equilibrium, z, T, P, model, v0=[None],
         for i, state in enumerate(equilibrium):
             lnphi[i], v[i], Xass[i] = model.logfugef_aux(X[i], temp_aux, P,
                                                          state, v[i], Xass[i])
+            if np.any(np.isnan(lnphi[i])) or np.isnan(v[i]):
+                lnphi[i], v[i], Xass[i] = model.logfugef_aux(X[i], temp_aux, P, state)
+
         lnK = lnphi[0] - lnphi[1:]
         error = np.sum((lnK - lnK_old)**2)
 

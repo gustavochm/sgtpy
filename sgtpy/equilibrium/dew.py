@@ -19,6 +19,8 @@ def dew_sus(P_T, Y, T_P, dew_type, x_guess, eos, vl0, vv0,
 
     # Vapour fugacities
     lnphiv, vv, Xassv = eos.logfugef_aux(Y, temp_aux, P, 'V', vv0, Xassv0)
+    if np.any(np.isnan(lnphiv)) or np.isnan(vv):
+        lnphiv, vv, Xassv = eos.logfugef_aux(Y, temp_aux, P, 'V')
 
     tol = 1e-8
     error = 1
@@ -30,6 +32,8 @@ def dew_sus(P_T, Y, T_P, dew_type, x_guess, eos, vl0, vv0,
 
     # Liquid fugacities
     lnphil, vl, Xassl = eos.logfugef_aux(X, temp_aux, P, 'L', vl0, Xassl0)
+    if np.any(np.isnan(lnphil)) or np.isnan(vl):
+        lnphil, vl, Xassl = eos.logfugef_aux(X, temp_aux, P, 'L')
 
     while error > tol and itacc < 3:
         niter += 1
@@ -57,6 +61,8 @@ def dew_sus(P_T, Y, T_P, dew_type, x_guess, eos, vl0, vv0,
         X = X_calc/X_calc.sum()
         # Liquid fugacitiies
         lnphil, vl, Xassl = eos.logfugef_aux(X, temp_aux, P, 'L', vl, Xassl)
+        if np.any(np.isnan(lnphil)) or np.isnan(vl):
+            lnphil, vl, Xassl = eos.logfugef_aux(X, temp_aux, P, 'L')
 
     if dew_type == 'T':
         f0 = X_calc.sum() - 1
@@ -88,8 +94,12 @@ def dew_newton(inc, Y, T_P, dew_type, eos, in_x=[]):
 
     # Liquid fugacities
     lnphil, vl, Xassl = eos.logfugef_aux(X, temp_aux, P, 'L', vl, Xassl)
+    if np.any(np.isnan(lnphil)) or np.isnan(vl):
+        lnphil, vl, Xassl = eos.logfugef_aux(X, temp_aux, P, 'L')
     # Vapor fugacities
     lnphiv, vv, Xassv = eos.logfugef_aux(Y, temp_aux, P, 'V', vv, Xassv)
+    if np.any(np.isnan(lnphiv)) or np.isnan(vv):
+        lnphiv, vv, Xassv = eos.logfugef_aux(Y, temp_aux, P, 'V')
 
     f[:-1] = lnK + (lnphiv - lnphil)[in_x]
     f[-1] = (Y-X).sum()

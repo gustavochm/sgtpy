@@ -29,6 +29,9 @@ def haz_objb(inc, T_P, type, model, index, equilibrium):
     for i, state in enumerate(equilibrium):
         out = model.logfugef_aux(X[i], temp_aux, P, state, vg[i], Xassg[i])
         lnphi[i], vg[i], Xassg[i] = out
+        if np.any(np.isnan(lnphi[i])) or np.isnan(vg[i]):
+            out = model.logfugef_aux(X[i], temp_aux, P, state)
+            lnphi[i], vg[i], Xassg[i] = out
 
     lnK = lnphi[0] - lnphi[1:]
     K = np.exp(lnK)
@@ -43,10 +46,18 @@ def haz_objt(inc, temp_aux, P, model):
 
     fugX, vg[0], Xassg[0] = model.logfugef_aux(X, temp_aux, P, 'L', vg[0],
                                                Xassg[0])
+    if np.any(np.isnan(fugX)) or np.isnan(vg[0]):
+        fugX, vg[0], Xassg[0] = model.logfugef_aux(X, temp_aux, P, 'L')
+
     fugW, vg[1], Xassg[1] = model.logfugef_aux(W, temp_aux, P, 'L', vg[1],
                                                Xassg[1])
+    if np.any(np.isnan(fugW)) or np.isnan(vg[1]):
+        fugW, vg[1], Xassg[1] = model.logfugef_aux(W, temp_aux, P, 'L')
+
     fugY, vg[2], Xassg[2] = model.logfugef_aux(Y, temp_aux, P, 'V', vg[2],
                                                Xassg[2])
+    if np.any(np.isnan(fugY)) or np.isnan(vg[2]):
+        fugY, vg[2], Xassg[2] = model.logfugef_aux(Y, temp_aux, P, 'V')
 
     K1 = np.exp(fugX-fugY)
     K2 = np.exp(fugX-fugW)

@@ -4,14 +4,14 @@ from scipy.optimize import root
 from .equilibriumresult import EquilibriumResult
 
 
-def haz_objb(inc, T_P, tipo, model):
+def haz_objb(inc, T_P, vlle_type, model):
 
     X, W, Y, P_T = np.array_split(inc, 4)
     P_T = P_T[0]
-    if tipo == 'T':
+    if vlle_type == 'T':
         P = P_T
         temp_aux = T_P
-    elif tipo == 'P':
+    elif vlle_type == 'P':
         T = P_T
         temp_aux = model.temperature_aux(T)
         P = T_P
@@ -20,8 +20,16 @@ def haz_objb(inc, T_P, tipo, model):
     global Xassx, Xassw, Xassy
 
     fugX, vx, Xassx = model.logfugef_aux(X, temp_aux, P, 'L', vx, Xassx)
+    if np.any(np.isnan(fugX)) or np.isnan(vx):
+        fugX, vx, Xassx = model.logfugef_aux(X, temp_aux, P, 'L')
+
     fugW, vw, Xassw = model.logfugef_aux(W, temp_aux, P, 'L', vw, Xassw)
+    if np.any(np.isnan(fugW)) or np.isnan(vw):
+        fugW, vw, Xassw = model.logfugef_aux(W, temp_aux, P, 'L')
+
     fugY, vy, Xassy = model.logfugef_aux(Y, temp_aux, P, 'V', vy, Xassy)
+    if np.any(np.isnan(fugW)) or np.isnan(vw):
+        fugY, vy, Xassy = model.logfugef_aux(Y, temp_aux, P, 'V')
 
     K1 = np.exp(fugX-fugY)
     K2 = np.exp(fugX-fugW)

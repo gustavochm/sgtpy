@@ -70,10 +70,17 @@ def Gibbs_obj(ny_var, phases, Z, nx, ny, where_x, where_y,
 
     global vx, vy, Xass_x, Xass_y
     with np.errstate(all='ignore'):
-        lnfugx, vx, Xass_y = model.logfugef_aux(X, temp_aux, P, phases[0], vx,
+        lnfugx, vx, Xass_x = model.logfugef_aux(X, temp_aux, P, phases[0], vx,
                                                 Xass_x)
-        lnfugy, vy, Xass_x = model.logfugef_aux(Y, temp_aux, P, phases[1], vy,
+        lnfugy, vy, Xass_y = model.logfugef_aux(Y, temp_aux, P, phases[1], vy,
                                                 Xass_y)
+        # If the previous volume/Xass initial guess is not good it might
+        # cause the whole calculation to fail
+        if np.any(np.isnan(lnfugx)) or np.isnan(vx):
+            lnfugx, vx, Xass_x = model.logfugef_aux(X, temp_aux, P, phases[0])
+        if np.any(np.isnan(lnfugy)) or np.isnan(vy):
+            lnfugy, vy, Xass_y = model.logfugef_aux(Y, temp_aux, P, phases[1])
+
         fugx = np.log(X) + lnfugx
         fugy = np.log(Y) + lnfugy
 
@@ -315,6 +322,14 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
                                               vx0, Xass_x0)
         fugy, vy, Xass_y = model.logfugef_aux(Y, temp_aux, P, equilibrium[1],
                                               vy0, Xass_y0)
+
+        # If the previous volume/Xass initial guess is not good it might
+        # cause the whole calculation to fail
+        if np.any(np.isnan(fugx)) or np.isnan(vx):
+            fugx, vx, Xass_x = model.logfugef_aux(X, temp_aux, P, equilibrium[0])
+        if np.any(np.isnan(fugy)) or np.isnan(vy):
+            fugy, vy, Xass_y = model.logfugef_aux(Y, temp_aux, P, equilibrium[1])
+
     lnK = fugx - fugy
     K = np.exp(lnK)
 
@@ -364,6 +379,12 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
                                                   vx, Xass_x)
             fugy, vy, Xass_y = model.logfugef_aux(Y, temp_aux, P, equilibrium[1],
                                                   vy, Xass_y)
+            # If the previous volume/Xass initial guess is not good it might
+            # cause the whole calculation to fail
+            if np.any(np.isnan(fugx)) or np.isnan(vx):
+                fugx, vx, Xass_x = model.logfugef_aux(X, temp_aux, P, equilibrium[0])
+            if np.any(np.isnan(fugy)) or np.isnan(vy):
+                fugy, vy, Xass_y = model.logfugef_aux(Y, temp_aux, P, equilibrium[1])
         lnK = fugx - fugy
 
         # acceleration
@@ -505,21 +526,25 @@ def flash(x_guess, y_guess, equilibrium, Z, T, P, model, v0=[None, None],
             Qsol_init = minimize(Qfun_obj_uc, inc, args=args, jac=False,
                                  method='SLSQP', bounds=bounds, options={'maxiter': 15})
             it_total += Qsol_init.nit
+            Qsol = Qsol_init
+            jac = Qsol_init.jac
 
             # Now that we have a better initial guess, we can use the jacobian
             # TNC method seems to work well after this step but the final solution might not be super accurate
             Qsol_tnc = minimize(dQfun_obj_uc, Qsol_init.x, args=args,
                                 jac=True, method='TNC', bounds=bounds,
                                 options=minimization_options)
-            Qsol = Qsol_tnc
-            jac = Qsol_tnc.jac
+            if Qsol_tnc.fun < Qsol.fun:
+                it_total += Qsol_tnc.nit
+                Qsol = Qsol_tnc
+                jac = Qsol_tnc.jac
             # Refinining the solution. SLSQP works well when there is a very good initial guess
             if np.mean(jac**2) > minimization_tol:
                 Qsol_slsqp = minimize(dQfun_obj_uc, Qsol_tnc.x, args=args,
                                       jac=True, method='SLSQP',
                                       bounds=bounds, tol=minimization_tol)
                 if Qsol_slsqp.fun < Qsol.fun:
-                    it_total += Qsol_tnc.nit
+                    it_total += Qsol_slsqp.nit
                     Qsol = Qsol_slsqp
 
             if Qsol.success or np.mean(Qsol.jac**2) < minimization_tol:

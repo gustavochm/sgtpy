@@ -236,7 +236,7 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None,
                 if len(f_minima) == nmin:
                     break
                     # return tuple(all_minima), np.array(f_minima)
-    
+
 
     # random seach
     niter = 0
@@ -264,7 +264,7 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None,
                 # if len(f_minima) == nmin:
                     # break
                     # return tuple(all_minima), np.array(f_minima)
-    
+
     f_minima = np.array(f_minima)
     sort = np.argsort(f_minima)
     f_minima = f_minima[sort]
@@ -274,11 +274,11 @@ def tpd_minimas(nmin, Z, T, P, model, stateW, stateZ, vw=None, vz=None,
 
     f_minima = list(f_minima)
     all_minima = list(all_minima)
-    
+
     while len(f_minima) < nmin:
         all_minima.append(all_minima[0])
         f_minima.append(f_minima[0])
-    
+
     if len(f_minima) > nmin:
         f_minima = f_minima[:nmin]
         all_minima = all_minima[:nmin]
