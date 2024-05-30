@@ -1212,7 +1212,7 @@ class saftgammamie_pure():
         """
         muad_aux(rho, temp_aux, Xass0)
 
-        Method that computes the adimenstional chemical potential at given
+        Method that computes the adimentional chemical potential at given
         density and temperature.
 
         Parameters
@@ -1226,7 +1226,7 @@ class saftgammamie_pure():
 
         Returns
         -------
-        muad: float
+        mu: float
             chemical potential [J/mol]
         Xass : array
             computed fraction of nonbonded sites
@@ -1243,7 +1243,7 @@ class saftgammamie_pure():
         """
         muad(rho, T, Xass0)
 
-        Method that computes the adimenstional chemical potential at given
+        Method that computes the adimentional chemical potential at given
         density and temperature.
 
         Parameters
@@ -1258,11 +1258,12 @@ class saftgammamie_pure():
         Returns
         -------
         muad: float
-            chemical potential [J/mol]
+            chemical potential [Adim]
         """
         temp_aux = self.temperature_aux(T)
         mu, Xass = self.muad_aux(rho, temp_aux, Xass0)
-        return mu
+        muad = mu / (R * T)
+        return muad
 
     def dOm_aux(self, rho, temp_aux, mu, Psat, Xass0=None):
         """
