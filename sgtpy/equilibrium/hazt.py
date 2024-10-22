@@ -66,7 +66,8 @@ def haz_objt(inc, temp_aux, P, model):
 
 
 def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
-        Xass0=[None, None, None], K_tol=1e-10, nacc=5, full_output=False):
+        Xass0=[None, None, None], K_tol=1e-10, nacc=5, full_output=False, 
+        tetha_max=10.):
     """
     Liquid liquid vapor (T,P) -> (x, w, y)
 
@@ -100,6 +101,8 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
         number of accelerated successive substitution cycles to perform
     full_output: bool, optional
         wheter to outputs all calculation info
+    tetha_max : float, optional
+        maximum value for stability variables. Default is 10.
 
     Returns
     -------
@@ -158,7 +161,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
         x0 = sol.reshape([model.nc, 3])
         Z0 = x0.mean(axis=0)
         out = multiflash(x0, b0, ['L', 'L', 'V'], Z0, T, P, model,
-                         vg, Xassg, K_tol, nacc, True)
+                         vg, Xassg, K_tol, nacc, True, tetha_max)
 
     Xm, beta, tetha, equilibrio = out.X, out.beta, out.tetha, out.states
     error_inner = out.error_inner
@@ -173,7 +176,7 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
         v0 = np.asarray(v)[order]
         Xass0 = np.asarray(out.Xass)[order]
         out = multiflash(Xm, betatetha, equilibrio, Z0, T, P, model, v0, Xass0,
-                         K_tol, nacc, full_output=True)
+                         K_tol, nacc, full_output=True, tetha_max=tetha_max)
         order = [1, 2, 0]
         Xm, beta, tetha, equilibrio = out.X, out.beta, out.tetha, out.states
         error_inner = out.error_inner
@@ -185,7 +188,8 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
             v0 = np.asarray(out.v)[order]
             Xass0 = np.asarray(out.Xass)[order]
             out = multiflash(Xm, betatetha, equilibrio, Z0, T, P, model, v0,
-                             Xass0, K_tol, nacc, full_output=True)
+                             Xass0, K_tol, nacc, full_output=True,
+                             tetha_max=tetha_max)
             order = [1, 0, 2]
             Xm, beta, tetha = out.X, out.beta, out.tetha
             equilibrio = out.states
@@ -216,7 +220,8 @@ def haz(X0, W0, Y0, T, P, model, good_initial=False, v0=[None, None, None],
 
 
 def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
-         Xass0=[None, None, None], K_tol=1e-10, nacc=5, full_output=False):
+         Xass0=[None, None, None], K_tol=1e-10, nacc=5,
+         full_output=False, tetha_max=10.):
     """
     Liquid liquid vapor Multiflash (Z, T, P) -> (x, w, y)
 
@@ -250,6 +255,8 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
         number of accelerated successive substitution cycles to perform
     full_output: bool, optional
         wheter to outputs all calculation info
+    tetha_max : float, optional
+        maximum value for stability variables. Default is 10.
 
     Returns
     -------
@@ -298,7 +305,7 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
             return out
         return X, W, Y, T
     out = multiflash(x0, b0, ['L', 'L', 'V'], Z, T, P, model, v0, Xass0,
-                     K_tol, nacc, True)
+                     K_tol, nacc, True, tetha_max)
 
     Xm, beta, tetha, equilibrio = out.X, out.beta, out.tetha, out.states
     error_inner = out.error_inner
@@ -313,7 +320,8 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
         v0 = np.asarray(v)[order]
         Xass0 = np.asarray(out.Xass)[order]
         out = multiflash(Xm, betatetha, equilibrio, Z, T, P, model, v0,
-                         Xass, K_tol, nacc, full_output=True)
+                         Xass, K_tol, nacc, full_output=True, 
+                         tetha_max=tetha_max)
         order = [1, 2, 0]
         Xm, beta, tetha, equilibrio = out.X, out.beta, out.tetha, out.states
         error_inner = out.error_inner
@@ -325,7 +333,8 @@ def vlle(X0, W0, Y0, Z, T, P, model, v0=[None, None, None],
             v0 = np.asarray(out.v)[order]
             Xass0 = np.asarray(out.Xass)[order]
             out = multiflash(Xm, betatetha, equilibrio, Z, T, P, model, v0,
-                             Xass0, K_tol, nacc, full_output=True)
+                             Xass0, K_tol, nacc, full_output=True, 
+                             tetha_max=tetha_max)
             order = [1, 0, 2]
             Xm, beta, tetha = out.X, out.beta, out.tetha
             equilibrio = out.states
