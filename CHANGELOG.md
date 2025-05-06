@@ -1,5 +1,9 @@
 # SGTPy Changelog
 
+## v0.0.22
+* Added the `nopython=True` flag the association functions used in SAFT-gamma-Mie EoS (As required by numba update)
+* Updaded association interaction of NH(e1) and H2O(H) for SAFT-gamma-Mie EoS. The updated database uses the value reported by [Perdomo et al. (2021)](https://doi.org/10.1002/aic.17194).
+
 ## v0.0.21
 * Changed the `brentq` to `toms748` in the density solvers for both SAFT versions.
 * Added an upper limit for the stability variables `tetha` in the `multiflash` solver (used in `lle` and `vlle` solvers). This is to avoid overflow in the solution of the modified multiflash.
