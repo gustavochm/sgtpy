@@ -17,6 +17,8 @@ SGTPy/src/build/
 
 examples/.ipynb_checkpoints/
 
+upload_pypi.sh
+
 
 #Python Cache#
 ##############
