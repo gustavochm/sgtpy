@@ -73,7 +73,7 @@ cpq[9, 1] = -1.92518067137033E-03
 cpq[10, 0] = -8.67296219639940E-01
 
 
-@jit(cache=True)
+@jit(cache=True, nopython=True)
 def Iab(rho_ad, T_ad):
     Iijklab = 0.
     for p in range(11):
@@ -83,7 +83,7 @@ def Iab(rho_ad, T_ad):
     return Iijklab
 
 
-@jit(cache=True)
+@jit(cache=True, nopython=True)
 def dIab_drho(rho_ad, T_ad, drho_ad):
     Iijklab = 0.
     dIijklab_drho = 0.
@@ -95,7 +95,7 @@ def dIab_drho(rho_ad, T_ad, drho_ad):
     return Iijklab, dIijklab_drho
 
 
-@jit(cache=True)
+@jit(cache=True, nopython=True)
 def d2Iab_drho(rho_ad, T_ad, drho_ad):
     Iijklab = 0.
     dIijklab_drho = 0.
