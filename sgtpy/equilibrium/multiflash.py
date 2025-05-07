@@ -81,7 +81,8 @@ def gibbs_obj(ind, phases, Z, z_notzero, n_nonzero, temp_aux, P, model):
 
 
 def multiflash(X0, betatetha, equilibrium, z, T, P, model, v0=[None],
-               Xass0=[None], K_tol=1e-10, nacc=5, full_output=False):
+               Xass0=[None], K_tol=1e-10, nacc=5, full_output=False,
+               tetha_max=10.):
     """
     multiflash (z,T,P) -> (x, w, y, ..., beta)
 
@@ -109,6 +110,8 @@ def multiflash(X0, betatetha, equilibrium, z, T, P, model, v0=[None],
         number of accelerated successive substitution cycles to perform
     full_output: bool, optional
         wheter to outputs all calculation info
+    tetha_max : float, optional
+        maximum value for stability variables. Default is 10.
 
     Returns
     -------
@@ -171,6 +174,7 @@ def multiflash(X0, betatetha, equilibrium, z, T, P, model, v0=[None],
             x += dx
             ef = np.linalg.norm(f)
             ex = np.linalg.norm(dx)
+            x[x > tetha_max] = tetha_max
 
         x[x <= 1e-10] = 0.
         beta, tetha = np.array_split(x, 2)

@@ -1,5 +1,12 @@
 # SGTPy Changelog
 
+## v0.0.21
+* Added the `nopython=True` flag the association functions used in SAFT-gamma-Mie EoS (As required by numba update)
+* Updaded association interaction of NH(e1) and H2O(H) for SAFT-gamma-Mie EoS. The updated database uses the value reported by [Perdomo et al. (2021)](https://doi.org/10.1002/aic.17194).
+* Changed the `brentq` to `toms748` in the density solvers for both SAFT versions.
+* Added an upper limit for the stability variables `tetha` in the `multiflash` solver (used in `lle` and `vlle` solvers). This is to avoid overflow in the solution of the modified multiflash.
+* Changed `cumtrapz` to `cumulative_trapezoid` function in the `path_sk` solver for SGT. (due to scipy deprecation)
+
 ## v0.0.20
 * Extra constraint to prevent the association non-bonded sites solver to return values bigger than ones.
 * Phase equilibrium solvers now check if the computed fugacity and volume root are a number. If not, these two are recomputed without using the previous solution as an initial guess, in this case the initial volume root is generated using Topliss method.

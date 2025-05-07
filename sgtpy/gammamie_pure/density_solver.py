@@ -1,7 +1,7 @@
 from __future__ import division, print_function, absolute_import
 import numpy as np
 from ..constants import Na
-from scipy.optimize import minimize_scalar, brentq
+from scipy.optimize import minimize_scalar, toms748
 
 
 def dPsaft_fun(rho, temp_aux, saft):
@@ -102,8 +102,8 @@ def density_topliss(state, temp_aux, P, Xass0, saft):
             bracket[0] = rho_inf
         elif state == 'V':
             bracket[1] = rho_inf
-        rho_ext = brentq(dPsaft_fun, bracket[0], bracket[1],
-                         args=(temp_aux, saft), xtol=1e-2)
+        rho_ext = toms748(dPsaft_fun, bracket[0], bracket[1],
+                          args=(temp_aux, saft), xtol=1e-2)
         P_ext, dP_ext, Xass = saft.dP_drho_aux(rho_ext, temp_aux, Xass)
         if P_ext > P and state == 'V':
             bracket[1] = rho_ext

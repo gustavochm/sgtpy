@@ -5,7 +5,7 @@ from .multiflash import multiflash
 
 
 def lle(x0, w0, Z, T, P, model, v0=[None, None], Xass0=[None, None],
-        K_tol=1e-8, nacc=5, full_output=False):
+        K_tol=1e-8, nacc=5, full_output=False, tetha_max=10.):
     """
     Liquid liquid equilibrium (z,T,P) -> (x,w,beta)
 
@@ -35,6 +35,8 @@ def lle(x0, w0, Z, T, P, model, v0=[None, None], Xass0=[None, None],
         number of accelerated successive substitution cycles to perform
     full_output: bool, optional
         wheter to outputs all calculation info
+    tetha_max : float, optional
+        maximum value for stability variables. Default is 10.
 
     Returns
     -------
@@ -68,7 +70,7 @@ def lle(x0, w0, Z, T, P, model, v0=[None, None], Xass0=[None, None],
     beta0 = np.array([1-beta, beta, 0.])
 
     out = multiflash(X0, beta0, equilibrio, Z, T, P, model,
-                     [v1, v2], [Xass1, Xass2], K_tol, nacc, True)
+                     [v1, v2], [Xass1, Xass2], K_tol, nacc, True, tetha_max)
     Xm, beta, tetha, v, Xass = out.X, out.beta, out.tetha, out.v, out.Xass
 
     if tetha > 0:
@@ -77,7 +79,7 @@ def lle(x0, w0, Z, T, P, model, v0=[None, None], Xass0=[None, None],
         X0 = np.asarray(xes)
         beta0 = np.hstack([beta, 0.])
         out = multiflash(X0, beta0, equilibrio, Z, T, P, model, v, Xass,
-                         K_tol, nacc, True)
+                         K_tol, nacc, True, tetha_max)
         Xm, beta, tetha, v = out.X, out.beta, out.tetha, out.v
 
     X, W = Xm
