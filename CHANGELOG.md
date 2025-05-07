@@ -1,5 +1,8 @@
 # SGTPy Changelog
 
+## v0.0.22
+* Changed the behavior of `eos.muad`, `eos.a0ad` and `eos.dOm` methods to use values divided by RT in pure fluid EoS (This behavior was already used in mixtures versions of the EoS).  These methods are used in SGT functions.
+
 ## v0.0.21
 * Added the `nopython=True` flag the association functions used in SAFT-gamma-Mie EoS (As required by numba update)
 * Updaded association interaction of NH(e1) and H2O(H) for SAFT-gamma-Mie EoS. The updated database uses the value reported by [Perdomo et al. (2021)](https://doi.org/10.1002/aic.17194).
