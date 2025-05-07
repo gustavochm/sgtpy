@@ -125,11 +125,11 @@ class saftgammamie_pure():
     pressure : computes the pressure
     dP_drho : computes pressure and its density derivative
     logfug : computes the fugacity coefficient
-    a0ad : computes adimentional Helmholtz density energy
-    muad : computes adimentional chemical potential
-    dOm : computes adimentional Thermodynamic Grand Potential
+    a0ad : computes dimensionless Helmholtz density energy
+    muad : computes dimensionless chemical potential
+    dOm : computes dimensionless Thermodynamic Grand Potential
     ci :  computes influence parameters matrix for SGT
-    sgt_adim : computes adimentional factors for SGT
+    sgt_adim : computes dimensionless factors for SGT
 
     association_solver: computes the fraction of non-bonded sites
     association_check: checks the fraction of non-bonded sites solution
@@ -1110,7 +1110,7 @@ class saftgammamie_pure():
         '''
         sgt_adim(T)
 
-        Method that evaluates adimentional factor for temperature, pressure,
+        Method that evaluates dimensionless factor for temperature, pressure,
         density, tension and distance for interfacial properties computations
         with SGT.
 
@@ -1128,35 +1128,38 @@ class saftgammamie_pure():
         rofactor : float
             factor to obtain dimentionless density (mol/m3 -> mol/m3)
         tenfactor : float
-            factor to obtain dimentionless surface tension (mN/m)
+            factor to obtain surface tension in (mN/m)
         zfactor : float
-            factor to obtain dimentionless distance  (Amstrong -> m)
+            factor to obtain the interfacial distance in (Amstrongs)
         '''
-
+        beta = 1 / (kb*T)
+        RT = (Na/beta)
         cii = self.ci(T)  # computing temperature dependent cii
 
         Tfactor = 1.
-        Pfactor = 1.
+        Pfactor = 1. / RT
         rofactor = 1.
-        tenfactor = np.sqrt(cii) * 1000  # To give tension in mN/m
-        zfactor = 10**-10
+        tenfactor = np.sqrt(cii*RT) * 1000  # To give tension in mN/m
+        zfactor = 10**-10 * np.sqrt(RT / cii)
 
         return Tfactor, Pfactor, rofactor, tenfactor, zfactor
 
     def sgt_adim_fit(self, T):
 
+        beta = 1 / (kb*T)
+        RT = (Na/beta)
         Tfactor = 1.
-        Pfactor = 1.
+        Pfactor = 1. / RT
         rofactor = 1.
-        tenfactor = 1. * 1000  # To give tension in mN/m
+        tenfactor = np.sqrt(RT) * 1000  # To give tension in mN/m
 
         return Tfactor, Pfactor, rofactor, tenfactor
 
     def a0ad_aux(self, rho, temp_aux, Xass0=None):
         """
-        a0ad_aux(ro, temp_aux, Xass0)
+        a0ad_aux(rho, temp_aux, Xass0)
 
-        Method that computes the adimenstional Helmholtz density energy at
+        Method that computes the dimensionless Helmholtz density energy at
         given density and temperature.
 
         Parameters
@@ -1172,7 +1175,7 @@ class saftgammamie_pure():
         Returns
         -------
         a0ad: float
-            Helmholtz density energy [J/m^3]
+            Helmholtz density energy divided by RT [mol/m^3]
         Xass : array
             computed fraction of nonbonded sites
         """
@@ -1180,13 +1183,17 @@ class saftgammamie_pure():
         a0, Xass = self.afcn_aux(rhomolecular, temp_aux, Xass0)
         a0 *= rho
 
+        beta = temp_aux[0]
+        RT = (Na/beta)
+        a0 /= RT
+
         return a0, Xass
 
     def a0ad(self, rho, T, Xass0=None):
         """
-        a0ad(ro, T, Xass0)
+        a0ad(rho, T, Xass0)
 
-        Method that computes the adimenstional Helmholtz density energy at
+        Method that computes the dimensionless Helmholtz density energy at
         given density and temperature.
 
         Parameters
@@ -1202,7 +1209,7 @@ class saftgammamie_pure():
         Returns
         -------
         a0ad: float
-            Helmholtz density energy [J/m^3]
+            Helmholtz density energy divided by RT [mol/m^3]
         """
         temp_aux = self.temperature_aux(T)
         a0, Xass = self.a0ad_aux(rho, temp_aux, Xass0)
@@ -1212,7 +1219,7 @@ class saftgammamie_pure():
         """
         muad_aux(rho, temp_aux, Xass0)
 
-        Method that computes the adimentional chemical potential at given
+        Method that computes the dimensionless chemical potential at given
         density and temperature.
 
         Parameters
@@ -1226,8 +1233,8 @@ class saftgammamie_pure():
 
         Returns
         -------
-        mu: float
-            chemical potential [J/mol]
+        muad: float
+            chemical potential divided by RT [Adim]
         Xass : array
             computed fraction of nonbonded sites
         """
@@ -1237,13 +1244,17 @@ class saftgammamie_pure():
         afcn, dafcn = da
         mu = afcn + rhomolecular * dafcn
 
+        beta = temp_aux[0]
+        RT = (Na/beta)
+        mu /= RT
+
         return mu, Xass
 
     def muad(self, rho, T, Xass0=None):
         """
         muad(rho, T, Xass0)
 
-        Method that computes the adimentional chemical potential at given
+        Method that computes the dimensionless chemical potential at given
         density and temperature.
 
         Parameters
@@ -1258,18 +1269,17 @@ class saftgammamie_pure():
         Returns
         -------
         muad: float
-            chemical potential [Adim]
+            chemical potential divided by RT [Adim]
         """
         temp_aux = self.temperature_aux(T)
         mu, Xass = self.muad_aux(rho, temp_aux, Xass0)
-        muad = mu / (R * T)
-        return muad
+        return mu
 
     def dOm_aux(self, rho, temp_aux, mu, Psat, Xass0=None):
         """
         dOm_aux(rho, temp_aux, mu, Psat, Xass0)
 
-        Method that computes the adimenstional Thermodynamic Grand potential
+        Method that computes the dimensionless Thermodynamic Grand potential
         at given density and temperature.
 
         Parameters
@@ -1279,16 +1289,16 @@ class saftgammamie_pure():
         temp_aux : list
             temperature dependend parameters computed with temperature_aux(T)
         mu : float
-            adimentional chemical potential at equilibrium
+            dimensionless chemical potential at equilibrium [Adim]
         Psat : float
-            adimentional pressure [Pa]
+            equilibrium pressure divided by RT [Pa mol / J]
         Xass0: array, optional
             Initial guess for the calculation of fraction of non-bonded sites
 
         Returns
         -------
         GPT: float
-            Thermodynamic Grand potential [Pa]
+            Thermodynamic Grand potential divided by RT [Pa mol / J]
         Xass : array
             computed fraction of nonbonded sites
         """
@@ -1301,7 +1311,7 @@ class saftgammamie_pure():
         """
         dOm(rho, T, mu, Psat, Xass0)
 
-        Method that computes the adimenstional Thermodynamic Grand potential
+        Method that computes the dimensionless Thermodynamic Grand potential
         at given density and temperature.
 
         Parameters
@@ -1311,16 +1321,16 @@ class saftgammamie_pure():
         T : float
             absolute temperature [K]
         mu : float
-            adimentional chemical potential at equilibrium
+            dimensionless chemical potential at equilibrium [Adim]
         Psat : float
-            adimentional pressure [Pa]
+            equilibrium pressure divided by RT [Pa mol / J]
         Xass0: array, optional
             Initial guess for the calculation of fraction of non-bonded sites
 
         Returns
         -------
         Out: float
-            Thermodynamic Grand potential [Pa]
+            Thermodynamic Grand potential divided by RT [Pa mol / J]
         """
         temp_aux = self.temperature_aux(T)
         GPT, Xass = self.dOm_aux(rho, temp_aux, mu, Psat, Xass0)

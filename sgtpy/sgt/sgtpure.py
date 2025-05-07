@@ -37,7 +37,7 @@ def sgt_pure(rhov, rhol, Tsat, Psat, model, n=100, full_output=False,
     # roots and weights of Gauss quadrature
     roots, w = gauss(n)
 
-    cii = model.ci(Tsat)  # computing temperature dependent cii
+    # cii = model.ci(Tsat)  # computing temperature dependent cii
     temp_aux = model.temperature_aux(Tsat)
     Tfactor, Pfactor, rofactor, tenfactor, zfactor = model.sgt_adim(Tsat)
 
@@ -67,7 +67,7 @@ def sgt_pure(rhov, rhol, Tsat, Psat, model, n=100, full_output=False,
     ten *= tenfactor
 
     if full_output:
-        zint = np.sqrt(cii/(2*dOm))
+        zint = np.sqrt(1./(2*dOm))
         z = np.cumsum(wreal*zint)
         z /= zfactor
         roi /= rofactor
