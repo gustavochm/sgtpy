@@ -143,12 +143,12 @@ class saftgammamie_mix():
     logfugmix: computes the fugacity coefficient of the mixture
     logfugef: computes the effective fugacity coefficients of the components
               in the mixture
-    a0ad: computes adimentional Helmholtz density energy
-    muad: computes adimentional chemical potential
-    dmuad: computes the adimentional chemical potential and its derivatives
-    dOm : computes adimentional Thermodynamic Grand Potential
+    a0ad: computes dimensionless Helmholtz density energy
+    muad: computes dimensionless chemical potential
+    dmuad: computes the dimensionless chemical potential and its derivatives
+    dOm : computes dimensionless Thermodynamic Grand Potential
     ci :  computes influence parameters matrix for SGT
-    sgt_adim : computes adimentional factors for SGT
+    sgt_adim : computes dimensionless factors for SGT
     beta_sgt: method for setting beta correction used in SGT
 
     association_solver: computes the fraction of non-bonded sites
@@ -1421,7 +1421,7 @@ class saftgammamie_mix():
         Returns
         -------
         muad: array_like
-            chemical potential [Adim]
+            chemical potential divided by RT [Adim]
         Xass : array
             computed fraction of nonbonded sites
         """
@@ -1457,7 +1457,7 @@ class saftgammamie_mix():
         Returns
         -------
         muad: array_like
-            chemical potential [Adim]
+            chemical potential divided by RT [Adim]
         """
         temp_aux = self.temperature_aux(T)
         mu, Xass = self.muad_aux(rhoi, temp_aux, Xass0)
@@ -1482,9 +1482,9 @@ class saftgammamie_mix():
         Returns
         -------
         muad: array_like
-            chemical potential [J/mol]
+            chemical potential divided by RT [Adim]
         dmuad: array_like
-            derivavites of the chemical potential respect to rhoi [J m^3/mol^2]
+            derivavites of the chemical potential respect to rhoi [m^3/mol]
         Xass : array
             computed fraction of nonbonded sites
         """
@@ -1522,9 +1522,9 @@ class saftgammamie_mix():
         Returns
         -------
         muad: array_like
-            chemical potential [J/mol]
+            chemical potential divided by RT [Adim]
         dmuad: array_like
-            derivavites of the chemical potential respect to rhoi [J m^3/mol^2]
+            derivavites of the chemical potential respect to rhoi [m^3/mol]
         """
         temp_aux = self.temperature_aux(T)
         mu, dmu, Xass = self.dmuad_aux(rhoi, temp_aux, Xass0)
@@ -1544,7 +1544,7 @@ class saftgammamie_mix():
         temp_aux : list
             temperature dependend parameters computed with temperature_aux(T)
         mu : float
-            adimentional chemical potential at equilibrium
+            dimensionless chemical potential at equilibrium [Adim]
         Psat : float
             equilibrium pressure divided by RT [Pa mol / J]
         Xass0: array, optional
@@ -1553,7 +1553,7 @@ class saftgammamie_mix():
         Returns
         -------
         dom: float
-            Thermodynamic Grand potential [Pa mol / J]
+            Thermodynamic Grand potential divided by RT [Pa mol / J]
         Xass : array
             computed fraction of nonbonded sites
         """
@@ -1575,7 +1575,7 @@ class saftgammamie_mix():
         T : float
             absolute temperature [K]
         mu : float
-            adimentional chemical potential at equilibrium
+            dimensionless chemical potential at equilibrium [Adim]
         Psat : float
             equilibrium pressure divided by RT [Pa mol / J]
         Xass0: array, optional
@@ -1584,7 +1584,7 @@ class saftgammamie_mix():
         Returns
         -------
         Out: float
-            Thermodynamic Grand potential [Pa]
+            Thermodynamic Grand potential divided by RT [Pa mol / J]
         """
         temp_aux = self.temperature_aux(T)
         dom, Xass = self.dOm_aux(rhoi, temp_aux, mu, Psat, Xass0)
@@ -1594,7 +1594,7 @@ class saftgammamie_mix():
         '''
         sgt_adim(T)
 
-        Method that evaluates adimentional factor for temperature, pressure,
+        Method that evaluates dimensionless factor for temperature, pressure,
         density, tension and distance for interfacial properties computations
         with SGT.
 
@@ -1612,9 +1612,9 @@ class saftgammamie_mix():
         rofactor : float
             factor to obtain dimentionless density (mol/m3 -> mol/m3)
         tenfactor : float
-            factor to obtain dimentionless surface tension (mN/m)
+            factor to obtain surface tension in (mN/m)
         zfactor : float
-            factor to obtain dimentionless distance  (Amstrong -> m)
+            factor to obtain the interfacial distance in (Amstrongs)
         '''
         beta = 1 / (kb*T)
         RT = (Na/beta)
@@ -2171,7 +2171,7 @@ class saftgammamie_mix():
         for i, pure_eos in enumerate(self.pure_eos):
             lnphi_pure[i], _ = pure_eos.logfug(T, P, state)
         return lnphi_pure
-    
+
     def get_lngamma(self, x, T, P, v0=None, Xass0=None, lnphi_pure=None):
         """
         get_lngamma(x, T, P, v0, Xass0)
@@ -2200,7 +2200,6 @@ class saftgammamie_mix():
         lngamma: float
             logarithm of activity coefficient model
         """
-
 
         if isinstance(x, (float, int)):
             x = np.array([x, 1.-x])
