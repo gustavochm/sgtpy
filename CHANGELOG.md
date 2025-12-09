@@ -1,5 +1,9 @@
 # SGTPy Changelog
 
+## v0.0.23
+* Updated `setup.py` file use updated cython API.
+* Corrected SAFT-gamma-Mie databse for group `cO` ([Valsecchi et al. (2024)](https://doi.org/10.1016/j.fluid.2023.113952)). (Previously, it was missing an electron association site)
+
 ## v0.0.22
 * Changed the behavior of `eos.muad`, `eos.a0ad` and `eos.dOm` methods to use values divided by RT in pure fluid EoS (This behavior was already used in mixtures versions of the EoS).  These methods are used in SGT functions.
 
