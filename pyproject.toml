@@ -1,3 +1,56 @@
 [build-system]
-requires = ["setuptools", "wheel", "cython"]
+requires = [
+    "setuptools>=61",
+    "wheel",
+    "cython>=3.0",
+    "numpy>=2.0.0"
+]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "sgtpy"
+version = "0.0.23"
+description = "SAFT-VR-MIE EOS and SGT"
+readme = "long_description.rst"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Gustavo Chaparro", email = "gchaparro@ethz.ch" },
+    { name = "Andres Mejia Matallana" },
+    { name = "Erich A. Muller" }
+]
+keywords = [
+    "SAFT-VR-Mie", "SGT"
+]
+dependencies = [
+    "numpy>=2.0.0",
+    "scipy>=1.13",
+    "pandas>=2.2",
+    "openpyxl>=3.0.0",
+    "numba"
+]
+
+[project.urls]
+Homepage = "https://github.com/gustavochm/sgtpy"
+Download = "https://github.com/gustavochm/sgtpy.git"
+
+[project.optional-dependencies]
+dev = [
+    "cython>=3.0",
+    "pytest>=6.0",
+    "build"
+]
+
+[tool.setuptools]
+py-modules = []
+
+[tool.setuptools.packages.find]
+include = ["sgtpy*"]
+namespaces = false
+
+[tool.setuptools.package-data]
+sgtpy = ["database/*"]
+
+[tool.cibuildwheel]
+build-verbosity = 3
+before-build = "pip install numpy cython"
